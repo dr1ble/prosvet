@@ -108,13 +108,27 @@ class CatalogRepository:
         )
         return self.db.scalar(stmt)
 
-    def list_releases(self, course_id: UUID) -> list[tuple[CourseRelease, int]]:
+    def list_releases(
+        self,
+        course_id: UUID,
+        release_status: str | None = None,
+        version_query: str | None = None,
+        limit: int = 50,
+    ) -> list[tuple[CourseRelease, int]]:
         stmt = (
             select(CourseRelease, func.count(CourseReleaseScreen.id))
             .outerjoin(CourseReleaseScreen, CourseReleaseScreen.release_id == CourseRelease.id)
             .where(CourseRelease.course_id == course_id)
-            .group_by(CourseRelease.id)
-            .order_by(desc(CourseRelease.published_at).nulls_last(), desc(CourseRelease.created_at))
         )
+        if release_status is not None:
+            stmt = stmt.where(CourseRelease.status == release_status)
+        if version_query is not None:
+            stmt = stmt.where(CourseRelease.version.ilike(f"%{version_query}%"))
+
+        stmt = stmt.group_by(CourseRelease.id).order_by(
+            desc(CourseRelease.published_at).nulls_last(),
+            desc(CourseRelease.created_at),
+        )
+        stmt = stmt.limit(limit)
         rows = self.db.execute(stmt).all()
         return [(release, int(screen_count)) for release, screen_count in rows]

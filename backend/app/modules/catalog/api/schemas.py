@@ -29,6 +29,20 @@ class CourseListQuery(_BaseSchema):
     include_archived: bool = False
 
 
+class ReleaseListQuery(_BaseSchema):
+    status: Literal["draft", "published"] | None = None
+    version_query: str | None = Field(default=None, max_length=32)
+    limit: int = Field(default=50, ge=1, le=200)
+
+    @field_validator("version_query")
+    @classmethod
+    def normalize_version_query(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
+
+
 class ReleaseScreenIn(_BaseSchema):
     screen_key: str = Field(min_length=3, max_length=120, pattern=r"^[a-z0-9][a-z0-9_.-]{2,119}$")
     title: str = Field(min_length=2, max_length=255)

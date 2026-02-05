@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,6 +11,7 @@ from app.modules.catalog.api.schemas import (
     CourseOut,
     CourseReleaseCreateIn,
     CourseReleaseOut,
+    ReleaseListQuery,
     ReleaseScreenOut,
 )
 from app.modules.catalog.domain.errors import CatalogError
@@ -106,12 +108,20 @@ def create_course_release(
 @router.get("/courses/{course_id}/releases", response_model=list[CourseReleaseOut])
 def list_course_releases(
     course_id: UUID,
+    release_status: Literal["draft", "published"] | None = Query(default=None, alias="status"),
+    version_query: str | None = Query(default=None, max_length=32),
+    limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
     _actor: CurrentActor = Depends(require_roles(*catalog_write_roles)),
 ) -> list[CourseReleaseOut]:
+    query = ReleaseListQuery(
+        status=release_status,
+        version_query=version_query,
+        limit=limit,
+    )
     service = CatalogService(db)
     try:
-        releases = service.list_course_releases(course_id=course_id)
+        releases = service.list_course_releases(course_id=course_id, query=query)
     except CatalogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return [_to_release_out(release, screen_count=screen_count) for release, screen_count in releases]
