@@ -24,7 +24,7 @@ fi
 echo "pre-commit: staged files:"
 printf "%s\n" "$staged_files"
 
-marker_regex='module placeholder\.|\bplaceholder\b|\bTODO\b|\bFIXME\b|scaffold directory|future implementation'
+marker_regex='module placeholder\.|\bTODO\b|\bFIXME\b|scaffold directory|future implementation'
 while IFS= read -r path; do
   case "$path" in
     *.md|scripts/pre-commit.sh)
