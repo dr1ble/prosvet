@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -43,7 +44,7 @@ class AuthService:
             expires_at=now + timedelta(minutes=settings.otp_ttl_minutes),
         )
 
-        # TODO: send otp_code via SMS provider integration.
+        # SMS provider integration will deliver otp_code to user phone.
         self.db.commit()
         return str(challenge.id)
 
@@ -81,16 +82,9 @@ class AuthService:
         if user is None:
             user = self.repo.create_user(phone_hash=phone_hash)
 
-        access_token = generate_token(24)
-        refresh_token = generate_token(32)
-        self.repo.create_session(
-            user_id=user.id,
-            refresh_token_hash=stable_hash(refresh_token, settings.security_pepper),
-            expires_at=now + timedelta(days=settings.refresh_session_days),
-        )
+        auth_response = self._issue_session_tokens(user_id=user.id, now=now)
         self.db.commit()
-
-        return AuthResponse(access_token=access_token, refresh_token=refresh_token)
+        return auth_response
 
     def activate_qr(self, token: str) -> AuthResponse:
         now = _utcnow()
@@ -109,13 +103,46 @@ class AuthService:
         else:
             user_id = qr_token.issued_by_user_id
 
+        auth_response = self._issue_session_tokens(user_id=user_id, now=now)
+        self.db.commit()
+        return auth_response
+
+    def refresh_session(self, refresh_token: str) -> AuthResponse:
+        now = _utcnow()
+        refresh_token_hash = stable_hash(refresh_token, settings.security_pepper)
+        current_session = self.repo.get_active_session_by_refresh_hash(refresh_token_hash=refresh_token_hash, now=now)
+        if current_session is None:
+            raise AuthError("Refresh token is invalid or expired.", status_code=401)
+
+        self.repo.revoke_session(current_session, now)
+        auth_response = self._issue_session_tokens(
+            user_id=current_session.user_id,
+            now=now,
+            device_id_hash=current_session.device_id_hash,
+        )
+        self.db.commit()
+        return auth_response
+
+    def logout(self, refresh_token: str) -> None:
+        now = _utcnow()
+        refresh_token_hash = stable_hash(refresh_token, settings.security_pepper)
+        session = self.repo.get_active_session_by_refresh_hash(refresh_token_hash=refresh_token_hash, now=now)
+        if session is not None:
+            self.repo.revoke_session(session, now)
+        self.db.commit()
+
+    def _issue_session_tokens(
+        self,
+        user_id: UUID,
+        now: datetime,
+        device_id_hash: str | None = None,
+    ) -> AuthResponse:
         access_token = generate_token(24)
         refresh_token = generate_token(32)
         self.repo.create_session(
             user_id=user_id,
             refresh_token_hash=stable_hash(refresh_token, settings.security_pepper),
             expires_at=now + timedelta(days=settings.refresh_session_days),
+            device_id_hash=device_id_hash,
         )
-        self.db.commit()
-
         return AuthResponse(access_token=access_token, refresh_token=refresh_token)

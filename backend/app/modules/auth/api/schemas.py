@@ -14,6 +14,10 @@ class QrActivateIn(BaseModel):
     token: str = Field(min_length=8)
 
 
+class RefreshTokenIn(BaseModel):
+    refresh_token: str = Field(min_length=16)
+
+
 class OtpRequestOut(BaseModel):
     challenge_id: str
     status: str
@@ -23,3 +27,7 @@ class AuthResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class LogoutOut(BaseModel):
+    status: str = "logged_out"

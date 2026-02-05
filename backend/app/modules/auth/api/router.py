@@ -2,7 +2,15 @@ from fastapi import APIRouter
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.modules.auth.api.schemas import AuthResponse, OtpRequestIn, OtpRequestOut, OtpVerifyIn, QrActivateIn
+from app.modules.auth.api.schemas import (
+    AuthResponse,
+    LogoutOut,
+    OtpRequestIn,
+    OtpRequestOut,
+    OtpVerifyIn,
+    QrActivateIn,
+    RefreshTokenIn,
+)
 from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.domain.services import AuthService
 from app.shared.db.deps import get_db
@@ -36,3 +44,22 @@ def activate_qr(payload: QrActivateIn, db: Session = Depends(get_db)) -> AuthRes
         return service.activate_qr(payload.token)
     except AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/refresh", response_model=AuthResponse)
+def refresh_session(payload: RefreshTokenIn, db: Session = Depends(get_db)) -> AuthResponse:
+    service = AuthService(db)
+    try:
+        return service.refresh_session(payload.refresh_token)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/logout", response_model=LogoutOut)
+def logout(payload: RefreshTokenIn, db: Session = Depends(get_db)) -> LogoutOut:
+    service = AuthService(db)
+    try:
+        service.logout(payload.refresh_token)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return LogoutOut()

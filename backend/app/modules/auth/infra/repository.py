@@ -84,3 +84,19 @@ class AuthRepository:
         self.db.add(session)
         self.db.flush()
         return session
+
+    def get_active_session_by_refresh_hash(self, refresh_token_hash: str, now: datetime) -> UserSession | None:
+        stmt = (
+            select(UserSession)
+            .where(
+                UserSession.refresh_token_hash == refresh_token_hash,
+                UserSession.revoked_at.is_(None),
+                UserSession.expires_at > now,
+            )
+            .order_by(desc(UserSession.created_at))
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
+
+    def revoke_session(self, session: UserSession, now: datetime) -> None:
+        session.revoked_at = now
