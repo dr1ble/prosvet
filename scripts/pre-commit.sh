@@ -31,7 +31,7 @@ while IFS= read -r path; do
       continue
       ;;
   esac
-  if git diff --cached -- "$path" | grep -Eiq "$marker_regex"; then
+  if git diff --cached -- "$path" | grep -E '^\+[^+]' | grep -Eiq "$marker_regex"; then
     echo "pre-commit: blocked. Remove draft markers (placeholder/TODO/FIXME/scaffold text) from staged changes." >&2
     echo "pre-commit: offending file: $path" >&2
     exit 1
