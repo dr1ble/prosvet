@@ -21,6 +21,7 @@ from app.shared.auth.schemas import CurrentActor
 from app.shared.db.deps import get_db
 
 router = APIRouter()
+catalog_write_roles = (UserRole.ADMINISTRATOR, UserRole.METHODOLOGIST, UserRole.MODERATOR)
 
 
 def _to_course_out(course: Course) -> CourseOut:
@@ -70,7 +71,7 @@ def create_course(
     payload: CourseCreateIn,
     db: Session = Depends(get_db),
     _actor: CurrentActor = Depends(
-        require_roles(UserRole.ADMINISTRATOR, UserRole.METHODOLOGIST, UserRole.MODERATOR)
+        require_roles(*catalog_write_roles)
     ),
 ) -> CourseOut:
     service = CatalogService(db)
@@ -91,7 +92,7 @@ def create_course_release(
     payload: CourseReleaseCreateIn,
     db: Session = Depends(get_db),
     _actor: CurrentActor = Depends(
-        require_roles(UserRole.ADMINISTRATOR, UserRole.METHODOLOGIST, UserRole.MODERATOR)
+        require_roles(*catalog_write_roles)
     ),
 ) -> CourseReleaseOut:
     service = CatalogService(db)
@@ -100,6 +101,20 @@ def create_course_release(
     except CatalogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return _to_release_out(release, screen_count=len(screens))
+
+
+@router.get("/courses/{course_id}/releases", response_model=list[CourseReleaseOut])
+def list_course_releases(
+    course_id: UUID,
+    db: Session = Depends(get_db),
+    _actor: CurrentActor = Depends(require_roles(*catalog_write_roles)),
+) -> list[CourseReleaseOut]:
+    service = CatalogService(db)
+    try:
+        releases = service.list_course_releases(course_id=course_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return [_to_release_out(release, screen_count=screen_count) for release, screen_count in releases]
 
 
 @router.get("/courses/{course_slug}/releases/latest", response_model=CourseBundleOut)

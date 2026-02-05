@@ -114,6 +114,12 @@ class CatalogService:
         screens = self.repo.list_release_screens(release.id)
         return course, release, screens
 
+    def list_course_releases(self, course_id: UUID) -> list[tuple[CourseRelease, int]]:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        return self.repo.list_releases(course_id=course.id)
+
     @staticmethod
     def _validate_screens(screens: list[ReleaseScreenIn]) -> None:
         keys = [screen.screen_key for screen in screens]

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen, CourseStatus, ReleaseStatus
@@ -97,7 +97,18 @@ class CatalogRepository:
                 CourseRelease.course_id == course_id,
                 CourseRelease.status == ReleaseStatus.PUBLISHED.value,
             )
-            .order_by(desc(CourseRelease.published_at), desc(CourseRelease.created_at))
+            .order_by(desc(CourseRelease.published_at).nulls_last(), desc(CourseRelease.created_at))
             .limit(1)
         )
         return self.db.scalar(stmt)
+
+    def list_releases(self, course_id: UUID) -> list[tuple[CourseRelease, int]]:
+        stmt = (
+            select(CourseRelease, func.count(CourseReleaseScreen.id))
+            .outerjoin(CourseReleaseScreen, CourseReleaseScreen.release_id == CourseRelease.id)
+            .where(CourseRelease.course_id == course_id)
+            .group_by(CourseRelease.id)
+            .order_by(desc(CourseRelease.published_at).nulls_last(), desc(CourseRelease.created_at))
+        )
+        rows = self.db.execute(stmt).all()
+        return [(release, int(screen_count)) for release, screen_count in rows]
