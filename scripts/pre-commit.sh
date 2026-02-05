@@ -73,6 +73,8 @@ if [ "$need_web_checks" -eq 1 ]; then
 fi
 
 if [ "$need_backend_checks" -eq 1 ]; then
+  backend_python_files="$(printf "%s\n" "$staged_files" | grep -E '^backend/.*\.py$' || true)"
+
   if ! python3 -m ruff --version >/dev/null 2>&1; then
     if ! require_or_skip "ruff is not available. Run: python3 -m pip install -r backend/requirements-dev.txt"; then
       need_backend_checks=0
@@ -86,11 +88,17 @@ if [ "$need_backend_checks" -eq 1 ]; then
   fi
 
   if [ "$need_backend_checks" -eq 1 ]; then
-    echo "pre-commit: running ruff..."
-    (
-      cd "$ROOT_DIR/backend"
-      python3 -m ruff check app tests migrations
-    )
+    if [ -n "$backend_python_files" ]; then
+      backend_python_files_rel="$(printf "%s\n" "$backend_python_files" | sed 's#^backend/##')"
+      echo "pre-commit: running ruff on staged backend Python files..."
+      (
+        cd "$ROOT_DIR/backend"
+        # shellcheck disable=SC2086
+        python3 -m ruff check $backend_python_files_rel
+      )
+    else
+      echo "pre-commit: no staged backend Python files, skipping ruff."
+    fi
 
     echo "pre-commit: running pytest..."
     (
