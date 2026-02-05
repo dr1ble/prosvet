@@ -62,6 +62,10 @@ class AuthRepository:
         stmt = select(User).where(User.phone_hash == phone_hash)
         return self.db.scalar(stmt)
 
+    def get_user_by_id(self, user_id: UUID) -> User | None:
+        stmt = select(User).where(User.id == user_id)
+        return self.db.scalar(stmt)
+
     def create_user(self, phone_hash: str) -> User:
         user = User(phone_hash=phone_hash, role=UserRole.USER, status=UserStatus.ACTIVE)
         self.db.add(user)

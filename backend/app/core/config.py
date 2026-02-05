@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     database_url: str = "postgresql+psycopg://app:app@localhost:5432/app"
     security_pepper: str = "dev-pepper-change-in-prod"
+    access_token_secret: str = "dev-access-token-secret-change-in-prod"
+    access_token_ttl_minutes: int = 30
     otp_ttl_minutes: int = 5
     otp_max_attempts: int = 5
     otp_block_minutes: int = 15

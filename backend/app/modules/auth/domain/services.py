@@ -8,8 +8,9 @@ from app.core.config import settings
 from app.modules.auth.api.schemas import AuthResponse
 from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.infra.repository import AuthRepository
+from app.modules.users.models import UserStatus
 from app.shared.security.hashing import stable_hash
-from app.shared.security.tokens import generate_token
+from app.shared.security.tokens import generate_token, issue_access_token
 
 
 def _utcnow() -> datetime:
@@ -82,7 +83,7 @@ class AuthService:
         if user is None:
             user = self.repo.create_user(phone_hash=phone_hash)
 
-        auth_response = self._issue_session_tokens(user_id=user.id, now=now)
+        auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
         self.db.commit()
         return auth_response
 
@@ -100,10 +101,15 @@ class AuthService:
         if qr_token.issued_by_user_id is None:
             user = self.repo.create_user(phone_hash=stable_hash(f"qr:{qr_token.id}", settings.security_pepper))
             user_id = user.id
+            role = user.role.value
         else:
-            user_id = qr_token.issued_by_user_id
+            user = self.repo.get_user_by_id(qr_token.issued_by_user_id)
+            if user is None or user.status != UserStatus.ACTIVE:
+                raise AuthError("User is unavailable for QR activation.", status_code=401)
+            user_id = user.id
+            role = user.role.value
 
-        auth_response = self._issue_session_tokens(user_id=user_id, now=now)
+        auth_response = self._issue_session_tokens(user_id=user_id, role=role, now=now)
         self.db.commit()
         return auth_response
 
@@ -114,9 +120,14 @@ class AuthService:
         if current_session is None:
             raise AuthError("Refresh token is invalid or expired.", status_code=401)
 
+        user = self.repo.get_user_by_id(current_session.user_id)
+        if user is None or user.status != UserStatus.ACTIVE:
+            raise AuthError("User is inactive or not found.", status_code=401)
+
         self.repo.revoke_session(current_session, now)
         auth_response = self._issue_session_tokens(
             user_id=current_session.user_id,
+            role=user.role.value,
             now=now,
             device_id_hash=current_session.device_id_hash,
         )
@@ -134,10 +145,17 @@ class AuthService:
     def _issue_session_tokens(
         self,
         user_id: UUID,
+        role: str,
         now: datetime,
         device_id_hash: str | None = None,
     ) -> AuthResponse:
-        access_token = generate_token(24)
+        access_token = issue_access_token(
+            user_id=user_id,
+            role=role,
+            secret=settings.access_token_secret,
+            ttl_minutes=settings.access_token_ttl_minutes,
+            now=now,
+        )
         refresh_token = generate_token(32)
         self.repo.create_session(
             user_id=user_id,

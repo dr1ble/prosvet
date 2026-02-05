@@ -15,6 +15,9 @@ from app.modules.catalog.api.schemas import (
 from app.modules.catalog.domain.errors import CatalogError
 from app.modules.catalog.domain.services import CatalogService
 from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen
+from app.modules.users.models import UserRole
+from app.shared.auth.deps import require_roles
+from app.shared.auth.schemas import CurrentActor
 from app.shared.db.deps import get_db
 
 router = APIRouter()
@@ -63,7 +66,13 @@ def list_courses(
 
 
 @router.post("/courses", response_model=CourseOut, status_code=status.HTTP_201_CREATED)
-def create_course(payload: CourseCreateIn, db: Session = Depends(get_db)) -> CourseOut:
+def create_course(
+    payload: CourseCreateIn,
+    db: Session = Depends(get_db),
+    _actor: CurrentActor = Depends(
+        require_roles(UserRole.ADMINISTRATOR, UserRole.METHODOLOGIST, UserRole.MODERATOR)
+    ),
+) -> CourseOut:
     service = CatalogService(db)
     try:
         course = service.create_course(payload)
@@ -81,6 +90,9 @@ def create_course_release(
     course_id: UUID,
     payload: CourseReleaseCreateIn,
     db: Session = Depends(get_db),
+    _actor: CurrentActor = Depends(
+        require_roles(UserRole.ADMINISTRATOR, UserRole.METHODOLOGIST, UserRole.MODERATOR)
+    ),
 ) -> CourseReleaseOut:
     service = CatalogService(db)
     try:
