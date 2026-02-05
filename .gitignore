@@ -3,3 +3,23 @@
 .idea/
 .vscode/
 *.log
+
+# Environment files
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+
+# Node / Next.js
+node_modules/
+.next/
+
+# Android / Kotlin
+.gradle/
+build/
+**/build/
