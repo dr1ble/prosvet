@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     otp_block_minutes: int = 15
     qr_ttl_hours: int = 24
     refresh_session_days: int = 30
+    admin_phone_numbers: str = ""
+    debug_return_otp_code: bool = False
 
 
 settings = Settings()

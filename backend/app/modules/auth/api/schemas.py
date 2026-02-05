@@ -21,6 +21,7 @@ class RefreshTokenIn(BaseModel):
 class OtpRequestOut(BaseModel):
     challenge_id: str
     status: str
+    dev_code: str | None = None
 
 
 class AuthResponse(BaseModel):

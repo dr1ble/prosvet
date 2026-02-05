@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.modules.auth.api.schemas import AuthResponse
 from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.infra.repository import AuthRepository
-from app.modules.users.models import UserStatus
+from app.modules.users.models import UserRole, UserStatus
 from app.shared.security.hashing import stable_hash
 from app.shared.security.tokens import generate_token, issue_access_token
 
@@ -25,14 +25,24 @@ def _generate_otp_code() -> str:
     return f"{secrets.randbelow(900_000) + 100_000:06d}"
 
 
+def _parse_admin_phones(raw: str) -> set[str]:
+    phones: set[str] = set()
+    for chunk in raw.split(","):
+        normalized = _normalize_phone(chunk)
+        if normalized:
+            phones.add(normalized)
+    return phones
+
+
 class AuthService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = AuthRepository(db)
 
-    def request_otp(self, phone: str) -> str:
+    def request_otp(self, phone: str) -> tuple[str, str | None]:
         now = _utcnow()
-        phone_hash = stable_hash(_normalize_phone(phone), settings.security_pepper)
+        normalized_phone = _normalize_phone(phone)
+        phone_hash = stable_hash(normalized_phone, settings.security_pepper)
         latest = self.repo.get_latest_challenge(phone_hash)
 
         if latest and latest.blocked_until and latest.blocked_until > now:
@@ -47,11 +57,13 @@ class AuthService:
 
         # SMS provider integration will deliver otp_code to user phone.
         self.db.commit()
-        return str(challenge.id)
+        dev_code = otp_code if settings.debug_return_otp_code else None
+        return str(challenge.id), dev_code
 
     def verify_otp(self, phone: str, code: str) -> AuthResponse:
         now = _utcnow()
-        phone_hash = stable_hash(_normalize_phone(phone), settings.security_pepper)
+        normalized_phone = _normalize_phone(phone)
+        phone_hash = stable_hash(normalized_phone, settings.security_pepper)
         latest = self.repo.get_latest_challenge(phone_hash)
 
         if latest is None:
@@ -80,8 +92,11 @@ class AuthService:
 
         self.repo.mark_challenge_verified(latest, now)
         user = self.repo.get_user_by_phone_hash(phone_hash)
+        promoted_role = self._resolve_role_for_phone(normalized_phone)
         if user is None:
-            user = self.repo.create_user(phone_hash=phone_hash)
+            user = self.repo.create_user(phone_hash=phone_hash, role=promoted_role)
+        elif user.role == UserRole.USER and promoted_role != UserRole.USER:
+            user.role = promoted_role
 
         auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
         self.db.commit()
@@ -164,3 +179,10 @@ class AuthService:
             device_id_hash=device_id_hash,
         )
         return AuthResponse(access_token=access_token, refresh_token=refresh_token)
+
+    @staticmethod
+    def _resolve_role_for_phone(normalized_phone: str) -> UserRole:
+        admin_phones = _parse_admin_phones(settings.admin_phone_numbers)
+        if normalized_phone in admin_phones:
+            return UserRole.ADMINISTRATOR
+        return UserRole.USER

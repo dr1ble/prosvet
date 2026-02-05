@@ -21,10 +21,10 @@ router = APIRouter()
 def request_otp(payload: OtpRequestIn, db: Session = Depends(get_db)) -> OtpRequestOut:
     service = AuthService(db)
     try:
-        challenge_id = service.request_otp(payload.phone)
+        challenge_id, dev_code = service.request_otp(payload.phone)
     except AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    return OtpRequestOut(challenge_id=challenge_id, status="otp_sent")
+    return OtpRequestOut(challenge_id=challenge_id, status="otp_sent", dev_code=dev_code)
 
 
 @router.post("/otp/verify", response_model=AuthResponse)
