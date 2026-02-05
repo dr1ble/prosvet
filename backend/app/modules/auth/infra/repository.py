@@ -4,7 +4,13 @@ from uuid import UUID
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.modules.auth.infra.models import OtpChallenge, OtpChallengeStatus, QrLoginToken, QrTokenStatus, UserSession
+from app.modules.auth.infra.models import (
+    OtpChallenge,
+    OtpChallengeStatus,
+    QrLoginToken,
+    QrTokenStatus,
+    UserSession,
+)
 from app.modules.users.models import User, UserRole, UserStatus
 
 

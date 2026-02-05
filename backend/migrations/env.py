@@ -13,9 +13,9 @@ import sys
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+import app.models  # noqa: F401  - ensure metadata imports all models
 from app.core.config import settings
 from app.shared.db.base import Base
-import app.models  # noqa: F401  - ensure metadata imports all models
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

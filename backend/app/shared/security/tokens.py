@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-
 TOKEN_VERSION = "at1"
 
 

@@ -4,6 +4,13 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "UP017", "UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/modules/*/api/router.py" = ["B008"]
+"app/shared/auth/deps.py" = ["B008"]
+"migrations/env.py" = ["E402"]
+"migrations/versions/*.py" = ["UP007", "UP035"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

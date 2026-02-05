@@ -5,7 +5,13 @@ from uuid import UUID
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
-from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen, CourseStatus, ReleaseStatus
+from app.modules.catalog.infra.models import (
+    Course,
+    CourseRelease,
+    CourseReleaseScreen,
+    CourseStatus,
+    ReleaseStatus,
+)
 
 
 class CatalogRepository:

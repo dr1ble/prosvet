@@ -6,9 +6,20 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.modules.catalog.api.schemas import CourseCreateIn, CourseListQuery, CourseReleaseCreateIn, ReleaseScreenIn
+from app.modules.catalog.api.schemas import (
+    CourseCreateIn,
+    CourseListQuery,
+    CourseReleaseCreateIn,
+    ReleaseScreenIn,
+)
 from app.modules.catalog.domain.errors import CatalogError
-from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen, CourseStatus, ReleaseStatus
+from app.modules.catalog.infra.models import (
+    Course,
+    CourseRelease,
+    CourseReleaseScreen,
+    CourseStatus,
+    ReleaseStatus,
+)
 from app.modules.catalog.infra.repository import CatalogRepository
 
 

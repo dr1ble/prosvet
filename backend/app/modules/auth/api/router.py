@@ -1,5 +1,4 @@
-from fastapi import APIRouter
-from fastapi import Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.modules.auth.api.schemas import (
