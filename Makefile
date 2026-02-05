@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-lint
+.PHONY: up down logs backend-test backend-lint install-hooks
 
 up:
 	docker compose up -d --build
@@ -14,3 +14,6 @@ backend-test:
 
 backend-lint:
 	cd backend && ruff check .
+
+install-hooks:
+	./scripts/install-git-hooks.sh
