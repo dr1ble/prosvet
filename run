@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+  cat <<'USAGE'
+Usage: ./run
+
+Starts local development stack:
+- PostgreSQL (Docker Compose)
+- Backend (FastAPI + Uvicorn, autoreload)
+- Web admin (Next.js dev server)
+
+Environment overrides:
+- BACKEND_HOST (default: 127.0.0.1)
+- BACKEND_PORT (default: 8000)
+- WEB_HOST (default: 127.0.0.1)
+- WEB_PORT (default: 3000)
+USAGE
+  exit 0
+fi
+
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BACKEND_DIR="$ROOT_DIR/backend"
+WEB_DIR="$ROOT_DIR/web-admin"
+COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
+
+BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+WEB_HOST="${WEB_HOST:-127.0.0.1}"
+WEB_PORT="${WEB_PORT:-3000}"
+
+require_cmd() {
+  local cmd="$1"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "[run] Missing command: $cmd"
+    exit 1
+  fi
+}
+
+require_cmd docker
+require_cmd python3
+require_cmd npm
+require_cmd lsof
+
+kill_listening_on_port() {
+  local port="$1"
+  local label="$2"
+  local pids
+
+  pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -z "$pids" ]]; then
+    return
+  fi
+
+  echo "[run] Port $port ($label) is busy. Stopping process(es): $pids"
+  for pid in $pids; do
+    kill "$pid" 2>/dev/null || true
+  done
+
+  sleep 1
+
+  pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -z "$pids" ]]; then
+    return
+  fi
+
+  echo "[run] Force stopping process(es) on port $port: $pids"
+  for pid in $pids; do
+    kill -9 "$pid" 2>/dev/null || true
+  done
+}
+
+if ! docker info >/dev/null 2>&1; then
+  echo "[run] Docker daemon is not running. Start Docker Desktop and retry."
+  exit 1
+fi
+
+if ! python3 -c "import uvicorn, alembic, multipart" >/dev/null 2>&1; then
+  echo "[run] Python dependencies are missing."
+  echo "[run] Install with: python3 -m pip install -r $BACKEND_DIR/requirements-dev.txt"
+  exit 1
+fi
+
+if [[ ! -d "$WEB_DIR/node_modules" ]]; then
+  echo "[run] Installing web dependencies..."
+  (cd "$WEB_DIR" && npm install)
+fi
+
+echo "[run] Starting PostgreSQL container..."
+docker compose -f "$COMPOSE_FILE" up -d postgres >/dev/null
+
+CONTAINER_ID="$(docker compose -f "$COMPOSE_FILE" ps -q postgres)"
+if [[ -n "$CONTAINER_ID" ]]; then
+  echo -n "[run] Waiting for PostgreSQL"
+  for _ in $(seq 1 40); do
+    HEALTH="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}running{{end}}' "$CONTAINER_ID" 2>/dev/null || true)"
+    if [[ "$HEALTH" == "healthy" ]] || [[ "$HEALTH" == "running" ]]; then
+      echo " ready"
+      break
+    fi
+    echo -n "."
+    sleep 1
+  done
+fi
+
+echo "[run] Applying backend migrations..."
+(cd "$BACKEND_DIR" && python3 -m alembic upgrade head)
+
+kill_listening_on_port "$BACKEND_PORT" "backend"
+if [[ "$WEB_PORT" != "$BACKEND_PORT" ]]; then
+  kill_listening_on_port "$WEB_PORT" "web-admin"
+fi
+
+cleanup() {
+  local code=$?
+  trap - INT TERM EXIT
+
+  if [[ -n "${BACKEND_PID:-}" ]] && kill -0 "$BACKEND_PID" 2>/dev/null; then
+    kill "$BACKEND_PID" 2>/dev/null || true
+  fi
+
+  if [[ -n "${WEB_PID:-}" ]] && kill -0 "$WEB_PID" 2>/dev/null; then
+    kill "$WEB_PID" 2>/dev/null || true
+  fi
+
+  wait "${BACKEND_PID:-}" 2>/dev/null || true
+  wait "${WEB_PID:-}" 2>/dev/null || true
+
+  echo "[run] Dev processes stopped."
+  exit "$code"
+}
+trap cleanup INT TERM EXIT
+
+echo "[run] Starting backend on http://$BACKEND_HOST:$BACKEND_PORT"
+(
+  cd "$BACKEND_DIR"
+  python3 -m uvicorn app.main:app --host "$BACKEND_HOST" --port "$BACKEND_PORT" --reload
+) &
+BACKEND_PID=$!
+
+echo "[run] Starting web admin on http://$WEB_HOST:$WEB_PORT"
+(
+  cd "$WEB_DIR"
+  npm run dev -- --hostname "$WEB_HOST" --port "$WEB_PORT"
+) &
+WEB_PID=$!
+
+echo "[run] Ready"
+echo "[run] Web:     http://$WEB_HOST:$WEB_PORT"
+echo "[run] Backend: http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health"
+echo "[run] Press Ctrl+C to stop"
+
+while true; do
+  if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+    echo "[run] Backend process exited unexpectedly."
+    wait "$BACKEND_PID" || true
+    exit 1
+  fi
+
+  if ! kill -0 "$WEB_PID" 2>/dev/null; then
+    echo "[run] Web admin process exited unexpectedly."
+    wait "$WEB_PID" || true
+    exit 1
+  fi
+
+  sleep 1
+done
