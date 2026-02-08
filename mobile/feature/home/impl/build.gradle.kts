@@ -1,6 +1,68 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.jetbrains.compose)
+}
+
+kotlin {
+    jvmToolchain(17)
+    androidTarget()
+    
+    jvm()
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
+    sourceSets {
+        iosX64Main.dependsOn(commonMain.get())
+        iosArm64Main.dependsOn(commonMain.get())
+        iosSimulatorArm64Main.dependsOn(commonMain.get())
+        
+        iosX64Main.dependencies {
+             implementation(libs.coil3.network.ktor)
+        }
+        iosArm64Main.dependencies {
+             implementation(libs.coil3.network.ktor)
+        }
+        iosSimulatorArm64Main.dependencies {
+             implementation(libs.coil3.network.ktor)
+        }
+
+        commonMain.dependencies {
+            implementation(projects.feature.home.api)
+            implementation(projects.core.common)
+            implementation(projects.core.data)
+            implementation(projects.core.model)
+            implementation(projects.core.designsystem)
+            implementation(projects.core.ui)
+
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.materialIconsExtended)
+            implementation(compose.components.resources)
+            implementation(compose.components.uiToolingPreview)
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.androidx.navigation.compose)
+            
+            implementation(libs.coil3.compose)
+            // Network components are platform-specific
+        }
+        
+        androidMain.dependencies {
+            implementation(compose.preview)
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.kotlinx.coroutines.android)
+            implementation(libs.coil3.network.okhttp)
+        }
+
+        jvmMain.dependencies {
+            implementation(libs.coil3.network.okhttp)
+        }
+    }
 }
 
 android {
@@ -15,41 +77,4 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
-    buildFeatures {
-        compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.androidxComposeCompiler.get()
-    }
-}
-
-dependencies {
-    implementation(projects.feature.home.api)
-    implementation(projects.core.common)
-    implementation(projects.core.data)
-    implementation(projects.core.model)
-    implementation(projects.core.designsystem)
-    implementation(projects.core.ui)
-
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.kotlinx.coroutines.android)
-
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.coil.compose)
-
-    testImplementation(libs.junit4)
-
-    debugImplementation(libs.androidx.compose.ui.tooling)
 }
