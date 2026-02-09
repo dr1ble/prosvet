@@ -1,5 +1,6 @@
 import hashlib
 import json
+from collections import deque
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
@@ -38,6 +39,10 @@ def _normalize_slug(value: str) -> str:
 def _checksum_payload(payload: dict[str, Any]) -> str:
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 class CatalogService:
@@ -149,3 +154,156 @@ class CatalogService:
             raise CatalogError("screen_key values must be unique per release.", status_code=422)
         if len(orders) != len(set(orders)):
             raise CatalogError("order_index values must be unique per release.", status_code=422)
+
+        known_screen_keys = set(keys)
+        simulation_screens = [screen for screen in screens if screen.payload.get("type") == "simulation"]
+        if not simulation_screens:
+            return
+
+        adjacency: dict[str, set[str]] = {}
+        start_screen_keys: list[str] = []
+        completion_screen_keys: set[str] = set()
+
+        for screen in simulation_screens:
+            is_start, is_completion, targets = CatalogService._validate_simulation_payload(
+                screen,
+                known_screen_keys,
+            )
+            adjacency[screen.screen_key] = targets
+            if is_start:
+                start_screen_keys.append(screen.screen_key)
+            if is_completion:
+                completion_screen_keys.add(screen.screen_key)
+
+        if len(start_screen_keys) != 1:
+            raise CatalogError(
+                "Simulation release must contain exactly one start screen (payload.is_start=true).",
+                status_code=422,
+            )
+
+        if not completion_screen_keys:
+            raise CatalogError(
+                "Simulation release must contain at least one completion screen (payload.is_completion=true).",
+                status_code=422,
+            )
+
+        start_key = start_screen_keys[0]
+        reachable = CatalogService._collect_reachable_screens(adjacency, start_key)
+        if not completion_screen_keys.intersection(reachable):
+            raise CatalogError(
+                "Simulation release does not have a reachable completion screen from the start.",
+                status_code=422,
+            )
+
+    @staticmethod
+    def _collect_reachable_screens(
+        adjacency: dict[str, set[str]],
+        start_key: str,
+    ) -> set[str]:
+        visited: set[str] = set()
+        queue: deque[str] = deque([start_key])
+
+        while queue:
+            current = queue.popleft()
+            if current in visited:
+                continue
+            visited.add(current)
+            for target in adjacency.get(current, set()):
+                if target not in visited:
+                    queue.append(target)
+
+        return visited
+
+    @staticmethod
+    def _validate_simulation_payload(
+        screen: ReleaseScreenIn,
+        known_screen_keys: set[str],
+    ) -> tuple[bool, bool, set[str]]:
+        is_start = screen.payload.get("is_start", False)
+        if not isinstance(is_start, bool):
+            raise CatalogError(
+                f"Simulation screen '{screen.screen_key}' has invalid 'is_start' flag.",
+                status_code=422,
+            )
+
+        is_completion = screen.payload.get("is_completion", False)
+        if not isinstance(is_completion, bool):
+            raise CatalogError(
+                f"Simulation screen '{screen.screen_key}' has invalid 'is_completion' flag.",
+                status_code=422,
+            )
+
+        hotspots = screen.payload.get("hotspots")
+        if not isinstance(hotspots, list):
+            raise CatalogError(
+                f"Simulation screen '{screen.screen_key}' must include 'hotspots' array.",
+                status_code=422,
+            )
+
+        targets: set[str] = set()
+        for hotspot_index, hotspot in enumerate(hotspots):
+            if not isinstance(hotspot, dict):
+                raise CatalogError(
+                    f"Simulation screen '{screen.screen_key}' has invalid hotspot at index {hotspot_index + 1}.",
+                    status_code=422,
+                )
+            target = CatalogService._validate_simulation_hotspot(
+                screen_key=screen.screen_key,
+                hotspot=hotspot,
+                hotspot_index=hotspot_index,
+                known_screen_keys=known_screen_keys,
+            )
+            if target:
+                targets.add(target)
+
+        return is_start, is_completion, targets
+
+    @staticmethod
+    def _validate_simulation_hotspot(
+        screen_key: str,
+        hotspot: dict[str, Any],
+        hotspot_index: int,
+        known_screen_keys: set[str],
+    ) -> str | None:
+        coordinates = {
+            "x": hotspot.get("x"),
+            "y": hotspot.get("y"),
+            "width": hotspot.get("width"),
+            "height": hotspot.get("height"),
+        }
+
+        for field, value in coordinates.items():
+            if not _is_number(value):
+                raise CatalogError(
+                    f"Simulation hotspot #{hotspot_index + 1} in screen '{screen_key}' has non-numeric field '{field}'.",
+                    status_code=422,
+                )
+
+        x = float(coordinates["x"])
+        y = float(coordinates["y"])
+        width = float(coordinates["width"])
+        height = float(coordinates["height"])
+
+        if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > 100 or y + height > 100:
+            raise CatalogError(
+                f"Simulation hotspot #{hotspot_index + 1} in screen '{screen_key}' is out of bounds.",
+                status_code=422,
+            )
+
+        target_screen_key = hotspot.get("target_screen_key")
+        if target_screen_key is None:
+            return None
+
+        if not isinstance(target_screen_key, str):
+            raise CatalogError(
+                f"Simulation hotspot #{hotspot_index + 1} in screen '{screen_key}' has invalid target_screen_key.",
+                status_code=422,
+            )
+
+        if target_screen_key not in known_screen_keys:
+            raise CatalogError(
+                f"Simulation hotspot #{hotspot_index + 1} in screen '{screen_key}' points to unknown target '{target_screen_key}'.",
+                status_code=422,
+            )
+
+        return target_screen_key

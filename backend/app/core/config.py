@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     qr_ttl_hours: int = 24
     refresh_session_days: int = 30
     admin_phone_numbers: str = ""
+    admin_login: str = "admin"
+    admin_password: str = "admin12345"
+    simulation_media_dir: str = "storage/simulation_media"
+    simulation_media_max_mb: int = 8
     debug_return_otp_code: bool = False
 
 

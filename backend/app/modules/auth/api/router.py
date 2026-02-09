@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.modules.auth.api.schemas import (
+    AuthMeOut,
     AuthResponse,
+    LoginIn,
     LogoutOut,
     OtpRequestIn,
     OtpRequestOut,
@@ -11,7 +13,10 @@ from app.modules.auth.api.schemas import (
     RefreshTokenIn,
 )
 from app.modules.auth.domain.errors import AuthError
+from app.modules.auth.domain.permissions import permissions_for_role
 from app.modules.auth.domain.services import AuthService
+from app.modules.users.models import User
+from app.shared.auth.deps import get_current_user
 from app.shared.db.deps import get_db
 
 router = APIRouter()
@@ -36,6 +41,15 @@ def verify_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> AuthRespo
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
+@router.post("/login", response_model=AuthResponse)
+def login(payload: LoginIn, db: Session = Depends(get_db)) -> AuthResponse:
+    service = AuthService(db)
+    try:
+        return service.login(login=payload.login, password=payload.password)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
 @router.post("/qr/activate", response_model=AuthResponse)
 def activate_qr(payload: QrActivateIn, db: Session = Depends(get_db)) -> AuthResponse:
     service = AuthService(db)
@@ -52,6 +66,17 @@ def refresh_session(payload: RefreshTokenIn, db: Session = Depends(get_db)) -> A
         return service.refresh_session(payload.refresh_token)
     except AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.get("/me", response_model=AuthMeOut)
+def auth_me(current_user: User = Depends(get_current_user)) -> AuthMeOut:
+    return AuthMeOut(
+        user_id=current_user.id,
+        role=current_user.role.value,
+        status=current_user.status.value,
+        display_name=current_user.display_name,
+        permissions=permissions_for_role(current_user.role),
+    )
 
 
 @router.post("/logout", response_model=LogoutOut)

@@ -8,8 +8,9 @@ from app.core.config import settings
 from app.modules.auth.api.schemas import AuthResponse
 from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.infra.repository import AuthRepository
-from app.modules.users.models import UserRole, UserStatus
+from app.modules.users.models import User, UserRole, UserStatus
 from app.shared.security.hashing import stable_hash
+from app.shared.security.passwords import hash_password, verify_password
 from app.shared.security.tokens import generate_token, issue_access_token
 
 
@@ -19,6 +20,10 @@ def _utcnow() -> datetime:
 
 def _normalize_phone(phone: str) -> str:
     return "".join(char for char in phone if char.isdigit())
+
+
+def _normalize_login(login: str) -> str:
+    return login.strip().lower()
 
 
 def _generate_otp_code() -> str:
@@ -59,6 +64,29 @@ class AuthService:
         self.db.commit()
         dev_code = otp_code if settings.debug_return_otp_code else None
         return str(challenge.id), dev_code
+
+    def login(self, login: str, password: str) -> AuthResponse:
+        now = _utcnow()
+        normalized_login = _normalize_login(login)
+        if len(normalized_login) < 3:
+            raise AuthError("Invalid credentials.", status_code=401)
+        if len(password) < 8:
+            raise AuthError("Invalid credentials.", status_code=401)
+
+        user = self.repo.get_user_by_login(normalized_login)
+        if user is None:
+            user = self._bootstrap_admin_if_needed(normalized_login, password)
+            if user is None:
+                raise AuthError("Invalid credentials.", status_code=401)
+        else:
+            if user.status != UserStatus.ACTIVE:
+                raise AuthError("Invalid credentials.", status_code=401)
+            if not user.password_hash or not verify_password(password, user.password_hash):
+                raise AuthError("Invalid credentials.", status_code=401)
+
+        auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
+        self.db.commit()
+        return auth_response
 
     def verify_otp(self, phone: str, code: str) -> AuthResponse:
         now = _utcnow()
@@ -186,3 +214,20 @@ class AuthService:
         if normalized_phone in admin_phones:
             return UserRole.ADMINISTRATOR
         return UserRole.USER
+
+    def _bootstrap_admin_if_needed(self, login: str, password: str) -> User | None:
+        admin_login = _normalize_login(settings.admin_login)
+        if not admin_login:
+            return None
+
+        admin_password = settings.admin_password
+        if login != admin_login or not admin_password or password != admin_password:
+            return None
+
+        synthetic_phone_hash = stable_hash(f"login:{admin_login}", settings.security_pepper)
+        return self.repo.create_user(
+            phone_hash=synthetic_phone_hash,
+            role=UserRole.ADMINISTRATOR,
+            login=admin_login,
+            password_hash=hash_password(admin_password),
+        )

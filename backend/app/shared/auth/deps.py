@@ -22,10 +22,10 @@ def _auth_error(detail: str) -> HTTPException:
     )
 
 
-def get_current_actor(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-    db: Session = Depends(get_db),
-) -> CurrentActor:
+def _resolve_authenticated_user(
+    credentials: HTTPAuthorizationCredentials | None,
+    db: Session,
+) -> User:
     if credentials is None:
         raise _auth_error("Authorization token is required.")
     if credentials.scheme.lower() != "bearer":
@@ -41,6 +41,19 @@ def get_current_actor(
     if user is None or user.status != UserStatus.ACTIVE:
         raise _auth_error("User is inactive or not found.")
 
+    return user
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> User:
+    return _resolve_authenticated_user(credentials=credentials, db=db)
+
+
+def get_current_actor(
+    user: User = Depends(get_current_user),
+) -> CurrentActor:
     return CurrentActor(user_id=user.id, role=user.role)
 
 
