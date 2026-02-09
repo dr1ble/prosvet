@@ -1,28 +1,28 @@
 [versions]
-androidGradlePlugin = "8.2.2"
-kotlin = "1.9.22"
-compileSdk = "34"
+androidGradlePlugin = "8.7.3"
+kotlin = "2.3.0"
+compileSdk = "35"
 minSdk = "24"
-targetSdk = "34"
-androidxCore = "1.12.0"
-androidxLifecycle = "2.8.0"
-androidxActivity = "1.8.2"
-androidxNavigation = "2.8.0"
-androidxComposeBom = "2024.02.00"
-androidxComposeCompiler = "1.5.10"
-kotlinxCoroutines = "1.7.3"
-kotlinxSerializationJson = "1.6.2"
-kotlinxDatetime = "0.5.0"
+targetSdk = "35"
+androidxCore = "1.15.0"
+androidxLifecycle = "2.10.0"
+androidxActivity = "1.10.0"
+androidxNavigation = "2.8.5"
+androidxComposeBom = "2024.12.01"
+androidxComposeCompiler = "1.5.15"
+kotlinxCoroutines = "1.10.2"
+kotlinxSerializationJson = "1.10.0"
+kotlinxDatetime = "0.6.1"
 junit4 = "4.13.2"
-androidxTestExt = "1.1.5"
-espressoCore = "3.5.1"
+androidxTestExt = "1.2.1"
+espressoCore = "3.6.1"
 retrofit = "2.9.0"
 retrofitKotlinSerialization = "1.0.0"
 okhttp = "4.12.0"
-coil = "2.6.0"
-ktor = "2.3.8"
-composePlugin = "1.6.0"
-coil3 = "3.0.0-alpha10"
+coil = "2.7.0"
+ktor = "3.4.0"
+composePlugin = "1.10.0"
+coil3 = "3.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCore" }
@@ -69,4 +69,5 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "composePlugin" }

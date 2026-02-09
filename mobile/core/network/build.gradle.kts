@@ -13,20 +13,7 @@ kotlin {
     // androidTarget() // Enable when ready to move to android-specific client testing
 
     sourceSets {
-        iosX64Main.dependsOn(commonMain.get())
-        iosArm64Main.dependsOn(commonMain.get())
-        iosSimulatorArm64Main.dependsOn(commonMain.get())
-        
-        iosX64Main.dependencies {
-           implementation(libs.ktor.client.darwin)
-        }
-        iosArm64Main.dependencies {
-           implementation(libs.ktor.client.darwin)
-        }
-        iosSimulatorArm64Main.dependencies {
-           implementation(libs.ktor.client.darwin)
-        }
-
+        val commonMain by getting
         commonMain.dependencies {
             implementation(projects.core.model)
             implementation(libs.kotlinx.serialization.json)
@@ -38,9 +25,25 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
         }
         
+        val iosX64Main by getting
+        iosX64Main.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
+        
+        val iosArm64Main by getting
+        iosArm64Main.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
+        
+        val iosSimulatorArm64Main by getting
+        iosSimulatorArm64Main.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
+        
+        val jvmMain by getting
         jvmMain.dependencies {
              implementation(libs.ktor.client.okhttp)
-             // Keep Retrofit for now to avoid breaking existing code during transition, 
+             // Keep Retrofit for now to avoid breaking existing code during transition,
              // but strictly it should be removed or moved to jvmMain only if needed.
              // We will move existing Retrofit code to jvmMain to keep it compiling for now.
              implementation(libs.retrofit.core)

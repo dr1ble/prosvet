@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.kotlin.compose)
 }
 
 kotlin {
@@ -14,20 +15,7 @@ kotlin {
     iosSimulatorArm64()
 
     sourceSets {
-        iosX64Main.dependsOn(commonMain.get())
-        iosArm64Main.dependsOn(commonMain.get())
-        iosSimulatorArm64Main.dependsOn(commonMain.get())
-        
-        iosX64Main.dependencies {
-             implementation(libs.coil3.network.ktor)
-        }
-        iosArm64Main.dependencies {
-             implementation(libs.coil3.network.ktor)
-        }
-        iosSimulatorArm64Main.dependencies {
-             implementation(libs.coil3.network.ktor)
-        }
-
+        val commonMain by getting
         commonMain.dependencies {
             implementation(projects.feature.home.api)
             implementation(projects.core.common)
@@ -52,13 +40,30 @@ kotlin {
             // Network components are platform-specific
         }
         
+        val iosX64Main by getting
+        iosX64Main.dependencies {
+            implementation(libs.coil3.network.ktor)
+        }
+        
+        val iosArm64Main by getting
+        iosArm64Main.dependencies {
+            implementation(libs.coil3.network.ktor)
+        }
+        
+        val iosSimulatorArm64Main by getting
+        iosSimulatorArm64Main.dependencies {
+            implementation(libs.coil3.network.ktor)
+        }
+        
+        val androidMain by getting
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.coil3.network.okhttp)
         }
-
+        
+        val jvmMain by getting
         jvmMain.dependencies {
             implementation(libs.coil3.network.okhttp)
         }
