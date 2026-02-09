@@ -6,7 +6,11 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.modules.simulation.infra.models import SimulationDraft, SimulationMediaAsset
+from app.modules.simulation.infra.models import (
+    SimulationDraft,
+    SimulationLibraryItem,
+    SimulationMediaAsset,
+)
 from app.modules.simulation.infra.repository import SimulationRepository
 
 DEFAULT_SCOPE_KEY = "global"
@@ -69,6 +73,26 @@ def _normalize_release_date(value: str | None) -> date | None:
         return date.fromisoformat(normalized)
     except ValueError as exc:
         raise ValueError("released_at must use YYYY-MM-DD format.") from exc
+
+
+def _extract_library_metadata(
+    title: str | None,
+    payload_json: dict,
+) -> tuple[str, str | None]:
+    raw_title = (title or "").strip()
+    payload_title = str(payload_json.get("title", "")).strip()
+    normalized_title = (raw_title or payload_title or "Simulation snapshot")[:255]
+
+    target_app_name: str | None = None
+    raw_target_app = payload_json.get("targetApp")
+    if isinstance(raw_target_app, dict):
+        raw_app_name = raw_target_app.get("appName")
+        if isinstance(raw_app_name, str):
+            next_target_app_name = raw_app_name.strip()
+            if next_target_app_name:
+                target_app_name = next_target_app_name[:255]
+
+    return normalized_title, target_app_name
 
 
 class SimulationService:
@@ -237,3 +261,100 @@ class SimulationService:
         if not file_path.exists() or not file_path.is_file():
             return None
         return asset, file_path
+
+    def list_library_items(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        search_query: str,
+        limit: int,
+    ) -> list[SimulationLibraryItem]:
+        normalized_scope = normalize_scope_key(scope_key)
+        normalized_limit = max(1, min(limit, 100))
+        return self.repo.list_library_items(
+            owner_user_id=owner_user_id,
+            scope_key=normalized_scope,
+            search_query=search_query,
+            limit=normalized_limit,
+        )
+
+    def create_library_item(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        title: str | None,
+        payload_json: dict,
+    ) -> SimulationLibraryItem:
+        if not isinstance(payload_json, dict):
+            raise ValueError("payload_json must be a JSON object.")
+
+        normalized_scope = normalize_scope_key(scope_key)
+        normalized_title, target_app_name = _extract_library_metadata(
+            title=title,
+            payload_json=payload_json,
+        )
+
+        item = self.repo.create_library_item(
+            owner_user_id=owner_user_id,
+            scope_key=normalized_scope,
+            title=normalized_title,
+            target_app_name=target_app_name,
+            payload_json=payload_json,
+        )
+        self.db.commit()
+        return item
+
+    def update_library_item(
+        self,
+        owner_user_id: UUID,
+        item_id: UUID,
+        title: str | None,
+        payload_json: dict,
+    ) -> SimulationLibraryItem | None:
+        if not isinstance(payload_json, dict):
+            raise ValueError("payload_json must be a JSON object.")
+
+        item = self.repo.get_library_item_by_id(
+            owner_user_id=owner_user_id,
+            item_id=item_id,
+        )
+        if item is None:
+            return None
+
+        normalized_title, target_app_name = _extract_library_metadata(
+            title=title,
+            payload_json=payload_json,
+        )
+        updated = self.repo.update_library_item(
+            item=item,
+            title=normalized_title,
+            target_app_name=target_app_name,
+            payload_json=payload_json,
+        )
+        self.db.commit()
+        return updated
+
+    def get_library_item(
+        self,
+        owner_user_id: UUID,
+        item_id: UUID,
+    ) -> SimulationLibraryItem | None:
+        return self.repo.get_library_item_by_id(
+            owner_user_id=owner_user_id,
+            item_id=item_id,
+        )
+
+    def delete_library_item(
+        self,
+        owner_user_id: UUID,
+        item_id: UUID,
+    ) -> bool:
+        item = self.repo.get_library_item_by_id(
+            owner_user_id=owner_user_id,
+            item_id=item_id,
+        )
+        if item is None:
+            return False
+        self.repo.delete_library_item(item)
+        self.db.commit()
+        return True

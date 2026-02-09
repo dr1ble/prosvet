@@ -1,12 +1,24 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.modules.simulation.api.schemas import (
     SimulationDraftOut,
     SimulationDraftUpsertIn,
+    SimulationLibraryCreateIn,
+    SimulationLibraryItemOut,
+    SimulationLibraryListOut,
     SimulationMediaListOut,
     SimulationMediaUploadOut,
 )
@@ -154,3 +166,94 @@ def get_media_asset_file(
         media_type=asset.content_type,
         filename=asset.original_filename,
     )
+
+
+@router.get("/library", response_model=SimulationLibraryListOut)
+def list_library_items(
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    scope_key: str = Query(default="global", min_length=1, max_length=190),
+    search_query: str = Query(default="", max_length=120),
+    limit: int = Query(default=40, ge=1, le=100),
+) -> SimulationLibraryListOut:
+    service = SimulationService(db)
+    items = service.list_library_items(
+        owner_user_id=actor.user_id,
+        scope_key=scope_key,
+        search_query=search_query,
+        limit=limit,
+    )
+    return SimulationLibraryListOut(items=items)
+
+
+@router.post(
+    "/library",
+    response_model=SimulationLibraryItemOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_library_item(
+    payload: SimulationLibraryCreateIn,
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    scope_key: str = Query(default="global", min_length=1, max_length=190),
+) -> SimulationLibraryItemOut:
+    service = SimulationService(db)
+    try:
+        item = service.create_library_item(
+            owner_user_id=actor.user_id,
+            scope_key=scope_key,
+            title=payload.title,
+            payload_json=payload.payload_json,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return SimulationLibraryItemOut.model_validate(item)
+
+
+@router.get("/library/{item_id}", response_model=SimulationLibraryItemOut)
+def get_library_item(
+    item_id: UUID,
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+) -> SimulationLibraryItemOut:
+    service = SimulationService(db)
+    item = service.get_library_item(owner_user_id=actor.user_id, item_id=item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Library item not found.")
+    return SimulationLibraryItemOut.model_validate(item)
+
+
+@router.patch("/library/{item_id}", response_model=SimulationLibraryItemOut)
+def update_library_item(
+    item_id: UUID,
+    payload: SimulationLibraryCreateIn,
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+) -> SimulationLibraryItemOut:
+    service = SimulationService(db)
+    try:
+        item = service.update_library_item(
+            owner_user_id=actor.user_id,
+            item_id=item_id,
+            title=payload.title,
+            payload_json=payload.payload_json,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if item is None:
+        raise HTTPException(status_code=404, detail="Library item not found.")
+    return SimulationLibraryItemOut.model_validate(item)
+
+
+@router.delete("/library/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_library_item(
+    item_id: UUID,
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+) -> Response:
+    service = SimulationService(db)
+    deleted = service.delete_library_item(owner_user_id=actor.user_id, item_id=item_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Library item not found.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

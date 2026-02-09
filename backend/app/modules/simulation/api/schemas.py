@@ -49,3 +49,28 @@ class SimulationMediaListOut(_BaseSchema):
 
 class SimulationMediaUploadOut(_BaseSchema):
     asset: SimulationMediaAssetOut
+
+
+class SimulationLibraryCreateIn(_BaseSchema):
+    title: str | None = Field(default=None, max_length=255)
+    payload_json: dict[str, Any]
+
+
+class SimulationLibraryItemSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    owner_user_id: UUID
+    scope_key: str
+    title: str
+    target_app_name: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class SimulationLibraryItemOut(SimulationLibraryItemSummaryOut):
+    payload_json: dict[str, Any]
+
+
+class SimulationLibraryListOut(_BaseSchema):
+    items: list[SimulationLibraryItemSummaryOut]

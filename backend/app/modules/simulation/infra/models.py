@@ -79,3 +79,34 @@ class SimulationMediaAsset(Base):
         default=_utcnow,
         nullable=False,
     )
+
+
+class SimulationLibraryItem(Base):
+    __tablename__ = "simulation_library_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    scope_key: Mapped[str] = mapped_column(String(190), nullable=False, default="global")
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_app_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        onupdate=_utcnow,
+        nullable=False,
+    )
