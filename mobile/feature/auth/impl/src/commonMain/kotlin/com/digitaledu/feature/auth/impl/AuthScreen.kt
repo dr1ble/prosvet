@@ -30,6 +30,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -43,16 +44,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.designsystem.theme.DigitalEduTheme
 import kotlinx.coroutines.flow.collectLatest
+import org.koin.core.context.GlobalContext
 
 @Composable
 internal fun AuthRoute(
-    authRepository: AuthRepository,
     onAuthenticated: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AuthViewModel = viewModel(
-        factory = AuthViewModel.provideFactory(authRepository),
-    ),
 ) {
+    val authRepository = remember {
+        GlobalContext.get().get<AuthRepository>()
+    }
+    val viewModel: AuthViewModel = viewModel(
+        factory = AuthViewModel.provideFactory(authRepository),
+    )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {

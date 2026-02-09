@@ -19,7 +19,7 @@ data class CatalogScreen(
     val screenKey: String,
     val title: String,
     val orderIndex: Int,
-    val payloadPreview: String,
+    val payload: ScreenPayload,
 )
 
 data class CatalogBundle(

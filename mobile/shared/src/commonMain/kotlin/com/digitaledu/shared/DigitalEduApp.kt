@@ -5,19 +5,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.digitaledu.core.data.auth.AuthRepository
-import com.digitaledu.core.data.catalog.CatalogRepository
 import com.digitaledu.core.ui.CenteredLoadingIndicator
 import com.digitaledu.shared.navigation.AppNavHost
+import org.koin.core.context.GlobalContext
 
 @Composable
-fun DigitalEduApp(
-    authRepository: AuthRepository,
-    catalogRepository: CatalogRepository,
-) {
+fun DigitalEduApp() {
     val navController = rememberNavController()
+    val authRepository = remember {
+        GlobalContext.get().get<AuthRepository>()
+    }
 
     val sessionBootstrapState by produceState(
         initialValue = SessionBootstrapState.Loading,
@@ -45,8 +46,6 @@ fun DigitalEduApp(
             SessionBootstrapState.Authenticated -> {
                 AppNavHost(
                     navController = navController,
-                    authRepository = authRepository,
-                    catalogRepository = catalogRepository,
                     hasAuthenticatedSession = true,
                     modifier = Modifier.padding(innerPadding),
                 )
@@ -55,8 +54,6 @@ fun DigitalEduApp(
             SessionBootstrapState.Unauthenticated -> {
                 AppNavHost(
                     navController = navController,
-                    authRepository = authRepository,
-                    catalogRepository = catalogRepository,
                     hasAuthenticatedSession = false,
                     modifier = Modifier.padding(innerPadding),
                 )

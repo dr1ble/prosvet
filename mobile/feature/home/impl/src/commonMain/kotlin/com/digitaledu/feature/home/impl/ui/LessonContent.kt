@@ -2,8 +2,9 @@ package com.digitaledu.feature.home.impl.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,13 +12,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -25,13 +24,20 @@ import androidx.compose.ui.unit.dp
 import com.digitaledu.core.ui.CenteredLoadingIndicator
 import com.digitaledu.feature.home.impl.HomeUiState
 
+/**
+ * Displays the current learning progress and allows continuing the lesson in fullscreen.
+ * 
+ * Simplified UX:
+ * - Single card with course info + current screen preview
+ * - Primary action: "Продолжить обучение" (launches fullscreen player)
+ * - Secondary action: "Выбрать другой курс" (returns to catalog)
+ */
 @Composable
 fun LessonContent(
     uiState: HomeUiState,
     onBackToCatalog: () -> Unit,
     onOpenCatalog: () -> Unit,
-    onPreviousScreen: () -> Unit,
-    onNextScreen: () -> Unit,
+    onEnterFullscreen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val bundle = uiState.selectedBundle
@@ -70,91 +76,114 @@ fun LessonContent(
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        ElevatedCard(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+        // Single unified card with all information
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
             ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         ) {
             Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                // Course title
                 Text(
                     text = bundle.course.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-                Text(
-                    text = "Версия ${bundle.release.version}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(100)),
-                )
-                Text(
-                    text = "Экран ${uiState.currentScreenIndex + 1} из ${bundle.screens.size}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                
+                // Progress bar
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(100)),
+                    )
+                    Text(
+                        text = "Экран ${uiState.currentScreenIndex + 1} из ${bundle.screens.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Current screen preview
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = currentScreen?.title ?: "Содержимое временно недоступно",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = currentScreen?.payload?.getPayloadPreview() ?: "Открой другой курс или обнови релиз.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                    )
+                }
             }
         }
 
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-            ),
-        ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = currentScreen?.title ?: "Содержимое временно недоступно",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = currentScreen?.payloadPreview ?: "Открой другой курс или обнови релиз.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Row(
+        // Primary action: Continue learning
+        Button(
+            onClick = onEnterFullscreen,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            shape = RoundedCornerShape(12.dp),
         ) {
-            OutlinedButton(
-                onClick = onPreviousScreen,
-                enabled = uiState.canOpenPreviousScreen,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(text = "Назад")
-            }
-            Button(
-                onClick = onNextScreen,
-                enabled = uiState.canOpenNextScreen,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(text = "Дальше")
-            }
+            Text(
+                text = "Продолжить обучение",
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
         }
 
+        // Secondary action: Choose another course
         OutlinedButton(
             onClick = onBackToCatalog,
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
         ) {
-            Text(text = "Выбрать другой курс")
+            Text(
+                text = "Выбрать другой курс",
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+        }
+    }
+}
+
+private fun com.digitaledu.core.model.ScreenPayload.getPayloadPreview(): String {
+    return when (this) {
+        is com.digitaledu.core.model.ScreenPayload.Simulation -> {
+            buildString {
+                append("Интерактивная симуляция")
+                if (hotspots.isNotEmpty()) {
+                    append(" • ${hotspots.size} ")
+                    append(when (hotspots.size) {
+                        1 -> "активная зона"
+                        in 2..4 -> "активные зоны"
+                        else -> "активных зон"
+                    })
+                }
+                if (isStart) append(" • Начальный экран")
+                if (isCompletion) append(" • Завершение")
+            }
+        }
+        is com.digitaledu.core.model.ScreenPayload.Unknown -> {
+            if (raw.length <= 100) raw else "${raw.take(100)}..."
         }
     }
 }

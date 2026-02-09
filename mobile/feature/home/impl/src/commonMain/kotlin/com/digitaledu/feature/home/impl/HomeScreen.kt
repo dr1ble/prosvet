@@ -20,6 +20,7 @@ import com.digitaledu.core.model.CatalogCourse
 import com.digitaledu.feature.home.impl.ui.CoursesContent
 import com.digitaledu.feature.home.impl.ui.LessonContent
 import com.digitaledu.feature.home.impl.ui.ProfileContent
+import com.digitaledu.feature.home.impl.ui.player.LessonPlayerScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,9 +37,31 @@ fun HomeScreen(
     onOpenCatalog: () -> Unit,
     onPreviousScreen: () -> Unit,
     onNextScreen: () -> Unit,
+    onEnterFullscreen: () -> Unit,
+    onExitFullscreen: () -> Unit,
     onLogout: () -> Unit,
+    baseUrl: String,
+    mediaAccessToken: String?,
+    onNavigateToScreen: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Show fullscreen player if active
+    if (uiState.isFullscreenMode && uiState.selectedBundle != null) {
+        LessonPlayerScreen(
+            bundle = uiState.selectedBundle,
+            currentScreenIndex = uiState.currentScreenIndex,
+            baseUrl = baseUrl,
+            mediaAccessToken = mediaAccessToken,
+            completedScreens = uiState.completedScreens,
+            onExit = onExitFullscreen,
+            onPreviousScreen = onPreviousScreen,
+            onNextScreen = onNextScreen,
+            onNavigateToScreen = onNavigateToScreen,
+            modifier = modifier,
+        )
+        return
+    }
+    
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -47,7 +70,7 @@ fun HomeScreen(
                     Text(
                         text = when (selectedTab) {
                             HomeTab.Courses -> "Каталог курсов"
-                            HomeTab.Lesson -> "Прохождение курса"
+                            HomeTab.Lesson -> "Обучение"
                             HomeTab.Profile -> "Профиль"
                         },
                     )
@@ -97,8 +120,7 @@ fun HomeScreen(
                     uiState = uiState,
                     onBackToCatalog = onBackToCatalog,
                     onOpenCatalog = onOpenCatalog,
-                    onPreviousScreen = onPreviousScreen,
-                    onNextScreen = onNextScreen,
+                    onEnterFullscreen = onEnterFullscreen,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),

@@ -41,6 +41,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(libs.androidx.navigation.compose)
+            implementation(libs.koin.core)
         }
         
         androidMain.dependencies {

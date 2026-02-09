@@ -94,9 +94,21 @@ class HomeViewModel(
 
     fun goToNextScreen() {
         _uiState.update { currentState ->
-            val maxIndex = (currentState.selectedBundle?.screens?.lastIndex ?: 0).coerceAtLeast(0)
-            val nextIndex = (currentState.currentScreenIndex + 1).coerceAtMost(maxIndex)
-            currentState.copy(currentScreenIndex = nextIndex)
+            val bundle = currentState.selectedBundle ?: return@update currentState
+            val nextIndex = (currentState.currentScreenIndex + 1)
+                .coerceIn(0, bundle.screens.lastIndex)
+            
+            // Mark current screen as complete when moving to next
+            val updatedCompleted = if (nextIndex > currentState.currentScreenIndex) {
+                currentState.completedScreens + currentState.currentScreenIndex
+            } else {
+                currentState.completedScreens
+            }
+            
+            currentState.copy(
+                currentScreenIndex = nextIndex,
+                completedScreens = updatedCompleted
+            )
         }
     }
 
@@ -113,6 +125,59 @@ class HomeViewModel(
     fun dismissError() {
         _uiState.update { currentState ->
             currentState.copy(errorMessage = null)
+        }
+    }
+
+    fun enterFullscreenPlayer() {
+        _uiState.update { currentState ->
+            currentState.copy(isFullscreenMode = true)
+        }
+    }
+
+    fun exitFullscreenMode() {
+        _uiState.update { currentState ->
+            currentState.copy(isFullscreenMode = false)
+        }
+    }
+
+    /**
+     * Navigate to a screen by its screenKey.
+     * Used by hotspot clicks in simulations.
+     */
+    fun navigateToScreenKey(screenKey: String) {
+        _uiState.update { currentState ->
+            val bundle = currentState.selectedBundle ?: return@update currentState
+            val targetIndex = bundle.screens.indexOfFirst { it.screenKey == screenKey }
+            if (targetIndex >= 0) {
+                currentState.copy(currentScreenIndex = targetIndex)
+            } else {
+                currentState
+            }
+        }
+    }
+    
+    /**
+     * Mark the current screen as complete.
+     * Called when user navigates to next screen, indicating they've viewed current one.
+     */
+    fun markCurrentScreenComplete() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                completedScreens = currentState.completedScreens + currentState.currentScreenIndex
+            )
+        }
+    }
+    
+    /**
+     * Reset progress for the current bundle.
+     * Useful when starting a course over.
+     */
+    fun resetProgress() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                completedScreens = emptySet(),
+                currentScreenIndex = 0
+            )
         }
     }
 
@@ -133,6 +198,8 @@ data class HomeUiState(
     val selectedBundle: CatalogBundle? = null,
     val currentScreenIndex: Int = 0,
     val errorMessage: String? = null,
+    val isFullscreenMode: Boolean = false,
+    val completedScreens: Set<Int> = emptySet(), // Tracks completed screens by index
 ) {
     val currentScreen = selectedBundle?.screens?.getOrNull(currentScreenIndex)
 

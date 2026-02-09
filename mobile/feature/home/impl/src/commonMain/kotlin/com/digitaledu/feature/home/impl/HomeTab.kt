@@ -15,7 +15,7 @@ enum class HomeTab(
         icon = Icons.Rounded.Home,
     ),
     Lesson(
-        label = "Урок",
+        label = "Обучение",
         icon = Icons.AutoMirrored.Rounded.MenuBook,
     ),
     Profile(

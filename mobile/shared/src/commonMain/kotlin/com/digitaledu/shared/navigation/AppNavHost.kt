@@ -5,8 +5,6 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
-import com.digitaledu.core.data.auth.AuthRepository
-import com.digitaledu.core.data.catalog.CatalogRepository
 import com.digitaledu.feature.auth.api.AUTH_ROUTE
 import com.digitaledu.feature.auth.impl.authScreen
 import com.digitaledu.feature.home.api.HOME_ROUTE
@@ -15,8 +13,6 @@ import com.digitaledu.feature.home.impl.homeScreen
 @Composable
 fun AppNavHost(
     navController: NavHostController,
-    authRepository: AuthRepository,
-    catalogRepository: CatalogRepository,
     hasAuthenticatedSession: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -28,7 +24,6 @@ fun AppNavHost(
         modifier = modifier,
     ) {
         authScreen(
-            authRepository = authRepository,
             onAuthenticated = {
                 navController.navigate(HOME_ROUTE) {
                     popUpTo(AUTH_ROUTE) {
@@ -41,8 +36,6 @@ fun AppNavHost(
         )
 
         homeScreen(
-            catalogRepository = catalogRepository,
-            authRepository = authRepository,
             onLoggedOut = {
                 navController.navigate(AUTH_ROUTE) {
                     clearHomeFromBackStack()

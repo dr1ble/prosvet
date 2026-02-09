@@ -22,7 +22,9 @@ kotlin {
             // Add Core data for repository creation on Desktop
             implementation(projects.core.network)
             implementation(projects.core.designsystem)
+            implementation(projects.core.ui)
             implementation(libs.kotlinx.coroutines.swing)
+            implementation(libs.koin.core)
         }
     }
 }

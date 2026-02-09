@@ -31,13 +31,17 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodel.compose)
-            implementation(libs.androidx.lifecycle.runtime.compose)
-            implementation(libs.androidx.lifecycle.runtime.compose)
+            // lifecycle dependencies moved to jvmAndroid (iOS not supported)
             implementation(libs.androidx.navigation.compose)
             
             implementation(libs.coil3.compose)
+            implementation(libs.koin.core)
             // Network components are platform-specific
+        }
+        
+        // Create jvmAndroid source set for shared JVM/Android dependencies
+        val jvmAndroid by creating {
+            dependsOn(commonMain)
         }
         
         val iosX64Main by getting
@@ -56,16 +60,28 @@ kotlin {
         }
         
         val androidMain by getting
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.kotlinx.coroutines.android)
-            implementation(libs.coil3.network.okhttp)
+        androidMain.apply {
+            dependsOn(jvmAndroid)
+            dependencies {
+                implementation(compose.preview)
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.coil3.network.okhttp)
+                // Lifecycle dependencies (Android/JVM only)
+                implementation(libs.androidx.lifecycle.viewmodel.compose)
+                implementation(libs.androidx.lifecycle.runtime.compose)
+            }
         }
         
         val jvmMain by getting
-        jvmMain.dependencies {
-            implementation(libs.coil3.network.okhttp)
+        jvmMain.apply {
+            dependsOn(jvmAndroid)
+            dependencies {
+                implementation(libs.coil3.network.okhttp)
+                // Lifecycle dependencies (Android/JVM only)
+                implementation(libs.androidx.lifecycle.viewmodel.compose)
+                implementation(libs.androidx.lifecycle.runtime.compose)
+            }
         }
     }
 }

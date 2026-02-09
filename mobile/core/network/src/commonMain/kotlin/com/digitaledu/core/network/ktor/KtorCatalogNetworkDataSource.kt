@@ -4,6 +4,8 @@ import com.digitaledu.core.model.CatalogBundle
 import com.digitaledu.core.model.CatalogCourse
 import com.digitaledu.core.model.CatalogRelease
 import com.digitaledu.core.model.CatalogScreen
+import com.digitaledu.core.model.Hotspot
+import com.digitaledu.core.model.ScreenPayload
 import com.digitaledu.core.network.CatalogNetworkDataSource
 import com.digitaledu.core.network.NetworkException
 import io.ktor.client.HttpClient
@@ -71,7 +73,7 @@ class KtorCatalogNetworkDataSource(
                             screenKey = screen.screenKey,
                             title = screen.title,
                             orderIndex = screen.orderIndex,
-                            payloadPreview = screen.payload.toPayloadPreview(),
+                            payload = screen.payload.toScreenPayload(),
                         )
                     }
                     .sortedBy { it.orderIndex },
@@ -108,29 +110,58 @@ class KtorCatalogNetworkDataSource(
         }
     }
 
-    private fun JsonObject.toPayloadPreview(): String {
-        val title = primitiveString("title")
-        val body = primitiveString("body")
-        val assetKey = primitiveString("asset_key")
-        val preferredPreview = listOfNotNull(
-            title,
-            body,
-            assetKey?.let { "asset: $it" },
-        ).joinToString(" • ")
-        if (preferredPreview.isNotBlank()) {
-            return preferredPreview
+    private fun JsonObject.toScreenPayload(): ScreenPayload {
+        val type = primitiveString("type")
+        return when (type) {
+            "simulation" -> {
+                val imageUrl = primitiveString("image_url") ?: ""
+                val hotspotsArray = this["hotspots"] as? kotlinx.serialization.json.JsonArray
+                val hotspots = hotspotsArray?.mapNotNull { element ->
+                    (element as? JsonObject)?.toHotspot()
+                } ?: emptyList()
+                val isStart = primitiveBool("is_start")
+                val isCompletion = primitiveBool("is_completion")
+                
+                ScreenPayload.Simulation(
+                    imageUrl = imageUrl,
+                    hotspots = hotspots,
+                    isStart = isStart,
+                    isCompletion = isCompletion,
+                )
+            }
+            else -> ScreenPayload.Unknown(toString())
         }
-        val fallback = toString()
-        return if (fallback.length <= PAYLOAD_PREVIEW_LIMIT) {
-            fallback
-        } else {
-            "${fallback.take(PAYLOAD_PREVIEW_LIMIT)}..."
+    }
+    
+    private fun JsonObject.toHotspot(): Hotspot? {
+        return try {
+            Hotspot(
+                x = primitiveFloat("x") ?: return null,
+                y = primitiveFloat("y") ?: return null,
+                width = primitiveFloat("width") ?: return null,
+                height = primitiveFloat("height") ?: return null,
+                label = primitiveString("label") ?: "",
+                hint = primitiveString("hint") ?: "",
+                targetScreenKey = primitiveString("target_screen_key"),
+            )
+        } catch (e: Exception) {
+            null
         }
     }
 
     private fun JsonObject.primitiveString(key: String): String? {
         val primitive = this[key] as? JsonPrimitive ?: return null
         return primitive.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+    }
+    
+    private fun JsonObject.primitiveFloat(key: String): Float? {
+        val primitive = this[key] as? JsonPrimitive ?: return null
+        return primitive.contentOrNull?.toFloatOrNull()
+    }
+    
+    private fun JsonObject.primitiveBool(key: String): Boolean {
+        val primitive = this[key] as? JsonPrimitive ?: return false
+        return primitive.contentOrNull?.toBoolean() ?: false
     }
 
     companion object {

@@ -23,6 +23,7 @@ coil = "2.7.0"
 ktor = "3.4.0"
 composePlugin = "1.10.0"
 coil3 = "3.3.0"
+koin = "4.1.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCore" }
@@ -61,6 +62,7 @@ androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espres
 coil3-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
 coil3-network-ktor = { group = "io.coil-kt.coil3", name = "coil-network-ktor", version.ref = "coil3" }
 coil3-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil3" }
+koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
