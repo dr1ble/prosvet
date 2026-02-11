@@ -17,7 +17,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,9 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.digitaledu.core.model.CodeSnippet
 import com.digitaledu.core.model.CatalogBundle
 import com.digitaledu.core.model.Hotspot
+import com.digitaledu.core.model.LessonReference
+import com.digitaledu.core.model.ScreenPayload
 import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.feature.home.impl.ui.player.components.LessonCheatSheetView
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 
@@ -66,11 +73,42 @@ fun LessonPlayerScreen(
         delay(3000)
         controlsVisible = false
     }
-    
+
     val canGoPrevious = currentScreenIndex > 0
     val canGoNext = currentScreenIndex < bundle.screens.lastIndex
     val currentScreen = bundle.screens.getOrNull(currentScreenIndex)
     val progress = (currentScreenIndex + 1).toFloat() / bundle.screens.size.toFloat()
+    
+    // Check if current screen has context reference (Theory)
+    val contextRef = remember(currentScreen) {
+        (currentScreen?.payload as? ScreenPayload.Simulation)?.contextRef
+    }
+
+    // Bottom Sheet State for Theory logic
+    @OptIn(ExperimentalMaterial3Api::class)
+    val sheetState = rememberModalBottomSheetState()
+    var showTheorySheet by remember { mutableStateOf(false) }
+
+    // Mock Data for Theory (Temporary until backend ready)
+    val mockLessonReference = remember {
+        LessonReference(
+            id = "mock-ref-1",
+            lessonId = "lesson-1",
+            title = "Configuring Interfaces",
+            summaryText = "Interfaces are the point of connection between two devices or networks. Proper configuration ensures connectivity.",
+            keyPoints = listOf(
+                "Interfaces must have an IP address and subnet mask.",
+                "Use 'no shutdown' to enable the interface.",
+                "Changes usually require privileged EXEC mode."
+            ),
+            codeSnippets = listOf(
+                CodeSnippet("Enter Config Mode", "configure terminal"),
+                CodeSnippet("Select Interface", "interface gigabitEthernet 0/0"),
+                CodeSnippet("Set IP Address", "ip address 192.168.1.1 255.255.255.0"),
+                CodeSnippet("Enable Interface", "no shutdown")
+            )
+        )
+    }
     
     Box(
         modifier = modifier
@@ -177,8 +215,24 @@ fun LessonPlayerScreen(
             PlayerTopBar(
                 courseTitle = bundle.course.title,
                 onExit = { onIntent(PlayerIntent.ExitFullscreen) },
+                onShowTheory = if (contextRef != null) {
+                    { showTheorySheet = true }
+                } else null,
                 modifier = Modifier.padding(16.dp)
             )
+        }
+        
+        // Theory Bottom Sheet
+        if (showTheorySheet) {
+            @OptIn(ExperimentalMaterial3Api::class)
+            ModalBottomSheet(
+                onDismissRequest = { showTheorySheet = false },
+                sheetState = sheetState
+            ) {
+                LessonCheatSheetView(
+                    reference = mockLessonReference
+                )
+            }
         }
         
         // Bottom controls with enhanced animations

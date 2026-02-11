@@ -16,6 +16,7 @@ __pycache__/
 .venv/
 backend/dev.db
 backend/storage/
+backend/MagicMock/
 
 # Node / Next.js
 node_modules/

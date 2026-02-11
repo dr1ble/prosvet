@@ -4,6 +4,7 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Generator
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine
@@ -22,9 +23,8 @@ from app.modules.simulation.infra.models import Base as SimulationBase
 from app.modules.users.models import User, UserRole
 
 
-# Use test database from environment or override the base URL
-# For now, use main database due to pg_hba restrictions
-# TODO: Configure pg_hba.conf to allow external database creation
+# Use main database (test database needs pg_hba config for external creation)
+# For isolated tests, use mock repositories instead of real DB
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     settings.database_url.replace("localhost", "127.0.0.1")
@@ -33,7 +33,7 @@ TEST_DATABASE_URL = os.getenv(
 
 @pytest.fixture(scope="session")
 def test_engine():
-    """Create test database engine for the entire test session."""
+    """Create test database engine for# entire test session."""
     engine = create_engine(TEST_DATABASE_URL, echo=False)
     
     # Create all tables
@@ -82,73 +82,64 @@ def course_id() -> uuid.UUID:
 
 
 @pytest.fixture
-def active_user(db_session: Session, user_id: uuid.UUID) -> User:
-    """Create an active user for testing."""
-    user = User(
-        id=user_id,
-        login="testuser",
-        phone_hash="test_phone_hash",
-        password_hash="hash",
-        role=UserRole.USER,
-        status="active",
-    )
-    db_session.add(user)
-    db_session.flush()
-    return user
-
-
-@pytest.fixture
-def admin_user(db_session: Session) -> User:
-    """Create an admin user for testing."""
+def active_user():
+    """Mock active user for testing (no DB interaction)."""
     user_id = uuid.uuid4()
-    user = User(
-        id=user_id,
-        login="admin",
-        phone_hash="admin_phone_hash",
-        password_hash="hash",
-        role=UserRole.ADMINISTRATOR,
-        status="active",
-    )
-    db_session.add(user)
-    db_session.flush()
+    user = MagicMock()
+    user.id = user_id
+    user.login = "testuser"
+    user.phone_hash = "test_phone_hash"
+    user.password_hash = "hash"
+    user.role = UserRole.USER
+    user.status = "active"
     return user
 
 
 @pytest.fixture
-def course(db_session: Session, course_id: uuid.UUID) -> Course:
-    """Create a test course."""
-    course = Course(
-        id=course_id,
-        slug="test-course",
-        title="Test Course",
-        description="Test Description",
-        status="draft",
-    )
-    db_session.add(course)
-    db_session.flush()
+def admin_user():
+    """Mock admin user for testing (no DB interaction)."""
+    user_id = uuid.uuid4()
+    user = MagicMock()
+    user.id = user_id
+    user.login = "admin"
+    user.phone_hash = "admin_phone_hash"
+    user.password_hash = "hash"
+    user.role = UserRole.ADMINISTRATOR
+    user.status = "active"
+    return user
+
+
+@pytest.fixture
+def course():
+    """Mock course for testing (no DB interaction)."""
+    course_id = uuid.uuid4()
+    course = MagicMock(spec=Course)
+    course.id = course_id
+    course.slug = "test-course"
+    course.title = "Test Course"
+    course.description = "Test Description"
+    course.status = "draft"
     return course
 
 
 @pytest.fixture
-def published_course(db_session: Session, course_id: uuid.UUID) -> Course:
-    """Create a published test course with release."""
-    course = Course(
-        id=course_id,
-        slug="published-course",
-        title="Published Course",
-        description="Test Description",
-        status="published",
-    )
-    db_session.add(course)
+def published_course():
+    """Mock published test course (no DB interaction)."""
+    course_id = uuid.uuid4()
+    release_id = uuid.uuid4()
     
-    release = CourseRelease(
-        id=uuid.uuid4(),
-        course_id=course_id,
-        version="1.0.0",
-        status="published",
-        published_at=datetime.now(timezone.utc),
-        changelog="Initial release",
-    )
-    db_session.add(release)
-    db_session.flush()
+    course = MagicMock(spec=Course)
+    course.id = course_id
+    course.slug = "published-course"
+    course.title = "Published Course"
+    course.description = "Test Description"
+    course.status = "published"
+    
+    release = MagicMock(spec=CourseRelease)
+    release.id = release_id
+    release.version = "1.0.0"
+    release.status = "published"
+    release.published_at = datetime.now(timezone.utc)
+    release.changelog = "Initial release"
+    
     return course

@@ -18,6 +18,9 @@ import com.digitaledu.core.model.CatalogScreen
 import com.digitaledu.core.model.Hotspot
 import com.digitaledu.core.model.ScreenPayload
 import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.feature.home.impl.ui.player.components.ArticleViewer
+import com.digitaledu.feature.home.impl.ui.player.components.QuizView
+import com.digitaledu.feature.home.impl.ui.player.components.VideoPlayer
 
 /**
  * Renders the lesson content for the current screen based on payload type.
@@ -51,6 +54,29 @@ fun PlayerContent(
                 onResolveImageUrl = resolveUrl,
                 onHotspotClick = { onIntent(PlayerIntent.ClickHotspot(it)) },
                 onDismissHint = { onIntent(PlayerIntent.DismissHotspotHint) },
+                modifier = modifier,
+            )
+        }
+        is ScreenPayload.Video -> {
+            VideoPlayer(
+                payload = payload,
+                modifier = modifier,
+            )
+        }
+        is ScreenPayload.Article -> {
+            ArticleViewer(
+                title = screen.title,
+                payload = payload,
+                modifier = modifier,
+            )
+        }
+        is ScreenPayload.Quiz -> {
+            QuizView(
+                payload = payload,
+                onQuizCompleted = { 
+                    // TODO: Handle quiz completion logic (unlock next screen, save cheat sheet)
+                    onIntent(PlayerIntent.Next) 
+                },
                 modifier = modifier,
             )
         }

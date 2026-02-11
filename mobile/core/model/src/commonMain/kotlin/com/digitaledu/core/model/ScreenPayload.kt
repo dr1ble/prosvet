@@ -9,21 +9,41 @@ package com.digitaledu.core.model
 sealed interface ScreenPayload {
     /**
      * Interactive simulation with clickable hotspots.
-     * 
-     * Used for step-by-step guided simulations where users click on specific
-     * areas of an image to progress through the lesson.
      */
     data class Simulation(
         val imageUrl: String,
         val hotspots: List<Hotspot>,
         val isStart: Boolean = false,
         val isCompletion: Boolean = false,
+        val contextRef: String? = null // Link to specific section in Article/Reference
+    ) : ScreenPayload
+
+    /**
+     * Video lecture with optional transcript.
+     */
+    data class Video(
+        val videoUrl: String,
+        val durationSec: Long,
+        val transcript: String? = null
+    ) : ScreenPayload
+
+    /**
+     * Rich text article (lesson notes) using Markdown.
+     */
+    data class Article(
+        val markdownContent: String,
+        val assets: List<String> = emptyList()
+    ) : ScreenPayload
+
+    /**
+     * Assessment/Quiz screen.
+     */
+    data class Quiz(
+        val questions: List<QuizQuestion>
     ) : ScreenPayload
     
     /**
      * Unknown or unsupported payload type.
-     * 
-     * Contains the raw JSON string for debugging or future compatibility.
      */
     data class Unknown(val raw: String) : ScreenPayload
 }
