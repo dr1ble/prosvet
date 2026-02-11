@@ -10,12 +10,19 @@ Starts local development stack:
 - PostgreSQL (Docker Compose)
 - Backend (FastAPI + Uvicorn, autoreload)
 - Web admin (Next.js dev server)
+- CodeGraphContext watcher (auto reindex on file changes)
 
 Environment overrides:
 - BACKEND_HOST (default: 127.0.0.1)
 - BACKEND_PORT (default: 8000)
 - WEB_HOST (default: 127.0.0.1)
 - WEB_PORT (default: 3000)
+- CGC_WATCH (default: 1, set 0 to disable)
+- CGC_WATCH_PATH (default: project root)
+- KG_MEMORY_SYNC (default: 1, set 0 to disable auto sync)
+- KG_MEMORY_SYNC_MODE (default: auto, values: auto|force)
+- KG_MEMORY_FILE (default: .context/operations/kg_memory.jsonl)
+- AUTO_INSTALL_BACKEND_DEPS (default: 1, set 0 to disable auto pip install)
 USAGE
   exit 0
 fi
@@ -24,11 +31,37 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 WEB_DIR="$ROOT_DIR/web-admin"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
+STATE_DIR="$ROOT_DIR/.run"
+BACKEND_PID_FILE="$STATE_DIR/backend.pid"
+WEB_PID_FILE="$STATE_DIR/web.pid"
+CGC_PID_FILE="$STATE_DIR/codegraph-watch.pid"
 
 BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 WEB_HOST="${WEB_HOST:-127.0.0.1}"
 WEB_PORT="${WEB_PORT:-3000}"
+CGC_WATCH="${CGC_WATCH:-1}"
+CGC_WATCH_PATH="${CGC_WATCH_PATH:-$ROOT_DIR}"
+KG_MEMORY_SYNC="${KG_MEMORY_SYNC:-1}"
+KG_MEMORY_SYNC_MODE="${KG_MEMORY_SYNC_MODE:-auto}"
+KG_MEMORY_FILE="${KG_MEMORY_FILE:-$ROOT_DIR/.context/operations/kg_memory.jsonl}"
+KG_SEED_SCRIPT="$ROOT_DIR/scripts/seed_kg_memory.py"
+AUTO_INSTALL_BACKEND_DEPS="${AUTO_INSTALL_BACKEND_DEPS:-1}"
+
+if [[ "$CGC_WATCH_PATH" != /* ]]; then
+  CGC_WATCH_PATH="$ROOT_DIR/$CGC_WATCH_PATH"
+fi
+
+if [[ "$KG_MEMORY_FILE" != /* ]]; then
+  KG_MEMORY_FILE="$ROOT_DIR/$KG_MEMORY_FILE"
+fi
+
+mkdir -p "$STATE_DIR"
+
+install_backend_requirements() {
+  echo "[run] Installing backend dependencies from requirements-dev.txt..."
+  python3 -m pip install -r "$BACKEND_DIR/requirements-dev.txt"
+}
 
 require_cmd() {
   local cmd="$1"
@@ -42,6 +75,7 @@ require_cmd docker
 require_cmd python3
 require_cmd npm
 require_cmd lsof
+require_cmd pgrep
 
 kill_listening_on_port() {
   local port="$1"
@@ -71,21 +105,202 @@ kill_listening_on_port() {
   done
 }
 
+kill_pid_from_file() {
+  local pid_file="$1"
+  local label="$2"
+  local pid
+
+  if [[ ! -f "$pid_file" ]]; then
+    return
+  fi
+
+  pid="$(cat "$pid_file" 2>/dev/null || true)"
+  rm -f "$pid_file"
+
+  if [[ -z "$pid" ]] || ! [[ "$pid" =~ ^[0-9]+$ ]]; then
+    return
+  fi
+
+  if ! kill -0 "$pid" 2>/dev/null; then
+    return
+  fi
+
+  echo "[run] Found stale $label process from previous run: $pid. Stopping..."
+  kill "$pid" 2>/dev/null || true
+  sleep 1
+
+  if kill -0 "$pid" 2>/dev/null; then
+    echo "[run] Force stopping stale $label process: $pid"
+    kill -9 "$pid" 2>/dev/null || true
+  fi
+}
+
+kill_matching_processes() {
+  local pattern="$1"
+  local label="$2"
+  local pids
+
+  pids="$(pgrep -f "$pattern" || true)"
+  if [[ -z "$pids" ]]; then
+    return
+  fi
+
+  echo "[run] Found stale $label process(es): $pids. Stopping..."
+  for pid in $pids; do
+    kill "$pid" 2>/dev/null || true
+  done
+  sleep 1
+  for pid in $pids; do
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "[run] Force stopping stale $label process: $pid"
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  done
+}
+
+kill_codegraph_watch_for_path() {
+  local watch_path="$1"
+  local pids
+
+  pids="$(ps -ax -o pid= -o command= | awk -v p="$watch_path" 'index($0, "codegraphcontext watch") && index($0, p) {print $1}')"
+  if [[ -z "$pids" ]]; then
+    return
+  fi
+
+  echo "[run] Found existing CodeGraphContext watcher(s) for $watch_path: $pids. Stopping..."
+  for pid in $pids; do
+    kill "$pid" 2>/dev/null || true
+  done
+  sleep 1
+  for pid in $pids; do
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "[run] Force stopping CodeGraphContext watcher: $pid"
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  done
+}
+
+cleanup_stale_processes() {
+  kill_listening_on_port "$BACKEND_PORT" "backend"
+  if [[ "$WEB_PORT" != "$BACKEND_PORT" ]]; then
+    kill_listening_on_port "$WEB_PORT" "web-admin"
+  fi
+
+  kill_pid_from_file "$BACKEND_PID_FILE" "backend"
+  kill_pid_from_file "$WEB_PID_FILE" "web-admin"
+  kill_pid_from_file "$CGC_PID_FILE" "codegraphcontext-watch"
+  kill_matching_processes "uvicorn app.main:app" "backend"
+  kill_matching_processes "next dev -- --hostname" "web-admin"
+  kill_matching_processes "next dev --hostname" "web-admin"
+
+  if [[ "$CGC_WATCH" == "1" ]]; then
+    if [[ ! -d "$CGC_WATCH_PATH" ]]; then
+      echo "[run] CGC_WATCH_PATH does not exist: $CGC_WATCH_PATH"
+      exit 1
+    fi
+    kill_codegraph_watch_for_path "$CGC_WATCH_PATH"
+  fi
+}
+
+has_newer_context_than_memory() {
+  if [[ ! -f "$KG_MEMORY_FILE" ]]; then
+    return 0
+  fi
+
+  if [[ -f "$ROOT_DIR/Claude.md" ]] && [[ "$ROOT_DIR/Claude.md" -nt "$KG_MEMORY_FILE" ]]; then
+    return 0
+  fi
+
+  if [[ "$KG_SEED_SCRIPT" -nt "$KG_MEMORY_FILE" ]]; then
+    return 0
+  fi
+
+  if [[ -d "$ROOT_DIR/.context" ]]; then
+    local newer
+    newer="$(find "$ROOT_DIR/.context" -type f -name '*.md' -newer "$KG_MEMORY_FILE" -print -quit 2>/dev/null || true)"
+    if [[ -n "$newer" ]]; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+sync_knowledge_memory_if_needed() {
+  if [[ "$KG_MEMORY_SYNC" != "1" ]]; then
+    return
+  fi
+
+  if [[ ! -f "$KG_SEED_SCRIPT" ]]; then
+    echo "[run] KG memory seed script not found: $KG_SEED_SCRIPT"
+    echo "[run] Skipping knowledge-memory sync."
+    return
+  fi
+
+  local should_sync=0
+  case "$KG_MEMORY_SYNC_MODE" in
+    force)
+      should_sync=1
+      ;;
+    auto)
+      if has_newer_context_than_memory; then
+        should_sync=1
+      fi
+      ;;
+    *)
+      echo "[run] Unknown KG_MEMORY_SYNC_MODE='$KG_MEMORY_SYNC_MODE'. Expected: auto|force"
+      exit 1
+      ;;
+  esac
+
+  if [[ "$should_sync" -eq 0 ]]; then
+    echo "[run] Knowledge memory is up to date."
+    return
+  fi
+
+  echo "[run] Syncing knowledge-memory graph ($KG_MEMORY_SYNC_MODE)..."
+  if python3 "$KG_SEED_SCRIPT" --project-root "$ROOT_DIR" --memory-file "$KG_MEMORY_FILE" --replace; then
+    echo "[run] Knowledge-memory sync completed."
+  else
+    echo "[run] Knowledge-memory sync failed. Continuing startup."
+  fi
+}
+
 if ! docker info >/dev/null 2>&1; then
   echo "[run] Docker daemon is not running. Start Docker Desktop and retry."
   exit 1
 fi
 
-if ! python3 -c "import uvicorn, alembic, multipart" >/dev/null 2>&1; then
-  echo "[run] Python dependencies are missing."
-  echo "[run] Install with: python3 -m pip install -r $BACKEND_DIR/requirements-dev.txt"
-  exit 1
+if ! python3 -c "import uvicorn, alembic" >/dev/null 2>&1; then
+  if [[ "$AUTO_INSTALL_BACKEND_DEPS" == "1" ]]; then
+    install_backend_requirements
+  else
+    echo "[run] Python dependencies are missing."
+    echo "[run] Install with: python3 -m pip install -r $BACKEND_DIR/requirements-dev.txt"
+    exit 1
+  fi
+fi
+
+if ! python3 -c "from fastapi.dependencies.utils import ensure_multipart_is_installed; ensure_multipart_is_installed()" >/dev/null 2>&1; then
+  if [[ "$AUTO_INSTALL_BACKEND_DEPS" == "1" ]]; then
+    echo "[run] Fixing multipart support for FastAPI..."
+    python3 -m pip install "python-multipart>=0.0.9,<1.0"
+  else
+    echo "[run] FastAPI multipart support is missing in current Python environment."
+    echo "[run] Install with: python3 -m pip install 'python-multipart>=0.0.9,<1.0'"
+    exit 1
+  fi
 fi
 
 if [[ ! -d "$WEB_DIR/node_modules" ]]; then
   echo "[run] Installing web dependencies..."
   (cd "$WEB_DIR" && npm install)
 fi
+
+echo "[run] Cleaning stale local dev processes..."
+cleanup_stale_processes
+
+sync_knowledge_memory_if_needed
 
 echo "[run] Starting PostgreSQL container..."
 docker compose -f "$COMPOSE_FILE" up -d postgres >/dev/null
@@ -107,11 +322,6 @@ fi
 echo "[run] Applying backend migrations..."
 (cd "$BACKEND_DIR" && python3 -m alembic upgrade head)
 
-kill_listening_on_port "$BACKEND_PORT" "backend"
-if [[ "$WEB_PORT" != "$BACKEND_PORT" ]]; then
-  kill_listening_on_port "$WEB_PORT" "web-admin"
-fi
-
 cleanup() {
   local code=$?
   trap - INT TERM EXIT
@@ -124,8 +334,14 @@ cleanup() {
     kill "$WEB_PID" 2>/dev/null || true
   fi
 
+  if [[ -n "${CGC_PID:-}" ]] && kill -0 "$CGC_PID" 2>/dev/null; then
+    kill "$CGC_PID" 2>/dev/null || true
+  fi
+
   wait "${BACKEND_PID:-}" 2>/dev/null || true
   wait "${WEB_PID:-}" 2>/dev/null || true
+  wait "${CGC_PID:-}" 2>/dev/null || true
+  rm -f "$BACKEND_PID_FILE" "$WEB_PID_FILE" "$CGC_PID_FILE"
 
   echo "[run] Dev processes stopped."
   exit "$code"
@@ -138,6 +354,7 @@ echo "[run] Starting backend on http://$BACKEND_HOST:$BACKEND_PORT"
   python3 -m uvicorn app.main:app --host "$BACKEND_HOST" --port "$BACKEND_PORT" --reload
 ) &
 BACKEND_PID=$!
+echo "$BACKEND_PID" >"$BACKEND_PID_FILE"
 
 echo "[run] Starting web admin on http://$WEB_HOST:$WEB_PORT"
 (
@@ -145,10 +362,29 @@ echo "[run] Starting web admin on http://$WEB_HOST:$WEB_PORT"
   npm run dev -- --hostname "$WEB_HOST" --port "$WEB_PORT"
 ) &
 WEB_PID=$!
+echo "$WEB_PID" >"$WEB_PID_FILE"
+
+if [[ "$CGC_WATCH" == "1" ]]; then
+  if python3 -m codegraphcontext --version >/dev/null 2>&1; then
+    echo "[run] Starting CodeGraphContext watch on $CGC_WATCH_PATH"
+    (
+      cd "$ROOT_DIR"
+      python3 -m codegraphcontext watch "$CGC_WATCH_PATH"
+    ) &
+    CGC_PID=$!
+    echo "$CGC_PID" >"$CGC_PID_FILE"
+  else
+    echo "[run] CodeGraphContext is not installed. Skipping watcher."
+    echo "[run] Install with: python3 -m pip install codegraphcontext"
+  fi
+fi
 
 echo "[run] Ready"
 echo "[run] Web:     http://$WEB_HOST:$WEB_PORT"
 echo "[run] Backend: http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health"
+if [[ -n "${CGC_PID:-}" ]]; then
+  echo "[run] CGC:     watching $CGC_WATCH_PATH"
+fi
 echo "[run] Press Ctrl+C to stop"
 
 while true; do
@@ -162,6 +398,13 @@ while true; do
     echo "[run] Web admin process exited unexpectedly."
     wait "$WEB_PID" || true
     exit 1
+  fi
+
+  if [[ -n "${CGC_PID:-}" ]] && ! kill -0 "$CGC_PID" 2>/dev/null; then
+    echo "[run] CodeGraphContext watcher exited. Continuing without watcher."
+    wait "$CGC_PID" || true
+    rm -f "$CGC_PID_FILE"
+    CGC_PID=""
   fi
 
   sleep 1
