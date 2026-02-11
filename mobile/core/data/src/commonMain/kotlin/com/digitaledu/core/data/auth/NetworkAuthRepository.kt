@@ -4,10 +4,8 @@ import com.digitaledu.core.model.AuthTokens
 import com.digitaledu.core.model.OtpChallenge
 import com.digitaledu.core.network.AuthNetworkDataSource
 import com.digitaledu.core.network.NetworkException
-import com.digitaledu.core.network.createKtorAuthNetworkDataSource
-import java.util.concurrent.atomic.AtomicReference
 
-class NetworkAuthRepository internal constructor(
+class NetworkAuthRepository(
     private val networkDataSource: AuthNetworkDataSource,
     private val authSessionStore: AuthSessionStore,
 ) : AuthRepository {
@@ -81,6 +79,10 @@ class NetworkAuthRepository internal constructor(
         return authSessionStore.current()
     }
 
+    override fun observeTokens(): kotlinx.coroutines.flow.Flow<AuthTokens?> {
+        return authSessionStore.observe()
+    }
+
     override fun clearSession() {
         authSessionStore.clear()
     }
@@ -96,36 +98,25 @@ class NetworkAuthRepository internal constructor(
     }
 }
 
-fun createAuthRepository(
-    baseUrl: String,
-    enableNetworkLogs: Boolean,
-    authSessionStore: AuthSessionStore = InMemoryAuthSessionStore(),
-): AuthRepository {
-    return NetworkAuthRepository(
-        networkDataSource = createKtorAuthNetworkDataSource(
-            baseUrl = baseUrl,
-            enableNetworkLogs = enableNetworkLogs,
-        ),
-        authSessionStore = authSessionStore,
-    )
-}
-
 interface AuthSessionStore {
     fun current(): AuthTokens?
+    fun observe(): kotlinx.coroutines.flow.Flow<AuthTokens?>
     fun update(tokens: AuthTokens)
     fun clear()
 }
 
-internal class InMemoryAuthSessionStore : AuthSessionStore {
-    private val state = AtomicReference<AuthTokens?>(null)
+class InMemoryAuthSessionStore : AuthSessionStore {
+    private val state = kotlinx.coroutines.flow.MutableStateFlow<AuthTokens?>(null)
 
-    override fun current(): AuthTokens? = state.get()
+    override fun current(): AuthTokens? = state.value
+
+    override fun observe(): kotlinx.coroutines.flow.Flow<AuthTokens?> = state
 
     override fun update(tokens: AuthTokens) {
-        state.set(tokens)
+        state.value = tokens
     }
 
     override fun clear() {
-        state.set(null)
+        state.value = null
     }
 }

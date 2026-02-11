@@ -1,95 +1,90 @@
 package com.digitaledu.feature.home.impl
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.digitaledu.core.common.di.BACKEND_BASE_URL_QUALIFIER
 import com.digitaledu.core.data.auth.AuthRepository
-import com.digitaledu.core.data.catalog.CatalogRepository
-import kotlinx.coroutines.launch
-import org.koin.core.context.GlobalContext
-import org.koin.core.qualifier.named
+import com.digitaledu.core.ui.ObserveEffects
+import com.digitaledu.feature.home.impl.catalog.CatalogEffect
+import com.digitaledu.feature.home.impl.catalog.CatalogIntent
+import com.digitaledu.feature.home.impl.catalog.CatalogViewModel
+import com.digitaledu.feature.home.impl.player.PlayerEffect
+import com.digitaledu.feature.home.impl.player.PlayerViewModel
+import com.digitaledu.feature.home.impl.profile.ProfileEffect
+import com.digitaledu.feature.home.impl.profile.ProfileIntent
+import com.digitaledu.feature.home.impl.profile.ProfileViewModel
+import org.koin.mp.KoinPlatform
 
 @Composable
 fun HomeRoute(
     onLoggedOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val authRepository = remember {
-        GlobalContext.get().get<AuthRepository>()
-    }
-    val catalogRepository = remember {
-        GlobalContext.get().get<CatalogRepository>()
-    }
-    val backendBaseUrl = remember {
-        GlobalContext.get().get<String>(qualifier = named(BACKEND_BASE_URL_QUALIFIER))
-    }
-    val viewModel: HomeViewModel = viewModel(
-        factory = HomeViewModel.provideFactory(catalogRepository),
-    )
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Courses) }
-    var isLoggingOut by rememberSaveable { mutableStateOf(false) }
-    var profileErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
+    val koin = remember { KoinPlatform.getKoin() }
+    val catalogViewModel = remember { koin.get<CatalogViewModel>() }
+    val playerViewModel = remember { koin.get<PlayerViewModel>() }
+    val profileViewModel = remember { koin.get<ProfileViewModel>() }
 
-    LaunchedEffect(uiState.errorMessage) {
-        val message = uiState.errorMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(message = message)
-        viewModel.dismissError()
+    val catalogUiState by catalogViewModel.uiState.collectAsState()
+    val playerUiState by playerViewModel.uiState.collectAsState()
+    val profileUiState by profileViewModel.uiState.collectAsState()
+
+    var selectedTab by remember { mutableStateOf(HomeTab.Courses) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(catalogUiState.errorMessage, profileUiState.errorMessage) {
+        catalogUiState.errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(message = message)
+            catalogViewModel.processIntent(CatalogIntent.DismissError)
+        }
+        profileUiState.errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(message = message)
+            profileViewModel.processIntent(ProfileIntent.DismissError)
+        }
     }
 
-    val mediaAccessToken = authRepository.getCachedTokens()?.accessToken
+    ObserveEffects(catalogViewModel.effects) { effect ->
+        if (effect is CatalogEffect.CourseOpened) {
+            playerViewModel.openBundle(effect.bundle)
+            selectedTab = HomeTab.Lesson
+        }
+    }
+
+    ObserveEffects(playerViewModel.effects) { effect ->
+        if (effect is PlayerEffect.Closed) {
+            selectedTab = HomeTab.Courses
+        }
+    }
+
+    ObserveEffects(profileViewModel.effects) { effect ->
+        if (effect is ProfileEffect.LoggedOut) {
+            onLoggedOut()
+        }
+    }
+
+    val authTokens by remember { koin.get<AuthRepository>().observeTokens() }
+        .collectAsState(initial = koin.get<AuthRepository>().getCachedTokens())
+
+    val mediaAccessToken = authTokens?.accessToken
 
     HomeScreen(
         selectedTab = selectedTab,
-        onTabSelected = { selectedTab = it },
-        uiState = uiState,
-        isLoggingOut = isLoggingOut,
-        profileErrorMessage = profileErrorMessage,
-        snackbarHostState = snackbarHostState,
-        onRefreshCourses = viewModel::loadCourses,
-        onCourseClick = { course ->
-            selectedTab = HomeTab.Lesson
-            viewModel.openCourse(courseSlug = course.slug)
-        },
-        onBackToCatalog = {
-            selectedTab = HomeTab.Courses
-            viewModel.closeCourse()
-        },
-        onOpenCatalog = { selectedTab = HomeTab.Courses },
-        onPreviousScreen = viewModel::goToPreviousScreen,
-        onNextScreen = viewModel::goToNextScreen,
-        onEnterFullscreen = viewModel::enterFullscreenPlayer,
-        onExitFullscreen = viewModel::exitFullscreenMode,
-        baseUrl = backendBaseUrl,
+        onTabSelected = { tab -> selectedTab = tab },
+        catalogUiState = catalogUiState,
+        playerUiState = playerUiState,
+        profileUiState = profileUiState,
         mediaAccessToken = mediaAccessToken,
-        onNavigateToScreen = viewModel::navigateToScreenKey,
-        onLogout = {
-            if (isLoggingOut) return@HomeScreen
-
-            coroutineScope.launch {
-                isLoggingOut = true
-                profileErrorMessage = null
-                runCatching {
-                    authRepository.logout()
-                }.onSuccess {
-                    onLoggedOut()
-                }.onFailure { throwable ->
-                    profileErrorMessage = throwable.message ?: "Не удалось выйти из профиля"
-                }
-                isLoggingOut = false
-            }
-        },
+        resolveUrl = playerViewModel::resolveImageUrl,
+        snackbarHostState = snackbarHostState,
+        onCatalogIntent = catalogViewModel::processIntent,
+        onPlayerIntent = playerViewModel::processIntent,
+        onProfileIntent = profileViewModel::processIntent,
         modifier = modifier,
     )
 }

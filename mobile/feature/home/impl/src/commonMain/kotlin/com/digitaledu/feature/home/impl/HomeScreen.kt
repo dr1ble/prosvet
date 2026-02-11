@@ -16,7 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.digitaledu.core.model.CatalogCourse
+import com.digitaledu.feature.home.impl.catalog.CatalogIntent
+import com.digitaledu.feature.home.impl.catalog.CatalogUiState
+import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.feature.home.impl.player.PlayerUiState
+import com.digitaledu.feature.home.impl.profile.ProfileIntent
+import com.digitaledu.feature.home.impl.profile.ProfileUiState
 import com.digitaledu.feature.home.impl.ui.CoursesContent
 import com.digitaledu.feature.home.impl.ui.LessonContent
 import com.digitaledu.feature.home.impl.ui.ProfileContent
@@ -27,41 +32,32 @@ import com.digitaledu.feature.home.impl.ui.player.LessonPlayerScreen
 fun HomeScreen(
     selectedTab: HomeTab,
     onTabSelected: (HomeTab) -> Unit,
-    uiState: HomeUiState,
-    isLoggingOut: Boolean,
-    profileErrorMessage: String?,
-    snackbarHostState: SnackbarHostState,
-    onRefreshCourses: () -> Unit,
-    onCourseClick: (CatalogCourse) -> Unit,
-    onBackToCatalog: () -> Unit,
-    onOpenCatalog: () -> Unit,
-    onPreviousScreen: () -> Unit,
-    onNextScreen: () -> Unit,
-    onEnterFullscreen: () -> Unit,
-    onExitFullscreen: () -> Unit,
-    onLogout: () -> Unit,
-    baseUrl: String,
+    catalogUiState: CatalogUiState,
+    playerUiState: PlayerUiState,
+    profileUiState: ProfileUiState,
     mediaAccessToken: String?,
-    onNavigateToScreen: (String) -> Unit,
+    resolveUrl: (String) -> String,
+    snackbarHostState: SnackbarHostState,
+    onCatalogIntent: (CatalogIntent) -> Unit,
+    onPlayerIntent: (PlayerIntent) -> Unit,
+    onProfileIntent: (ProfileIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Show fullscreen player if active
-    if (uiState.isFullscreenMode && uiState.selectedBundle != null) {
+    if (playerUiState.isFullscreenMode && playerUiState.hasBundle) {
+        val bundle = playerUiState.bundle ?: return
         LessonPlayerScreen(
-            bundle = uiState.selectedBundle,
-            currentScreenIndex = uiState.currentScreenIndex,
-            baseUrl = baseUrl,
+            bundle = bundle,
+            currentScreenIndex = playerUiState.currentScreenIndex,
             mediaAccessToken = mediaAccessToken,
-            completedScreens = uiState.completedScreens,
-            onExit = onExitFullscreen,
-            onPreviousScreen = onPreviousScreen,
-            onNextScreen = onNextScreen,
-            onNavigateToScreen = onNavigateToScreen,
+            activeHotspotHint = playerUiState.activeHotspotHint,
+            completedScreens = playerUiState.completedScreens,
+            onIntent = onPlayerIntent,
+            resolveUrl = resolveUrl,
             modifier = modifier,
         )
         return
     }
-    
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -76,7 +72,7 @@ fun HomeScreen(
                     )
                 },
                 actions = {
-                    if (uiState.isLoading && selectedTab != HomeTab.Profile) {
+                    if (catalogUiState.isLoading && selectedTab != HomeTab.Profile) {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .padding(end = 16.dp)
@@ -106,9 +102,8 @@ fun HomeScreen(
         when (selectedTab) {
             HomeTab.Courses -> {
                 CoursesContent(
-                    uiState = uiState,
-                    onRefresh = onRefreshCourses,
-                    onCourseClick = onCourseClick,
+                    uiState = catalogUiState,
+                    onIntent = onCatalogIntent,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -117,10 +112,8 @@ fun HomeScreen(
 
             HomeTab.Lesson -> {
                 LessonContent(
-                    uiState = uiState,
-                    onBackToCatalog = onBackToCatalog,
-                    onOpenCatalog = onOpenCatalog,
-                    onEnterFullscreen = onEnterFullscreen,
+                    uiState = playerUiState,
+                    onIntent = onPlayerIntent,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -129,9 +122,8 @@ fun HomeScreen(
 
             HomeTab.Profile -> {
                 ProfileContent(
-                    isLoggingOut = isLoggingOut,
-                    errorMessage = profileErrorMessage,
-                    onLogout = onLogout,
+                    uiState = profileUiState,
+                    onIntent = onProfileIntent,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),

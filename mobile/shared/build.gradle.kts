@@ -1,6 +1,5 @@
-
 plugins {
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kotlin.compose)
@@ -8,7 +7,11 @@ plugins {
 
 kotlin {
     jvmToolchain(17)
-    androidTarget()
+    androidLibrary {
+        namespace = "com.digitaledu.shared"
+        compileSdk = libs.versions.compileSdk.get().toInt()
+        minSdk = libs.versions.minSdk.get().toInt()
+    }
     
     jvm()
     
@@ -25,41 +28,23 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(projects.feature.auth.api)
+            implementation(projects.feature.root.impl)
             implementation(projects.feature.auth.impl)
-            implementation(projects.feature.home.api)
             implementation(projects.feature.home.impl)
             implementation(projects.core.common)
             implementation(projects.core.data)
-            implementation(projects.core.model)
-            implementation(projects.core.designsystem)
-            implementation(projects.core.ui)
+            implementation(projects.core.network)
 
             implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
             implementation(compose.ui)
-            implementation(compose.components.resources)
+            implementation(libs.androidx.navigation.runtime)
             implementation(libs.androidx.navigation.compose)
+            implementation(libs.ktor.client.core)
             implementation(libs.koin.core)
         }
         
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
         }
-    }
-}
-
-android {
-    namespace = "com.digitaledu.shared"
-    compileSdk = libs.versions.compileSdk.get().toInt()
-
-    defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 }

@@ -24,7 +24,6 @@ import kotlinx.serialization.json.contentOrNull
 
 class KtorCatalogNetworkDataSource(
     private val client: HttpClient,
-    private val baseUrl: String,
 ) : CatalogNetworkDataSource {
 
     override suspend fun listCourses(
@@ -33,7 +32,7 @@ class KtorCatalogNetworkDataSource(
     ): List<CatalogCourse> {
         return executeCall {
             client.get {
-                url("$baseUrl/api/v1/catalog/courses")
+                url("api/v1/catalog/courses")
                 parameter("include_drafts", includeDrafts)
                 parameter("include_archived", includeArchived)
             }.body<List<CourseResponse>>().map { response ->
@@ -42,6 +41,7 @@ class KtorCatalogNetworkDataSource(
                     slug = response.slug,
                     title = response.title,
                     description = response.description,
+                    coverImageUrl = response.pickCoverImageUrl(),
                 )
             }
         }
@@ -50,7 +50,7 @@ class KtorCatalogNetworkDataSource(
     override suspend fun getLatestCourseBundle(courseSlug: String): CatalogBundle {
         return executeCall {
             val response = client.get {
-                url("$baseUrl/api/v1/catalog/courses/$courseSlug/releases/latest")
+                url("api/v1/catalog/courses/$courseSlug/releases/latest")
             }.body<CourseBundleResponse>()
             
             CatalogBundle(
@@ -59,6 +59,7 @@ class KtorCatalogNetworkDataSource(
                     slug = response.course.slug,
                     title = response.course.title,
                     description = response.course.description,
+                    coverImageUrl = response.course.pickCoverImageUrl(),
                 ),
                 release = CatalogRelease(
                     id = response.release.id,
@@ -175,6 +176,9 @@ private data class CourseResponse(
     val slug: String,
     val title: String,
     val description: String? = null,
+    @SerialName("cover_url") val coverUrl: String? = null,
+    @SerialName("photo_url") val photoUrl: String? = null,
+    @SerialName("image_url") val imageUrl: String? = null,
 )
 
 @Serializable
@@ -200,3 +204,7 @@ private data class CourseBundleResponse(
     val release: ReleaseResponse,
     val screens: List<ScreenResponse>,
 )
+
+private fun CourseResponse.pickCoverImageUrl(): String? {
+    return listOf(coverUrl, photoUrl, imageUrl).firstOrNull { !it.isNullOrBlank() }
+}

@@ -19,13 +19,12 @@ import kotlinx.serialization.Serializable
 
 class KtorAuthNetworkDataSource(
     private val client: HttpClient,
-    private val baseUrl: String,
 ) : AuthNetworkDataSource {
 
     override suspend fun requestOtp(phoneNumber: String): OtpChallenge {
         return executeCall {
             val response = client.post {
-                url("$baseUrl/api/v1/auth/otp/request")
+                url("api/v1/auth/otp/request")
                 contentType(ContentType.Application.Json)
                 setBody(OtpRequestPayload(phone = phoneNumber))
             }.body<OtpRequestResponse>()
@@ -40,7 +39,7 @@ class KtorAuthNetworkDataSource(
     override suspend fun verifyOtp(phoneNumber: String, code: String): AuthTokens {
         return executeCall {
             val response = client.post {
-                url("$baseUrl/api/v1/auth/otp/verify")
+                url("api/v1/auth/otp/verify")
                 contentType(ContentType.Application.Json)
                 setBody(OtpVerifyPayload(phone = phoneNumber, code = code))
             }.body<AuthResponse>()
@@ -52,7 +51,7 @@ class KtorAuthNetworkDataSource(
     override suspend fun refreshSession(refreshToken: String): AuthTokens {
         return executeCall {
             val response = client.post {
-                url("$baseUrl/api/v1/auth/refresh")
+                url("api/v1/auth/refresh")
                 contentType(ContentType.Application.Json)
                 setBody(RefreshTokenPayload(refreshToken = refreshToken))
             }.body<AuthResponse>()
@@ -64,7 +63,7 @@ class KtorAuthNetworkDataSource(
     override suspend fun logout(refreshToken: String) {
         executeCall {
             client.post {
-                url("$baseUrl/api/v1/auth/logout")
+                url("api/v1/auth/logout")
                 contentType(ContentType.Application.Json)
                 setBody(RefreshTokenPayload(refreshToken = refreshToken))
             }

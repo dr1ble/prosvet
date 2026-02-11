@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kotlin.compose)
@@ -7,7 +7,11 @@ plugins {
 
 kotlin {
     jvmToolchain(17)
-    androidTarget()
+    androidLibrary {
+        namespace = "com.digitaledu.feature.home.impl"
+        compileSdk = libs.versions.compileSdk.get().toInt()
+        minSdk = libs.versions.minSdk.get().toInt()
+    }
     
     jvm()
     iosX64()
@@ -31,12 +35,11 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            // lifecycle dependencies moved to jvmAndroid (iOS not supported)
+            implementation(libs.androidx.navigation.runtime)
             implementation(libs.androidx.navigation.compose)
             
             implementation(libs.coil3.compose)
             implementation(libs.koin.core)
-            // Network components are platform-specific
         }
         
         // Create jvmAndroid source set for shared JVM/Android dependencies
@@ -83,19 +86,5 @@ kotlin {
                 implementation(libs.androidx.lifecycle.runtime.compose)
             }
         }
-    }
-}
-
-android {
-    namespace = "com.digitaledu.feature.home.impl"
-    compileSdk = libs.versions.compileSdk.get().toInt()
-
-    defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 }

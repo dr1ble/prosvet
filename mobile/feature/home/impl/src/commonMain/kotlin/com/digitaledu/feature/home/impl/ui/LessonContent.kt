@@ -21,8 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.digitaledu.core.ui.CenteredLoadingIndicator
-import com.digitaledu.feature.home.impl.HomeUiState
+import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.feature.home.impl.player.PlayerUiState
 
 /**
  * Displays the current learning progress and allows continuing the lesson in fullscreen.
@@ -34,18 +34,11 @@ import com.digitaledu.feature.home.impl.HomeUiState
  */
 @Composable
 fun LessonContent(
-    uiState: HomeUiState,
-    onBackToCatalog: () -> Unit,
-    onOpenCatalog: () -> Unit,
-    onEnterFullscreen: () -> Unit,
+    uiState: PlayerUiState,
+    onIntent: (PlayerIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val bundle = uiState.selectedBundle
-
-    if (uiState.isLoading && bundle == null) {
-        CenteredLoadingIndicator(modifier = modifier)
-        return
-    }
+    val bundle = uiState.bundle
 
     if (bundle == null) {
         Column(
@@ -62,8 +55,8 @@ fun LessonContent(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(onClick = onOpenCatalog) {
-                Text(text = "Перейти к курсам")
+            Button(onClick = { onIntent(PlayerIntent.Close) }) {
+                Text(text = "Вернуться к курсам")
             }
         }
         return
@@ -141,7 +134,7 @@ fun LessonContent(
 
         // Primary action: Continue learning
         Button(
-            onClick = onEnterFullscreen,
+            onClick = { onIntent(PlayerIntent.EnterFullscreen) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
         ) {
@@ -153,7 +146,7 @@ fun LessonContent(
 
         // Secondary action: Choose another course
         OutlinedButton(
-            onClick = onBackToCatalog,
+            onClick = { onIntent(PlayerIntent.Close) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
         ) {

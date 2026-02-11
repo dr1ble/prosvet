@@ -11,8 +11,10 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.core.network)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.jetbrains.lifecycle.viewmodel)
         }
     }
 }

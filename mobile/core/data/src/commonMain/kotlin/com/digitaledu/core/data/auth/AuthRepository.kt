@@ -2,6 +2,7 @@ package com.digitaledu.core.data.auth
 
 import com.digitaledu.core.model.AuthTokens
 import com.digitaledu.core.model.OtpChallenge
+import kotlinx.coroutines.flow.Flow
 
 interface AuthRepository {
     suspend fun requestOtp(phoneNumber: String): OtpChallenge
@@ -11,5 +12,6 @@ interface AuthRepository {
     suspend fun logout()
     suspend fun <T> withFreshAccessToken(block: suspend (accessToken: String) -> T): T
     fun getCachedTokens(): AuthTokens?
+    fun observeTokens(): Flow<AuthTokens?>
     fun clearSession()
 }

@@ -30,13 +30,13 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.digitaledu.core.model.CatalogCourse
 import com.digitaledu.core.ui.CenteredLoadingIndicator
-import com.digitaledu.feature.home.impl.HomeUiState
+import com.digitaledu.feature.home.impl.catalog.CatalogIntent
+import com.digitaledu.feature.home.impl.catalog.CatalogUiState
 
 @Composable
 fun CoursesContent(
-    uiState: HomeUiState,
-    onRefresh: () -> Unit,
-    onCourseClick: (CatalogCourse) -> Unit,
+    uiState: CatalogUiState,
+    onIntent: (CatalogIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (uiState.isLoading && uiState.courses.isEmpty()) {
@@ -59,7 +59,7 @@ fun CoursesContent(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(onClick = onRefresh) {
+            Button(onClick = { onIntent(CatalogIntent.RefreshCourses) }) {
                 Text(text = "Обновить")
             }
         }
@@ -79,10 +79,11 @@ fun CoursesContent(
         ) { course ->
             CourseTile(
                 course = course,
-                onClick = { onCourseClick(course) },
+                onClick = { onIntent(CatalogIntent.OpenCourse(course.slug)) },
             )
         }
     }
+
 }
 
 @Composable
@@ -148,6 +149,9 @@ private fun CourseTile(
 }
 
 private fun CatalogCourse.photoUrl(): String {
-    val seed = if (id.isNotBlank()) id else slug
-    return "https://picsum.photos/seed/${seed}/720/720"
+    val remoteUrl = coverImageUrl?.trim().orEmpty()
+    if (remoteUrl.isNotEmpty()) return remoteUrl
+
+    val seed = if (id.isNotBlank()) id else "course-tile"
+    return "https://picsum.photos/seed/$seed/720/720"
 }

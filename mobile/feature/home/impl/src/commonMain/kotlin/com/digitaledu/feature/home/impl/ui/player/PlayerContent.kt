@@ -15,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.digitaledu.core.model.CatalogScreen
+import com.digitaledu.core.model.Hotspot
 import com.digitaledu.core.model.ScreenPayload
+import com.digitaledu.feature.home.impl.player.PlayerIntent
 
 /**
  * Renders the lesson content for the current screen based on payload type.
@@ -25,15 +27,18 @@ import com.digitaledu.core.model.ScreenPayload
  * - `ScreenPayload.Unknown`: Fallback text-based rendering
  * 
  * @param screen The screen data containing title and typed payload
- * @param baseUrl Base URL for loading images and media resources
- * @param onNavigateToScreen Callback to navigate to a screen by its screenKey
+ * @param mediaAccessToken Token for accessing media
+ * @param activeHotspotHint Currently active hint to display
+ * @param onIntent Callback for processing user intents
+ * @param resolveUrl Callback to resolve full URLs for media
  */
 @Composable
 fun PlayerContent(
     screen: CatalogScreen,
-    baseUrl: String,
     mediaAccessToken: String?,
-    onNavigateToScreen: (screenKey: String) -> Unit,
+    activeHotspotHint: Hotspot?,
+    onIntent: (PlayerIntent) -> Unit,
+    resolveUrl: (String) -> String,
     modifier: Modifier = Modifier,
 ) {
     when (val payload = screen.payload) {
@@ -41,9 +46,11 @@ fun PlayerContent(
             // Render interactive simulation
             SimulationScreen(
                 payload = payload,
-                baseUrl = baseUrl,
                 accessToken = mediaAccessToken,
-                onNavigateToScreen = onNavigateToScreen,
+                activeHotspotHint = activeHotspotHint,
+                onResolveImageUrl = resolveUrl,
+                onHotspotClick = { onIntent(PlayerIntent.ClickHotspot(it)) },
+                onDismissHint = { onIntent(PlayerIntent.DismissHotspotHint) },
                 modifier = modifier,
             )
         }

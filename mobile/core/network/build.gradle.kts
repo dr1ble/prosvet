@@ -42,13 +42,7 @@ kotlin {
         
         val jvmMain by getting
         jvmMain.dependencies {
-             implementation(libs.ktor.client.okhttp)
-             // Keep Retrofit for now to avoid breaking existing code during transition,
-             // but strictly it should be removed or moved to jvmMain only if needed.
-             // We will move existing Retrofit code to jvmMain to keep it compiling for now.
-             implementation(libs.retrofit.core)
-             implementation(libs.retrofit.kotlin.serialization)
-             implementation(libs.okhttp.logging)
+            implementation(libs.ktor.client.okhttp)
         }
     }
 }

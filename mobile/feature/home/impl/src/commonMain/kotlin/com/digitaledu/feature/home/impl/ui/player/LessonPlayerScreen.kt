@@ -10,7 +10,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.SizeTransform
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -30,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.digitaledu.core.model.CatalogBundle
+import com.digitaledu.core.model.Hotspot
+import com.digitaledu.feature.home.impl.player.PlayerIntent
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 
@@ -43,21 +44,18 @@ import kotlin.math.abs
  * 
  * @param bundle The lesson bundle to display
  * @param currentScreenIndex Current screen position (0-based)
- * @param onExit Callback when user exits player
- * @param onPreviousScreen Navigate to previous screen
- * @param onNextScreen Navigate to next screen
+ * @param onIntent Callback for processing user intents
+ * @param resolveUrl Callback to resolve full URLs for media
  */
 @Composable
 fun LessonPlayerScreen(
     bundle: CatalogBundle,
     currentScreenIndex: Int,
-    baseUrl: String,
     mediaAccessToken: String?,
+    activeHotspotHint: Hotspot?,
     completedScreens: Set<Int> = emptySet(),
-    onExit: () -> Unit,
-    onPreviousScreen: () -> Unit,
-    onNextScreen: () -> Unit,
-    onNavigateToScreen: (screenKey: String) -> Unit,
+    onIntent: (PlayerIntent) -> Unit,
+    resolveUrl: (String) -> String,
     modifier: Modifier = Modifier,
 ) {
     // Auto-hide controls after 3 seconds of inactivity
@@ -87,16 +85,16 @@ fun LessonPlayerScreen(
                 // Slide direction based on navigation
                 if (targetState > initialState) {
                     // Next: slide from right
-                    androidx.compose.animation.slideInHorizontally { width -> width } + 
-                        androidx.compose.animation.fadeIn() togetherWith
-                        androidx.compose.animation.slideOutHorizontally { width -> -width } + 
-                        androidx.compose.animation.fadeOut()
+                    slideInHorizontally { width -> width } + 
+                        fadeIn() togetherWith
+                        slideOutHorizontally { width -> -width } + 
+                        fadeOut()
                 } else {
                     // Previous: slide from left
-                    androidx.compose.animation.slideInHorizontally { width -> -width } + 
-                        androidx.compose.animation.fadeIn() togetherWith
-                        androidx.compose.animation.slideOutHorizontally { width -> width } + 
-                        androidx.compose.animation.fadeOut()
+                    slideInHorizontally { width -> -width } + 
+                        fadeIn() togetherWith
+                        slideOutHorizontally { width -> width } + 
+                        fadeOut()
                 } using androidx.compose.animation.SizeTransform(clip = false)
             },
             label = "screen_transition",
@@ -125,10 +123,10 @@ fun LessonPlayerScreen(
                         if (abs(dragAmount) > swipeThreshold) {
                             if (dragAmount < 0 && canGoNext) {
                                 // Swipe left -> Next
-                                onNextScreen()
+                                onIntent(PlayerIntent.Next)
                             } else if (dragAmount > 0 && canGoPrevious) {
                                 // Swipe right -> Previous  
-                                onPreviousScreen()
+                                onIntent(PlayerIntent.Previous)
                             }
                         }
                     }
@@ -138,9 +136,10 @@ fun LessonPlayerScreen(
             if (screen != null) {
                 PlayerContent(
                     screen = screen,
-                    baseUrl = baseUrl,
                     mediaAccessToken = mediaAccessToken,
-                    onNavigateToScreen = onNavigateToScreen,
+                    activeHotspotHint = activeHotspotHint,
+                    onIntent = onIntent,
+                    resolveUrl = resolveUrl,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -154,7 +153,7 @@ fun LessonPlayerScreen(
                     durationMillis = 300,
                     easing = androidx.compose.animation.core.FastOutSlowInEasing
                 )
-            ) + androidx.compose.animation.scaleIn(
+            ) + scaleIn(
                 initialScale = 0.92f,
                 animationSpec = androidx.compose.animation.core.tween(
                     durationMillis = 300,
@@ -166,7 +165,7 @@ fun LessonPlayerScreen(
                     durationMillis = 250,
                     easing = androidx.compose.animation.core.FastOutLinearInEasing
                 )
-            ) + androidx.compose.animation.scaleOut(
+            ) + scaleOut(
                 targetScale = 0.92f,
                 animationSpec = androidx.compose.animation.core.tween(
                     durationMillis = 250,
@@ -177,7 +176,7 @@ fun LessonPlayerScreen(
         ) {
             PlayerTopBar(
                 courseTitle = bundle.course.title,
-                onExit = onExit,
+                onExit = { onIntent(PlayerIntent.ExitFullscreen) },
                 modifier = Modifier.padding(16.dp)
             )
         }
@@ -190,7 +189,7 @@ fun LessonPlayerScreen(
                     durationMillis = 300,
                     easing = androidx.compose.animation.core.FastOutSlowInEasing
                 )
-            ) + androidx.compose.animation.slideInVertically(
+            ) + slideInVertically(
                 initialOffsetY = { it / 4 },
                 animationSpec = androidx.compose.animation.core.tween(
                     durationMillis = 300,
@@ -202,7 +201,7 @@ fun LessonPlayerScreen(
                     durationMillis = 250,
                     easing = androidx.compose.animation.core.FastOutLinearInEasing
                 )
-            ) + androidx.compose.animation.slideOutVertically(
+            ) + slideOutVertically(
                 targetOffsetY = { it / 4 },
                 animationSpec = androidx.compose.animation.core.tween(
                     durationMillis = 250,
@@ -218,8 +217,8 @@ fun LessonPlayerScreen(
                 canGoPrevious = canGoPrevious,
                 canGoNext = canGoNext,
                 completedScreens = completedScreens,
-                onPreviousScreen = onPreviousScreen,
-                onNextScreen = onNextScreen,
+                onPreviousScreen = { onIntent(PlayerIntent.Previous) },
+                onNextScreen = { onIntent(PlayerIntent.Next) },
                 modifier = Modifier.padding(16.dp)
             )
         }

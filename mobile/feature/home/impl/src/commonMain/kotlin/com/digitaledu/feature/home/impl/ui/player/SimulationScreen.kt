@@ -51,22 +51,21 @@ import kotlin.math.roundToInt
 @Composable
 fun SimulationScreen(
     payload: ScreenPayload.Simulation,
-    baseUrl: String,
     accessToken: String?,
-    onNavigateToScreen: (screenKey: String) -> Unit,
+    activeHotspotHint: Hotspot?,
+    onResolveImageUrl: (String) -> String,
+    onHotspotClick: (Hotspot) -> Unit,
+    onDismissHint: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val platformContext = LocalPlatformContext.current
-    var showingHint by remember { mutableStateOf<Hotspot?>(null) }
     var imageWidth by remember { mutableStateOf(0) }
     var imageHeight by remember { mutableStateOf(0) }
     
-    val fullImageUrl = remember(baseUrl, payload.imageUrl) {
-        resolveSimulationImageUrl(
-            baseUrl = baseUrl,
-            rawImageUrl = payload.imageUrl,
-        )
+    val fullImageUrl = remember(payload.imageUrl, onResolveImageUrl) {
+        onResolveImageUrl(payload.imageUrl)
     }
+    
     val imageRequest = remember(platformContext, fullImageUrl, accessToken) {
         ImageRequest.Builder(platformContext)
             .data(fullImageUrl)
@@ -124,25 +123,16 @@ fun SimulationScreen(
                     hotspot = hotspot,
                     imageWidth = imageWidth,
                     imageHeight = imageHeight,
-                    onClick = {
-                        // Show hint first if available
-                        if (hotspot.hint.isNotBlank()) {
-                            showingHint = hotspot
-                        }
-                        // Navigate if target is set
-                        hotspot.targetScreenKey?.let { targetKey ->
-                            onNavigateToScreen(targetKey)
-                        }
-                    },
+                    onClick = { onHotspotClick(hotspot) },
                 )
             }
         }
     }
     
     // Hint dialog
-    showingHint?.let { hotspot ->
+    activeHotspotHint?.let { hotspot ->
         AlertDialog(
-            onDismissRequest = { showingHint = null },
+            onDismissRequest = onDismissHint,
             title = {
                 Text(text = hotspot.label.takeIf { it.isNotBlank() } ?: "Подсказка")
             },
@@ -150,7 +140,7 @@ fun SimulationScreen(
                 Text(text = hotspot.hint)
             },
             confirmButton = {
-                TextButton(onClick = { showingHint = null }) {
+                TextButton(onClick = onDismissHint) {
                     Text("Закрыть")
                 }
             },
@@ -216,80 +206,4 @@ private fun HotspotOverlay(
     }
 }
 
-private fun resolveSimulationImageUrl(
-    baseUrl: String,
-    rawImageUrl: String,
-): String {
-    val imageUrl = rawImageUrl.trim()
-    val baseOrigin = extractOrigin(baseUrl)
-    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-        val absolutePathAndQuery = extractPathAndQuery(imageUrl)
-        val normalizedPathAndQuery = normalizeSimulationPath(absolutePathAndQuery)
-        val origin = if (
-            isLoopbackUrl(imageUrl) ||
-            absolutePathAndQuery.trimStart('/') != normalizedPathAndQuery.trimStart('/')
-        ) {
-            baseOrigin
-        } else {
-            extractOrigin(imageUrl)
-        }
-        return "${origin.trimEnd('/')}/${normalizedPathAndQuery.trimStart('/')}"
-    }
 
-    val normalizedPathAndQuery = normalizeSimulationPath(imageUrl)
-    return "${baseOrigin.trimEnd('/')}/${normalizedPathAndQuery.trimStart('/')}"
-}
-
-private fun normalizeSimulationPath(rawPathOrUrlPart: String): String {
-    val pathAndQuery = rawPathOrUrlPart.trim()
-    val queryStart = pathAndQuery.indexOf('?')
-    val pathPart = if (queryStart >= 0) {
-        pathAndQuery.substring(0, queryStart)
-    } else {
-        pathAndQuery
-    }
-    val queryPart = if (queryStart >= 0) {
-        pathAndQuery.substring(queryStart)
-    } else {
-        ""
-    }
-
-    val normalizedPath = pathPart.trimStart('/')
-    val backendPath = when {
-        normalizedPath.startsWith("api/admin/simulation/media/") ->
-            normalizedPath.replaceFirst("api/admin/", "api/v1/")
-        normalizedPath.startsWith("api/simulation/media/") ->
-            normalizedPath.replaceFirst("api/", "api/v1/")
-        normalizedPath.startsWith("simulation/media/") ->
-            "api/v1/$normalizedPath"
-        else -> normalizedPath
-    }
-    return "${backendPath.trimStart('/')}$queryPart"
-}
-
-private fun extractOrigin(url: String): String {
-    val trimmed = url.trim().trimEnd('/')
-    val schemeIndex = trimmed.indexOf("://")
-    if (schemeIndex < 0) return trimmed
-
-    val afterSchemeIndex = schemeIndex + 3
-    val pathStart = trimmed.indexOf('/', startIndex = afterSchemeIndex)
-    return if (pathStart >= 0) trimmed.substring(0, pathStart) else trimmed
-}
-
-private fun extractPathAndQuery(url: String): String {
-    val trimmed = url.trim()
-    val schemeIndex = trimmed.indexOf("://")
-    if (schemeIndex < 0) return trimmed
-
-    val afterSchemeIndex = schemeIndex + 3
-    val pathStart = trimmed.indexOf('/', startIndex = afterSchemeIndex)
-    return if (pathStart >= 0) trimmed.substring(pathStart) else "/"
-}
-
-private fun isLoopbackUrl(url: String): Boolean {
-    val lowered = url.lowercase()
-    return lowered.contains("://localhost") ||
-        lowered.contains("://127.0.0.1") ||
-        lowered.contains("://[::1]")
-}

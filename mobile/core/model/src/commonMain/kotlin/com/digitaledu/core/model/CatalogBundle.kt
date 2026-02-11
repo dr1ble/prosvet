@@ -5,6 +5,7 @@ data class CatalogCourse(
     val slug: String,
     val title: String,
     val description: String?,
+    val coverImageUrl: String? = null,
 )
 
 data class CatalogRelease(

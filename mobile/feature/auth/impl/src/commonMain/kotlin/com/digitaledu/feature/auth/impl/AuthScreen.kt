@@ -28,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -40,36 +39,29 @@ import androidx.compose.ui.text.input.KeyboardType
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.designsystem.theme.DigitalEduTheme
-import kotlinx.coroutines.flow.collectLatest
-import org.koin.core.context.GlobalContext
+import com.digitaledu.core.ui.ObserveEffects
+import org.koin.mp.KoinPlatform
 
 @Composable
 internal fun AuthRoute(
     onAuthenticated: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val authRepository = remember {
-        GlobalContext.get().get<AuthRepository>()
+    val viewModel = remember {
+        KoinPlatform.getKoin().get<AuthViewModel>()
     }
-    val viewModel: AuthViewModel = viewModel(
-        factory = AuthViewModel.provideFactory(authRepository),
-    )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(viewModel) {
-        viewModel.events.collectLatest { event ->
-            if (event is AuthEvent.Authenticated) {
-                onAuthenticated()
-            }
+    ObserveEffects(viewModel.effects) { effect ->
+        if (effect is AuthEffect.Authenticated) {
+            onAuthenticated()
         }
     }
 
     AuthScreen(
         uiState = uiState,
-        onAction = viewModel::onAction,
+        onIntent = viewModel::processIntent,
         modifier = modifier,
     )
 }
@@ -78,7 +70,7 @@ internal fun AuthRoute(
 @OptIn(ExperimentalMaterial3Api::class)
 internal fun AuthScreen(
     uiState: AuthUiState,
-    onAction: (AuthAction) -> Unit,
+    onIntent: (AuthIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isOtpStep = uiState.isOtpRequested
@@ -157,7 +149,7 @@ internal fun AuthScreen(
                     ) {
                         OutlinedTextField(
                             value = uiState.phoneNumber,
-                            onValueChange = { value -> onAction(AuthAction.PhoneChanged(value)) },
+                            onValueChange = { value -> onIntent(AuthIntent.PhoneChanged(value)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             enabled = !isOtpStep,
@@ -170,7 +162,7 @@ internal fun AuthScreen(
                             keyboardActions = KeyboardActions(
                                 onDone = {
                                     if (!isOtpStep) {
-                                        onAction(AuthAction.RequestOtpClicked)
+                                        onIntent(AuthIntent.RequestOtpClicked)
                                     }
                                 },
                             ),
@@ -179,7 +171,7 @@ internal fun AuthScreen(
                         if (isOtpStep) {
                             OutlinedTextField(
                                 value = uiState.otpCode,
-                                onValueChange = { value -> onAction(AuthAction.OtpCodeChanged(value)) },
+                                onValueChange = { value -> onIntent(AuthIntent.OtpCodeChanged(value)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 label = { Text(text = "Код из SMS") },
@@ -189,7 +181,7 @@ internal fun AuthScreen(
                                     imeAction = ImeAction.Done,
                                 ),
                                 keyboardActions = KeyboardActions(
-                                    onDone = { onAction(AuthAction.VerifyOtpClicked) },
+                                    onDone = { onIntent(AuthIntent.VerifyOtpClicked) },
                                 ),
                             )
                         }
@@ -197,9 +189,9 @@ internal fun AuthScreen(
                         Button(
                             onClick = {
                                 if (isOtpStep) {
-                                    onAction(AuthAction.VerifyOtpClicked)
+                                    onIntent(AuthIntent.VerifyOtpClicked)
                                 } else {
-                                    onAction(AuthAction.RequestOtpClicked)
+                                    onIntent(AuthIntent.RequestOtpClicked)
                                 }
                             },
                             enabled = if (isOtpStep) uiState.isVerifyEnabled else uiState.isRequestEnabled,
@@ -220,7 +212,7 @@ internal fun AuthScreen(
 
                         if (isOtpStep) {
                             TextButton(
-                                onClick = { onAction(AuthAction.ChangePhoneClicked) },
+                                onClick = { onIntent(AuthIntent.ChangePhoneClicked) },
                                 enabled = !uiState.isSubmitting,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
@@ -280,7 +272,7 @@ private fun AuthScreenPreview() {
     DigitalEduTheme {
         AuthScreen(
             uiState = AuthUiState(phoneNumber = "+7 999 123-45-67"),
-            onAction = {},
+            onIntent = {},
         )
     }
 }

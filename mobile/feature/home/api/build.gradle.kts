@@ -11,7 +11,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // Add dependencies if needed
+            implementation(libs.androidx.navigation.runtime)
         }
     }
 }

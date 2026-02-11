@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kotlin.compose)
@@ -7,7 +7,11 @@ plugins {
 
 kotlin {
     jvmToolchain(17)
-    androidTarget()
+    androidLibrary {
+        namespace = "com.digitaledu.feature.auth.impl"
+        compileSdk = libs.versions.compileSdk.get().toInt()
+        minSdk = libs.versions.minSdk.get().toInt()
+    }
     
     jvm()
     iosX64()
@@ -29,9 +33,9 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodel.compose)
-            implementation(libs.androidx.lifecycle.runtime.compose)
-            implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.jetbrains.lifecycle.viewmodel.compose)
+            implementation(libs.jetbrains.lifecycle.runtime.compose)
+            implementation(libs.androidx.navigation.runtime)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.koin.core)
         }
@@ -41,19 +45,5 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.kotlinx.coroutines.android)
         }
-    }
-}
-
-android {
-    namespace = "com.digitaledu.feature.auth.impl"
-    compileSdk = libs.versions.compileSdk.get().toInt()
-
-    defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 }

@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kotlin.compose)
@@ -7,7 +7,11 @@ plugins {
 
 kotlin {
     jvmToolchain(17)
-    androidTarget()
+    androidLibrary {
+        namespace = "com.digitaledu.core.designsystem"
+        compileSdk = libs.versions.compileSdk.get().toInt()
+        minSdk = libs.versions.minSdk.get().toInt()
+    }
     
     jvm()
     iosX64()
@@ -28,19 +32,5 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
         }
-    }
-}
-
-android {
-    namespace = "com.digitaledu.core.designsystem"
-    compileSdk = libs.versions.compileSdk.get().toInt()
-
-    defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
     }
 }

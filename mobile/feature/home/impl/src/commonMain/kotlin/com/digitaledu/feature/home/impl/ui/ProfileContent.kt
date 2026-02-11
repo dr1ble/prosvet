@@ -20,11 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+import com.digitaledu.feature.home.impl.profile.ProfileIntent
+import com.digitaledu.feature.home.impl.profile.ProfileUiState
+
 @Composable
 fun ProfileContent(
-    isLoggingOut: Boolean,
-    errorMessage: String?,
-    onLogout: () -> Unit,
+    uiState: ProfileUiState,
+    onIntent: (ProfileIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -55,11 +57,11 @@ fun ProfileContent(
         }
 
         Button(
-            onClick = onLogout,
-            enabled = !isLoggingOut,
+            onClick = { onIntent(ProfileIntent.Logout) },
+            enabled = !uiState.isLoggingOut,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            if (isLoggingOut) {
+            if (uiState.isLoggingOut) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
@@ -67,10 +69,10 @@ fun ProfileContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Text(text = if (isLoggingOut) "Выходим..." else "Выйти из аккаунта")
+            Text(text = if (uiState.isLoggingOut) "Выходим..." else "Выйти из аккаунта")
         }
 
-        errorMessage?.let { message ->
+        uiState.errorMessage?.let { message ->
             Card(
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(
