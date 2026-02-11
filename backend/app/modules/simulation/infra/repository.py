@@ -135,6 +135,13 @@ class SimulationRepository:
         )
         return self.db.scalar(stmt)
 
+    def get_media_asset_public(
+        self,
+        asset_id: UUID,
+    ) -> SimulationMediaAsset | None:
+        stmt = select(SimulationMediaAsset).where(SimulationMediaAsset.id == asset_id)
+        return self.db.scalar(stmt)
+
     def list_library_items(
         self,
         owner_user_id: UUID,

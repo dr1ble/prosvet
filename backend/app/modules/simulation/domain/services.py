@@ -246,13 +246,9 @@ class SimulationService:
 
     def get_media_asset_with_path(
         self,
-        owner_user_id: UUID,
         asset_id: UUID,
     ) -> tuple[SimulationMediaAsset, Path] | None:
-        asset = self.repo.get_media_asset_by_id(
-            owner_user_id=owner_user_id,
-            asset_id=asset_id,
-        )
+        asset = self.repo.get_media_asset_public(asset_id=asset_id)
         if asset is None:
             return None
 

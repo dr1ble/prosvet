@@ -1,6 +1,6 @@
 """add simulation library items
 
-Revision ID: 0007_add_simulation_library_items
+Revision ID: 0007_simulation_library_items
 Revises: 0006_add_simulation_media_assets
 Create Date: 2026-02-09 23:10:00.000000
 """
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "0007_add_simulation_library_items"
+revision: str = "0007_simulation_library_items"
 down_revision: Union[str, None] = "0006_add_simulation_media_assets"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

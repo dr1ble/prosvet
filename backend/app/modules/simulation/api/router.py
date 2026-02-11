@@ -24,7 +24,7 @@ from app.modules.simulation.api.schemas import (
 )
 from app.modules.simulation.domain.services import SimulationService
 from app.modules.users.models import UserRole
-from app.shared.auth.deps import require_roles
+from app.shared.auth.deps import get_current_actor, require_roles
 from app.shared.auth.schemas import CurrentActor
 from app.shared.db.deps import get_db
 
@@ -150,11 +150,10 @@ async def upload_media_asset(
 def get_media_asset_file(
     asset_id: UUID,
     db: Session = Depends(get_db),
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(get_current_actor),
 ) -> FileResponse:
     service = SimulationService(db)
     asset_data = service.get_media_asset_with_path(
-        owner_user_id=actor.user_id,
         asset_id=asset_id,
     )
     if asset_data is None:
