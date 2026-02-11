@@ -33,5 +33,7 @@ mobile/.run/
 # iOS / Xcode
 mobile/iosApp/.derivedData/
 mobile/iosApp/**/*.xcuserdata/
+mobile/iosApp/**/xcuserdata/
+mobile/iosApp/**/xcuserdata/**
 mobile/iosApp/**/*.xcuserstate
 mobile/iosApp/**/*.xcscmblueprint
