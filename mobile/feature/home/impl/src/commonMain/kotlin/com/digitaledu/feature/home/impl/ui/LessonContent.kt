@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.digitaledu.core.model.ScreenPayload
 import com.digitaledu.feature.home.impl.player.PlayerIntent
 import com.digitaledu.feature.home.impl.player.PlayerUiState
 
@@ -158,9 +159,9 @@ fun LessonContent(
     }
 }
 
-private fun com.digitaledu.core.model.ScreenPayload.getPayloadPreview(): String {
+private fun ScreenPayload.getPayloadPreview(): String {
     return when (this) {
-        is com.digitaledu.core.model.ScreenPayload.Simulation -> {
+        is ScreenPayload.Simulation -> {
             buildString {
                 append("Интерактивная симуляция")
                 if (hotspots.isNotEmpty()) {
@@ -175,7 +176,25 @@ private fun com.digitaledu.core.model.ScreenPayload.getPayloadPreview(): String 
                 if (isCompletion) append(" • Завершение")
             }
         }
-        is com.digitaledu.core.model.ScreenPayload.Unknown -> {
+        is ScreenPayload.Video -> {
+            val minutes = durationSec / 60
+            val seconds = durationSec % 60
+            "Видеоурок • ${minutes}:${seconds.toString().padStart(2, '0')}"
+        }
+        is ScreenPayload.Article -> {
+            "Статья • ${markdownContent.length}" // Simplified preview
+        }
+        is ScreenPayload.Quiz -> {
+            "Тест • ${questions.size} " + when (questions.size) {
+                1 -> "вопрос"
+                in 2..4 -> "вопроса"
+                else -> "вопросов"
+            }
+        }
+        is ScreenPayload.CheatSheet -> {
+            "Шпаргалка • Итоги урока"
+        }
+        is ScreenPayload.Unknown -> {
             if (raw.length <= 100) raw else "${raw.take(100)}..."
         }
     }

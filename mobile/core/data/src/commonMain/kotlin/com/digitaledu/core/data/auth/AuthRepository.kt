@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 interface AuthRepository {
     suspend fun requestOtp(phoneNumber: String): OtpChallenge
     suspend fun verifyOtp(phoneNumber: String, code: String): AuthTokens
+    suspend fun login(login: String, password: String): AuthTokens
     suspend fun refreshSession(): Boolean
     suspend fun restoreSession(): Boolean
     suspend fun logout()

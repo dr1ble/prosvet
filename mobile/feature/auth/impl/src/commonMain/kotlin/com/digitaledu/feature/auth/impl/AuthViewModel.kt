@@ -11,40 +11,32 @@ class AuthViewModel(
 
     override suspend fun handleIntent(intent: AuthIntent) {
         when (intent) {
-            is AuthIntent.PhoneChanged -> onPhoneChanged(intent.value)
-            is AuthIntent.OtpCodeChanged -> onOtpCodeChanged(intent.value)
-            AuthIntent.RequestOtpClicked -> requestOtp()
-            AuthIntent.VerifyOtpClicked -> verifyOtp()
-            AuthIntent.ChangePhoneClicked -> resetOtpStep()
+            is AuthIntent.LoginChanged -> onLoginChanged(intent.value)
+            is AuthIntent.PasswordChanged -> onPasswordChanged(intent.value)
+            AuthIntent.LoginClicked -> login()
         }
     }
 
-    private fun onPhoneChanged(value: String) {
+    private fun onLoginChanged(value: String) {
         updateState {
             copy(
-                phoneNumber = value,
+                login = value,
                 errorMessage = null,
             )
         }
     }
 
-    private fun onOtpCodeChanged(value: String) {
+    private fun onPasswordChanged(value: String) {
         updateState {
             copy(
-                otpCode = value,
+                password = value,
                 errorMessage = null,
             )
         }
     }
 
-    private suspend fun requestOtp() {
-        val normalizedPhoneNumber = PhoneNumberFormatter.normalize(currentState.phoneNumber)
-        if (normalizedPhoneNumber.length < 10) {
-            updateState {
-                copy(errorMessage = "Введите корректный номер телефона")
-            }
-            return
-        }
+    private suspend fun login() {
+        if (!currentState.isLoginEnabled) return
 
         updateState {
             copy(
@@ -54,46 +46,9 @@ class AuthViewModel(
         }
 
         runCatching {
-            authRepository.requestOtp(phoneNumber = currentState.phoneNumber)
-        }.onSuccess { challenge ->
-            updateState {
-                copy(
-                    isSubmitting = false,
-                    challengeId = challenge.challengeId,
-                    devCode = challenge.devCode,
-                    otpCode = "",
-                    errorMessage = null,
-                )
-            }
-        }.onFailure { throwable ->
-            updateState {
-                copy(
-                    isSubmitting = false,
-                    errorMessage = throwable.toUserMessage(),
-                )
-            }
-        }
-    }
-
-    private suspend fun verifyOtp() {
-        if (currentState.otpCode.filter(Char::isDigit).length !in 4..8) {
-            updateState {
-                copy(errorMessage = "Введите корректный код подтверждения")
-            }
-            return
-        }
-
-        updateState {
-            copy(
-                isSubmitting = true,
-                errorMessage = null,
-            )
-        }
-
-        runCatching {
-            authRepository.verifyOtp(
-                phoneNumber = currentState.phoneNumber,
-                code = currentState.otpCode,
+            authRepository.login(
+                login = currentState.login,
+                password = currentState.password,
             )
         }.onSuccess {
             updateState { copy(isSubmitting = false) }
@@ -105,17 +60,6 @@ class AuthViewModel(
                     errorMessage = throwable.toUserMessage(),
                 )
             }
-        }
-    }
-
-    private fun resetOtpStep() {
-        updateState {
-            copy(
-                otpCode = "",
-                challengeId = null,
-                devCode = null,
-                errorMessage = null,
-            )
         }
     }
 }

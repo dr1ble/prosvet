@@ -5,9 +5,19 @@ import com.digitaledu.core.model.CatalogBundle
 import com.digitaledu.core.model.Hotspot
 import com.digitaledu.feature.home.impl.utils.SimulationUrlResolver
 
+import androidx.lifecycle.viewModelScope
+import com.digitaledu.core.data.catalog.CatalogRepository
+import com.digitaledu.core.model.ScreenPayload
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+
 class PlayerViewModel(
     private val urlResolver: SimulationUrlResolver,
+    private val catalogRepository: CatalogRepository,
 ) : BaseViewModel<PlayerUiState, PlayerIntent, PlayerEffect>(PlayerUiState()) {
+
+    private var referenceFetchJob: Job? = null
+
 
     override suspend fun handleIntent(intent: PlayerIntent) {
         when (intent) {
@@ -27,11 +37,12 @@ class PlayerViewModel(
             copy(
                 bundle = bundle,
                 currentScreenIndex = 0,
-                isFullscreenMode = false,
+                isFullscreenMode = true,
                 completedScreens = emptySet(),
                 activeHotspotHint = null,
             )
         }
+        currentState.currentScreen?.payload?.let { loadLessonReference(it) }
     }
 
     fun resolveImageUrl(rawUrl: String): String = urlResolver.resolve(rawUrl)
@@ -41,6 +52,7 @@ class PlayerViewModel(
             val nextIndex = (currentScreenIndex - 1).coerceAtLeast(0)
             copy(currentScreenIndex = nextIndex)
         }
+        currentState.currentScreen?.payload?.let { loadLessonReference(it) }
     }
 
     private fun goToNextScreen() {
@@ -57,6 +69,7 @@ class PlayerViewModel(
                 completedScreens = updatedCompleted,
             )
         }
+        currentState.currentScreen?.payload?.let { loadLessonReference(it) }
     }
 
     private fun enterFullscreenPlayer() {
@@ -77,6 +90,7 @@ class PlayerViewModel(
                 this
             }
         }
+        currentState.currentScreen?.payload?.let { loadLessonReference(it) }
     }
 
     private fun onHotspotClick(hotspot: Hotspot) {
@@ -96,5 +110,30 @@ class PlayerViewModel(
     private fun closeCourse() {
         updateState { PlayerUiState() }
         emitEffect(PlayerEffect.Closed)
+    }
+
+    private fun loadLessonReference(screenPayload: ScreenPayload) {
+        referenceFetchJob?.cancel()
+        
+        val refId = when (screenPayload) {
+            is ScreenPayload.Simulation -> screenPayload.contextRef
+            is ScreenPayload.CheatSheet -> screenPayload.referenceId
+            else -> null
+        }
+
+        if (refId == null) {
+            updateState { copy(activeLessonReference = null) }
+            return
+        }
+
+        referenceFetchJob = viewModelScope.launch {
+            try {
+                val reference = catalogRepository.getLessonReference(refId)
+                updateState { copy(activeLessonReference = reference) }
+            } catch (e: Exception) {
+                // Error is ignored for now as it's auxiliary content
+                updateState { copy(activeLessonReference = null) }
+            }
+        }
     }
 }

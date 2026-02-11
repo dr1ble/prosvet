@@ -48,6 +48,18 @@ class KtorAuthNetworkDataSource(
         }
     }
 
+    override suspend fun login(login: String, password: String): AuthTokens {
+        return executeCall {
+            val response = client.post {
+                url("api/v1/auth/login")
+                contentType(ContentType.Application.Json)
+                setBody(LoginPayload(login = login, password = password))
+            }.body<AuthResponse>()
+            
+            response.toAuthTokens()
+        }
+    }
+
     override suspend fun refreshSession(refreshToken: String): AuthTokens {
         return executeCall {
             val response = client.post {
@@ -109,6 +121,12 @@ private data class OtpRequestPayload(
 private data class OtpVerifyPayload(
     val phone: String,
     val code: String,
+)
+
+@Serializable
+private data class LoginPayload(
+    val login: String,
+    val password: String,
 )
 
 @Serializable

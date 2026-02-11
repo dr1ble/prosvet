@@ -22,6 +22,15 @@ class NetworkAuthRepository(
         return tokens
     }
 
+    override suspend fun login(login: String, password: String): AuthTokens {
+        val tokens = networkDataSource.login(
+            login = login,
+            password = password,
+        )
+        authSessionStore.update(tokens)
+        return tokens
+    }
+
     override suspend fun refreshSession(): Boolean {
         val cachedTokens = authSessionStore.current() ?: return false
         return runCatching {

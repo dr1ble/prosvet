@@ -5,6 +5,7 @@ import com.digitaledu.core.model.CatalogCourse
 import com.digitaledu.core.model.CatalogRelease
 import com.digitaledu.core.model.CatalogScreen
 import com.digitaledu.core.model.Hotspot
+import com.digitaledu.core.model.LessonReference
 import com.digitaledu.core.model.ScreenPayload
 import com.digitaledu.core.network.CatalogNetworkDataSource
 import com.digitaledu.core.network.NetworkException
@@ -74,11 +75,27 @@ class KtorCatalogNetworkDataSource(
                             screenKey = screen.screenKey,
                             title = screen.title,
                             orderIndex = screen.orderIndex,
-                            payload = screen.payload.toScreenPayload(),
+                            payload = screen.payload,
                         )
                     }
                     .sortedBy { it.orderIndex },
             )
+        }
+    }
+
+    override suspend fun getLessonReference(referenceId: String): LessonReference {
+        return executeCall {
+            client.get {
+                url("api/v1/catalog/references/$referenceId")
+            }.body()
+        }
+    }
+
+    override suspend fun getLessonReferencesByLesson(lessonId: String): List<LessonReference> {
+        return executeCall {
+            client.get {
+                url("api/v1/catalog/courses/lessons/$lessonId/references")
+            }.body()
         }
     }
 
@@ -111,60 +128,6 @@ class KtorCatalogNetworkDataSource(
         }
     }
 
-    private fun JsonObject.toScreenPayload(): ScreenPayload {
-        val type = primitiveString("type")
-        return when (type) {
-            "simulation" -> {
-                val imageUrl = primitiveString("image_url") ?: ""
-                val hotspotsArray = this["hotspots"] as? kotlinx.serialization.json.JsonArray
-                val hotspots = hotspotsArray?.mapNotNull { element ->
-                    (element as? JsonObject)?.toHotspot()
-                } ?: emptyList()
-                val isStart = primitiveBool("is_start")
-                val isCompletion = primitiveBool("is_completion")
-                
-                ScreenPayload.Simulation(
-                    imageUrl = imageUrl,
-                    hotspots = hotspots,
-                    isStart = isStart,
-                    isCompletion = isCompletion,
-                )
-            }
-            else -> ScreenPayload.Unknown(toString())
-        }
-    }
-    
-    private fun JsonObject.toHotspot(): Hotspot? {
-        return try {
-            Hotspot(
-                x = primitiveFloat("x") ?: return null,
-                y = primitiveFloat("y") ?: return null,
-                width = primitiveFloat("width") ?: return null,
-                height = primitiveFloat("height") ?: return null,
-                label = primitiveString("label") ?: "",
-                hint = primitiveString("hint") ?: "",
-                targetScreenKey = primitiveString("target_screen_key"),
-            )
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun JsonObject.primitiveString(key: String): String? {
-        val primitive = this[key] as? JsonPrimitive ?: return null
-        return primitive.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
-    }
-    
-    private fun JsonObject.primitiveFloat(key: String): Float? {
-        val primitive = this[key] as? JsonPrimitive ?: return null
-        return primitive.contentOrNull?.toFloatOrNull()
-    }
-    
-    private fun JsonObject.primitiveBool(key: String): Boolean {
-        val primitive = this[key] as? JsonPrimitive ?: return false
-        return primitive.contentOrNull?.toBoolean() ?: false
-    }
-
     companion object {
         private const val PAYLOAD_PREVIEW_LIMIT = 140
     }
@@ -195,7 +158,7 @@ private data class ScreenResponse(
     @SerialName("screen_key") val screenKey: String,
     val title: String,
     @SerialName("order_index") val orderIndex: Int,
-    val payload: JsonObject,
+    val payload: ScreenPayload,
 )
 
 @Serializable

@@ -50,6 +50,7 @@ fun HomeScreen(
             currentScreenIndex = playerUiState.currentScreenIndex,
             mediaAccessToken = mediaAccessToken,
             activeHotspotHint = playerUiState.activeHotspotHint,
+            activeLessonReference = playerUiState.activeLessonReference,
             completedScreens = playerUiState.completedScreens,
             onIntent = onPlayerIntent,
             resolveUrl = resolveUrl,

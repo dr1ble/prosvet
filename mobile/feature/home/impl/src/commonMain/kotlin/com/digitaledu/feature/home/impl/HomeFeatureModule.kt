@@ -20,6 +20,6 @@ fun homeFeatureModule(): Module = module {
     }
 
     factory { CatalogViewModel(catalogRepository = get()) }
-    factory { PlayerViewModel(urlResolver = get()) }
+    factory { PlayerViewModel(urlResolver = get(), catalogRepository = get()) }
     factory { ProfileViewModel(authRepository = get()) }
 }

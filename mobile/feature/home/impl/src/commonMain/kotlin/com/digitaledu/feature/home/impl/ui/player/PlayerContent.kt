@@ -1,6 +1,7 @@
 package com.digitaledu.feature.home.impl.ui.player
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,9 +9,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -18,9 +21,11 @@ import com.digitaledu.core.model.CatalogScreen
 import com.digitaledu.core.model.Hotspot
 import com.digitaledu.core.model.ScreenPayload
 import com.digitaledu.feature.home.impl.player.PlayerIntent
-import com.digitaledu.feature.home.impl.ui.player.components.ArticleViewer
-import com.digitaledu.feature.home.impl.ui.player.components.QuizView
-import com.digitaledu.feature.home.impl.ui.player.components.VideoPlayer
+import com.digitaledu.feature.home.impl.ui.player.components.ArticleStory
+import com.digitaledu.feature.home.impl.ui.player.components.QuizStory
+import com.digitaledu.feature.home.impl.ui.player.components.VideoStory
+import com.digitaledu.feature.home.impl.ui.player.components.LessonCheatSheetView
+import com.digitaledu.core.model.LessonReference
 
 /**
  * Renders the lesson content for the current screen based on payload type.
@@ -40,6 +45,7 @@ fun PlayerContent(
     screen: CatalogScreen,
     mediaAccessToken: String?,
     activeHotspotHint: Hotspot?,
+    activeLessonReference: LessonReference?,
     onIntent: (PlayerIntent) -> Unit,
     resolveUrl: (String) -> String,
     modifier: Modifier = Modifier,
@@ -58,27 +64,43 @@ fun PlayerContent(
             )
         }
         is ScreenPayload.Video -> {
-            VideoPlayer(
+            VideoStory(
                 payload = payload,
+                onIntent = onIntent,
+                resolveUrl = resolveUrl,
                 modifier = modifier,
             )
         }
         is ScreenPayload.Article -> {
-            ArticleViewer(
+            ArticleStory(
                 title = screen.title,
                 payload = payload,
+                onIntent = onIntent,
                 modifier = modifier,
             )
         }
         is ScreenPayload.Quiz -> {
-            QuizView(
+            QuizStory(
                 payload = payload,
-                onQuizCompleted = { 
-                    // TODO: Handle quiz completion logic (unlock next screen, save cheat sheet)
-                    onIntent(PlayerIntent.Next) 
-                },
+                onIntent = onIntent,
                 modifier = modifier,
             )
+        }
+        is ScreenPayload.CheatSheet -> {
+             if (activeLessonReference != null) {
+                 LessonCheatSheetView(
+                     reference = activeLessonReference,
+                     modifier = modifier.fillMaxSize()
+                 )
+             } else {
+                 // Loading or error state
+                 Box(
+                     modifier = modifier.fillMaxSize(),
+                     contentAlignment = Alignment.Center
+                 ) {
+                     CircularProgressIndicator()
+                 }
+             }
         }
         is ScreenPayload.Unknown -> {
             // Fallback: show title + raw content

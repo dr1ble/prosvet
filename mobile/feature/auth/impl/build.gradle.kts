@@ -28,6 +28,7 @@ kotlin {
             implementation(projects.core.ui)
 
             implementation(compose.runtime)
+            implementation(compose.materialIconsExtended)
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)

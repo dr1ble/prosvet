@@ -2,6 +2,7 @@ package com.digitaledu.feature.home.impl.player
 
 import com.digitaledu.core.model.CatalogBundle
 import com.digitaledu.core.model.Hotspot
+import com.digitaledu.core.model.LessonReference
 
 data class PlayerUiState(
     val bundle: CatalogBundle? = null,
@@ -9,6 +10,7 @@ data class PlayerUiState(
     val isFullscreenMode: Boolean = false,
     val completedScreens: Set<Int> = emptySet(),
     val activeHotspotHint: Hotspot? = null,
+    val activeLessonReference: LessonReference? = null,
 ) {
     val currentScreen
         get() = bundle?.screens?.getOrNull(currentScreenIndex)
