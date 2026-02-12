@@ -14,7 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
+import com.digitaledu.core.ui.util.BackHandler
 import com.digitaledu.core.model.CatalogBundle
 import com.digitaledu.core.model.Hotspot
 import com.digitaledu.core.model.LessonReference
