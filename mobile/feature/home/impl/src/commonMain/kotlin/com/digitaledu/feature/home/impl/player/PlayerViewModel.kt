@@ -17,6 +17,12 @@ class PlayerViewModel(
 ) : BaseViewModel<PlayerUiState, PlayerIntent, PlayerEffect>(PlayerUiState()) {
 
     private var referenceFetchJob: Job? = null
+    private val courseProgress = mutableMapOf<String, SavedCourseProgress>()
+
+    private data class SavedCourseProgress(
+        val currentScreenIndex: Int,
+        val completedScreens: Set<Int>,
+    )
 
 
     override suspend fun handleIntent(intent: PlayerIntent) {
@@ -33,15 +39,17 @@ class PlayerViewModel(
     }
 
     fun openBundle(bundle: CatalogBundle) {
+        val restoredProgress = restoreProgress(bundle)
         updateState {
             copy(
                 bundle = bundle,
-                currentScreenIndex = 0,
+                currentScreenIndex = restoredProgress.currentScreenIndex,
                 isFullscreenMode = true,
-                completedScreens = emptySet(),
+                completedScreens = restoredProgress.completedScreens,
                 activeHotspotHint = null,
             )
         }
+        persistCurrentProgress()
         currentState.currentScreen?.payload?.let { loadLessonReference(it) }
     }
 
@@ -52,6 +60,7 @@ class PlayerViewModel(
             val nextIndex = (currentScreenIndex - 1).coerceAtLeast(0)
             copy(currentScreenIndex = nextIndex)
         }
+        persistCurrentProgress()
         currentState.currentScreen?.payload?.let { loadLessonReference(it) }
     }
 
@@ -69,6 +78,7 @@ class PlayerViewModel(
                 completedScreens = updatedCompleted,
             )
         }
+        persistCurrentProgress()
         currentState.currentScreen?.payload?.let { loadLessonReference(it) }
     }
 
@@ -85,16 +95,31 @@ class PlayerViewModel(
             val currentBundle = bundle ?: return@updateState this
             val targetIndex = currentBundle.screens.indexOfFirst { it.screenKey == screenKey }
             if (targetIndex >= 0) {
-                copy(currentScreenIndex = targetIndex)
+                val updatedCompleted = if (targetIndex > currentScreenIndex) {
+                    completedScreens + currentScreenIndex
+                } else {
+                    completedScreens
+                }
+                copy(
+                    currentScreenIndex = targetIndex,
+                    completedScreens = updatedCompleted,
+                )
             } else {
                 this
             }
         }
+        persistCurrentProgress()
         currentState.currentScreen?.payload?.let { loadLessonReference(it) }
     }
 
     private fun onHotspotClick(hotspot: Hotspot) {
-        if (hotspot.hint.isNotBlank()) {
+        val currentPayload = currentState.currentScreen?.payload
+        val isStartSimulation = (currentPayload as? ScreenPayload.Simulation)?.isStart == true
+
+        // If it's a start screen and the hotspot has NO explicit target, treat it as "Next"
+        if (isStartSimulation && hotspot.targetScreenKey == null) {
+            goToNextScreen()
+        } else if (hotspot.hint.isNotBlank()) {
             updateState { copy(activeHotspotHint = hotspot) }
         } else {
             hotspot.targetScreenKey?.let { navigateToScreenKey(it) }
@@ -111,6 +136,31 @@ class PlayerViewModel(
         updateState { PlayerUiState() }
         emitEffect(PlayerEffect.Closed)
     }
+
+    private fun restoreProgress(bundle: CatalogBundle): SavedCourseProgress {
+        val saved = courseProgress[bundle.progressKey()] ?: return SavedCourseProgress(
+            currentScreenIndex = 0,
+            completedScreens = emptySet(),
+        )
+        val lastIndex = bundle.screens.lastIndex.coerceAtLeast(0)
+        val restoredIndex = saved.currentScreenIndex.coerceIn(0, lastIndex)
+        val validCompleted = saved.completedScreens.filterTo(mutableSetOf()) { it in 0..lastIndex }
+        return SavedCourseProgress(
+            currentScreenIndex = restoredIndex,
+            completedScreens = validCompleted,
+        )
+    }
+
+    private fun persistCurrentProgress() {
+        val state = currentState
+        val bundle = state.bundle ?: return
+        courseProgress[bundle.progressKey()] = SavedCourseProgress(
+            currentScreenIndex = state.currentScreenIndex,
+            completedScreens = state.completedScreens,
+        )
+    }
+
+    private fun CatalogBundle.progressKey(): String = "${course.id}:${release.id}"
 
     private fun loadLessonReference(screenPayload: ScreenPayload) {
         referenceFetchJob?.cancel()
