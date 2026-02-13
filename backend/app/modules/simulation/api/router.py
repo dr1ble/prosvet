@@ -18,6 +18,7 @@ from app.modules.simulation.api.schemas import (
     SimulationDraftUpsertIn,
     SimulationLibraryCreateIn,
     SimulationLibraryItemOut,
+    SimulationLibraryItemSummaryOut,
     SimulationLibraryListOut,
     SimulationMediaAppBindingListOut,
     SimulationMediaAssetOut,
@@ -228,16 +229,31 @@ def list_library_items(
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     search_query: str = Query(default="", max_length=120),
+    app_package_name: str | None = Query(default=None, min_length=3, max_length=255),
+    store_type: str | None = Query(default=None, max_length=30),
+    min_supported_version: str | None = Query(default=None, min_length=3, max_length=40),
+    max_supported_version: str | None = Query(default=None, min_length=3, max_length=40),
+    released_at: str | None = Query(default=None, max_length=20),
     limit: int = Query(default=40, ge=1, le=100),
 ) -> SimulationLibraryListOut:
     service = SimulationService(db)
-    items = service.list_library_items(
-        owner_user_id=actor.user_id,
-        scope_key=scope_key,
-        search_query=search_query,
-        limit=limit,
+    try:
+        items = service.list_library_items(
+            owner_user_id=actor.user_id,
+            scope_key=scope_key,
+            search_query=search_query,
+            app_package_name=app_package_name,
+            store_type=store_type,
+            min_supported_version=min_supported_version,
+            max_supported_version=max_supported_version,
+            released_at=released_at,
+            limit=limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return SimulationLibraryListOut(
+        items=[SimulationLibraryItemSummaryOut.model_validate(item) for item in items]
     )
-    return SimulationLibraryListOut(items=items)
 
 
 @router.post(

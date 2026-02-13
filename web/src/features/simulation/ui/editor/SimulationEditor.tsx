@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useState, useMemo, useEffect, useRef } from "react";
+import {
+  useCallback,
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import {
   ReactFlow,
   Background,
@@ -42,10 +49,13 @@ import {
   deleteSimulationMediaAssetRemote,
   fetchCurrentSimulationDraftRemote,
   fetchSimulationMediaAppBindingsRemote,
+  loadSimulationLibraryItemRemote,
   saveCurrentSimulationDraftRemote,
+  saveSimulationLibraryItemRemote,
   fetchSimulationMediaAssetsRemote,
   renameSimulationMediaAssetRemote,
   resolveSimulationStoreAppRemote,
+  type SimulationLibraryFilter,
   uploadSimulationMediaAssetRemote,
 } from "@/features/simulation/api/client";
 import {
@@ -80,6 +90,18 @@ const SCREEN_NODE_FALLBACK_HEIGHT = 390;
 const HOTSPOT_DROP_HITBOX_SIZE = 24;
 const HOTSPOT_LINK_DRAG_THRESHOLD_PX = 6;
 const SCREEN_NODE_HEADER_HEIGHT = 34;
+const SCENARIO_IMPORT_DEFAULT_X = 50;
+const SCENARIO_IMPORT_DEFAULT_Y = 50;
+const SCENARIO_IMPORT_VERTICAL_GAP = 88;
+const SCENARIO_IMPORT_COLLISION_PADDING = 16;
+const SCENARIO_IMPORT_COLLISION_STEP_Y = 56;
+const SCENARIO_IMPORT_COLLISION_MAX_STEPS = 120;
+const SIDEBAR_WIDTH_MIN = 220;
+const SIDEBAR_WIDTH_DEFAULT = 220;
+const SIDEBAR_WIDTH_MAX = 460;
+const PROPERTIES_WIDTH_MIN = 240;
+const PROPERTIES_WIDTH_DEFAULT = 260;
+const PROPERTIES_WIDTH_MAX = 460;
 
 const emptyModalTargetApp: SimulationDraft["targetApp"] = {
   appName: "",
@@ -141,6 +163,14 @@ function splitFilename(filename: string): { base: string; extension: string } {
   const base = match?.[1]?.trim() ?? filename.trim();
   const extension = match?.[2] ?? "";
   return { base, extension };
+}
+
+function clampSidebarWidth(width: number): number {
+  return Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, width));
+}
+
+function clampPropertiesWidth(width: number): number {
+  return Math.min(PROPERTIES_WIDTH_MAX, Math.max(PROPERTIES_WIDTH_MIN, width));
 }
 
 function findNodeIdAtPoint(
@@ -410,7 +440,10 @@ type SimulationEditorProps = {
   language: "ru" | "en";
   scopeKey: string;
   scopeLabel: string;
-  courseId?: string | null;
+};
+
+type ScenarioInsertOptions = {
+  dropFlowPosition?: { x: number; y: number } | null;
 };
 
 type EditorHistorySnapshot = {
@@ -518,11 +551,138 @@ function nodesEdgesToDraft(
   };
 }
 
+function normalizeComparable(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
+function buildUniqueValue(
+  source: string,
+  used: Set<string>,
+  fallbackPrefix: string,
+): string {
+  const base = source.trim() || fallbackPrefix;
+  const normalizedBase = normalizeComparable(base);
+  if (!used.has(normalizedBase)) {
+    used.add(normalizedBase);
+    return base;
+  }
+  let index = 2;
+  while (index < 10000) {
+    const candidate = `${base} (${index})`;
+    const normalizedCandidate = normalizeComparable(candidate);
+    if (!used.has(normalizedCandidate)) {
+      used.add(normalizedCandidate);
+      return candidate;
+    }
+    index += 1;
+  }
+  const forced = `${base} (${Date.now()})`;
+  used.add(normalizeComparable(forced));
+  return forced;
+}
+
+function withStartAndCompletionFlags(
+  nodes: SimulationNode[],
+): SimulationNode[] {
+  if (nodes.length === 0) {
+    return nodes;
+  }
+  const sorted = [...nodes].sort(
+    (a, b) => a.position.x - b.position.x || a.position.y - b.position.y,
+  );
+  const firstId = sorted[0]?.id;
+  const lastId = sorted[sorted.length - 1]?.id;
+  return nodes.map((node) => ({
+    ...node,
+    data: {
+      ...node.data,
+      isStart: node.id === firstId,
+      isCompletion: nodes.length > 1 && node.id === lastId,
+    },
+  }));
+}
+
+function getNodeWidth(node: SimulationNode): number {
+  return node.width ?? node.measured?.width ?? SCREEN_NODE_FALLBACK_WIDTH;
+}
+
+function getNodeHeight(node: SimulationNode): number {
+  return node.height ?? node.measured?.height ?? SCREEN_NODE_FALLBACK_HEIGHT;
+}
+
+function getNodeBounds(node: SimulationNode): {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+} {
+  const width = getNodeWidth(node);
+  const height = getNodeHeight(node);
+  return {
+    left: node.position.x,
+    top: node.position.y,
+    right: node.position.x + width,
+    bottom: node.position.y + height,
+  };
+}
+
+function rectanglesOverlap(
+  left: { left: number; top: number; right: number; bottom: number },
+  right: { left: number; top: number; right: number; bottom: number },
+  padding: number,
+): boolean {
+  return !(
+    left.right + padding <= right.left ||
+    left.left >= right.right + padding ||
+    left.bottom + padding <= right.top ||
+    left.top >= right.bottom + padding
+  );
+}
+
+function buildSelectedScreensDraft(
+  fullDraft: SimulationDraft,
+  selectedScreenIds: string[],
+): SimulationDraft | null {
+  if (selectedScreenIds.length === 0) {
+    return null;
+  }
+  const selectedIdSet = new Set(selectedScreenIds);
+  const selectedScreens = fullDraft.screens.filter((screen) =>
+    selectedIdSet.has(screen.id),
+  );
+  if (selectedScreens.length === 0) {
+    return null;
+  }
+
+  const filteredScreenIds = new Set(selectedScreens.map((screen) => screen.id));
+  const screens = selectedScreens.map((screen) => ({
+    ...screen,
+    hotspots: screen.hotspots.map((hotspot) => ({
+      ...hotspot,
+      targetScreenId:
+        hotspot.targetScreenId && filteredScreenIds.has(hotspot.targetScreenId)
+          ? hotspot.targetScreenId
+          : null,
+    })),
+  }));
+
+  const startScreenId =
+    fullDraft.startScreenId && filteredScreenIds.has(fullDraft.startScreenId)
+      ? fullDraft.startScreenId
+      : (screens[0]?.id ?? null);
+
+  return {
+    ...fullDraft,
+    screens,
+    startScreenId,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function SimulationEditorInner({
   language,
   scopeLabel,
   scopeKey,
-  courseId,
 }: SimulationEditorProps) {
   const [nodes, setNodes] = useState<SimulationNode[]>([]);
   const [edges, setEdges] = useState<SimulationEdge[]>([]);
@@ -572,6 +732,17 @@ function SimulationEditorInner({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
+  const [isSidebarResizing, setIsSidebarResizing] = useState(false);
+  const [propertiesWidth, setPropertiesWidth] = useState(
+    PROPERTIES_WIDTH_DEFAULT,
+  );
+  const [isPropertiesResizing, setIsPropertiesResizing] = useState(false);
+  const [canvasLayoutTick, setCanvasLayoutTick] = useState(0);
+  const [previewImage, setPreviewImage] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
 
   const {
     fitView,
@@ -604,6 +775,282 @@ function SimulationEditorInner({
   const historyLastSignatureRef = useRef<string | null>(null);
   const historyLastSnapshotRef = useRef<EditorHistorySnapshot | null>(null);
   const isApplyingHistoryRef = useRef(false);
+  const sidebarResizeRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+  const propertiesResizeRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  const getDraftForLibrarySave = useCallback(
+    (mode: "all" | "selected"): SimulationDraft | null => {
+      const fullDraft = nodesEdgesToDraft(nodes, title, targetApp);
+      if (mode === "all") {
+        return fullDraft;
+      }
+
+      const selectedNodeIds = nodes
+        .filter((node) => node.selected)
+        .map((node) => node.id);
+      const fallbackSelectedIds =
+        selectedNodeIds.length === 0 && selectedNodeId ? [selectedNodeId] : [];
+      const effectiveSelectedIds =
+        selectedNodeIds.length > 0 ? selectedNodeIds : fallbackSelectedIds;
+
+      return buildSelectedScreensDraft(fullDraft, effectiveSelectedIds);
+    },
+    [nodes, selectedNodeId, targetApp, title],
+  );
+
+  const insertScenarioDraft = useCallback(
+    (draft: SimulationDraft, options?: ScenarioInsertOptions): boolean => {
+      const imported = draftToNodesEdges(draft);
+      if (imported.nodes.length === 0) {
+        return false;
+      }
+
+      const existingNodes = nodesRef.current;
+      const existingEdges = edgesRef.current;
+
+      const importedMinX = Math.min(
+        ...imported.nodes.map((node) => node.position.x),
+      );
+      const importedMinY = Math.min(
+        ...imported.nodes.map((node) => node.position.y),
+      );
+
+      const desiredAnchor = (() => {
+        if (options?.dropFlowPosition) {
+          return options.dropFlowPosition;
+        }
+        if (existingNodes.length === 0) {
+          return { x: SCENARIO_IMPORT_DEFAULT_X, y: SCENARIO_IMPORT_DEFAULT_Y };
+        }
+        const minLeft = Math.min(
+          ...existingNodes.map((node) => node.position.x),
+        );
+        const maxBottom = Math.max(
+          ...existingNodes.map((node) => node.position.y + getNodeHeight(node)),
+        );
+        return {
+          x: Number.isFinite(minLeft) ? minLeft : SCENARIO_IMPORT_DEFAULT_X,
+          y: maxBottom + SCENARIO_IMPORT_VERTICAL_GAP,
+        };
+      })();
+
+      const baseOffset = {
+        x: desiredAnchor.x - importedMinX,
+        y: desiredAnchor.y - importedMinY,
+      };
+
+      const usedTitles = new Set(
+        existingNodes.map((node) => normalizeComparable(node.data.title || "")),
+      );
+      const usedKeys = new Set(
+        existingNodes.map((node) => normalizeComparable(node.data.key || "")),
+      );
+
+      const screenIdMap = new Map<string, string>();
+      const hotspotIdMap = new Map<string, string>();
+      imported.nodes.forEach((node, index) => {
+        screenIdMap.set(
+          node.id,
+          `screen-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+        );
+        node.data.hotspots.forEach((hotspot, hotspotIndex) => {
+          hotspotIdMap.set(
+            hotspot.id,
+            `hotspot-${Date.now()}-${index}-${hotspotIndex}-${Math.random().toString(36).slice(2, 8)}`,
+          );
+        });
+      });
+
+      const baseNodes: SimulationNode[] = imported.nodes.map((node) => {
+        const mappedId = screenIdMap.get(node.id) ?? node.id;
+        const nextTitle = buildUniqueValue(
+          node.data.title,
+          usedTitles,
+          language === "ru" ? "Экран" : "Screen",
+        );
+        const nextKey = buildUniqueValue(node.data.key, usedKeys, "screen");
+
+        return {
+          ...node,
+          id: mappedId,
+          position: {
+            x: node.position.x + baseOffset.x,
+            y: node.position.y + baseOffset.y,
+          },
+          data: {
+            ...node.data,
+            title: nextTitle,
+            key: nextKey,
+            hotspots: node.data.hotspots.map((hotspot) => ({
+              ...hotspot,
+              id: hotspotIdMap.get(hotspot.id) ?? hotspot.id,
+              targetScreenId: hotspot.targetScreenId
+                ? (screenIdMap.get(hotspot.targetScreenId) ?? null)
+                : null,
+            })),
+          },
+        };
+      });
+
+      const importedEdges: SimulationEdge[] = imported.edges
+        .map((edge, index) => {
+          const source = screenIdMap.get(edge.source);
+          const target = screenIdMap.get(edge.target);
+          if (!source || !target) {
+            return null;
+          }
+          const mappedHotspotId =
+            typeof edge.data?.hotspotId === "string"
+              ? (hotspotIdMap.get(edge.data.hotspotId) ?? edge.data.hotspotId)
+              : undefined;
+
+          return {
+            ...edge,
+            id: `edge-${source}-${target}-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+            source,
+            target,
+            data: {
+              ...(edge.data ?? { label: "" }),
+              hotspotId: mappedHotspotId,
+            },
+          } as SimulationEdge;
+        })
+        .filter((edge): edge is SimulationEdge => edge !== null);
+
+      let resolvedNodes = baseNodes;
+      for (
+        let step = 0;
+        step < SCENARIO_IMPORT_COLLISION_MAX_STEPS;
+        step += 1
+      ) {
+        const hasCollision = resolvedNodes.some((candidateNode) => {
+          const candidateBounds = getNodeBounds(candidateNode);
+          return existingNodes.some((existingNode) =>
+            rectanglesOverlap(
+              candidateBounds,
+              getNodeBounds(existingNode),
+              SCENARIO_IMPORT_COLLISION_PADDING,
+            ),
+          );
+        });
+        if (!hasCollision) {
+          break;
+        }
+        resolvedNodes = resolvedNodes.map((node) => ({
+          ...node,
+          position: {
+            ...node.position,
+            y: node.position.y + SCENARIO_IMPORT_COLLISION_STEP_Y,
+          },
+        }));
+      }
+
+      const mergedNodes = withStartAndCompletionFlags([
+        ...existingNodes,
+        ...resolvedNodes,
+      ]);
+      setNodes(mergedNodes);
+      setEdges([...existingEdges, ...importedEdges]);
+      setSelectedNodeId(resolvedNodes[0]?.id ?? null);
+      setSelectedEdgeId(null);
+      setSelectedHotspotId(null);
+      return true;
+    },
+    [language],
+  );
+
+  const handleInsertLibraryItem = useCallback(
+    async (
+      itemId: string,
+      options?: ScenarioInsertOptions,
+    ): Promise<boolean> => {
+      try {
+        const loaded = await loadSimulationLibraryItemRemote(itemId);
+        if (!loaded) {
+          return false;
+        }
+        return insertScenarioDraft(loaded, options);
+      } catch (error) {
+        console.error("Failed to insert scenario from library:", error);
+        return false;
+      }
+    },
+    [insertScenarioDraft],
+  );
+
+  const handleSaveLibraryScenario = useCallback(
+    async (
+      mode: "all" | "selected",
+    ): Promise<{ ok: boolean; message?: string }> => {
+      const draft = getDraftForLibrarySave(mode);
+      if (!draft) {
+        return {
+          ok: false,
+          message:
+            language === "ru"
+              ? "Выберите хотя бы один экран для сохранения."
+              : "Select at least one screen to save.",
+        };
+      }
+
+      try {
+        await saveSimulationLibraryItemRemote(scopeKey, {
+          title:
+            draft.title.trim() || (language === "ru" ? "Сценарий" : "Scenario"),
+          draft,
+        });
+        return { ok: true };
+      } catch (error) {
+        return {
+          ok: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : language === "ru"
+                ? "Не удалось сохранить сценарий."
+                : "Failed to save scenario.",
+        };
+      }
+    },
+    [getDraftForLibrarySave, language, scopeKey],
+  );
+
+  const libraryBindingFilter = useMemo<SimulationLibraryFilter | null>(() => {
+    const packageName = targetApp.packageName.trim();
+    const minSupportedVersion = targetApp.minSupportedVersion.trim();
+    const maxSupportedVersion = targetApp.maxSupportedVersion.trim();
+    if (!packageName || !minSupportedVersion || !maxSupportedVersion) {
+      return null;
+    }
+    const isDefaultBinding =
+      packageName === defaultTargetApp.packageName && !targetApp.appName.trim();
+    if (isDefaultBinding) {
+      return null;
+    }
+    return {
+      appPackageName: packageName,
+      storeType: targetApp.storeType,
+      minSupportedVersion,
+      maxSupportedVersion,
+      releasedAt: targetApp.releasedAt.trim(),
+    };
+  }, [
+    targetApp.appName,
+    targetApp.maxSupportedVersion,
+    targetApp.minSupportedVersion,
+    targetApp.packageName,
+    targetApp.releasedAt,
+    targetApp.storeType,
+  ]);
 
   useEffect(() => {
     let mounted = true;
@@ -860,20 +1307,7 @@ function SimulationEditorInner({
           (c) => c.type === "position" && c.dragging === false,
         );
         if (hasPositionChange && updated.length > 0) {
-          const sorted = [...updated].sort(
-            (a, b) =>
-              a.position.x - b.position.x || a.position.y - b.position.y,
-          );
-          const firstId = sorted[0].id;
-          const lastId = sorted[sorted.length - 1].id;
-          return updated.map((node) => ({
-            ...node,
-            data: {
-              ...node.data,
-              isStart: node.id === firstId,
-              isCompletion: updated.length > 1 && node.id === lastId,
-            },
-          }));
+          return withStartAndCompletionFlags(updated);
         }
         return updated;
       });
@@ -917,6 +1351,10 @@ function SimulationEditorInner({
             backToMenu: "Назад",
             showAllConnections: "Показать все связи",
             showOnlySelectedConnections: "Показывать только выбранную зону",
+            resizeSidebar: "Изменить ширину левого меню",
+            resizeProperties: "Изменить ширину панели свойств",
+            closePreview: "Закрыть предпросмотр",
+            imagePreviewHint: "Двойной клик для предпросмотра",
           }
         : {
             title: "Simulation Editor",
@@ -944,6 +1382,10 @@ function SimulationEditorInner({
             backToMenu: "Back",
             showAllConnections: "Show all links",
             showOnlySelectedConnections: "Show selected hotspot only",
+            resizeSidebar: "Resize left panel",
+            resizeProperties: "Resize properties panel",
+            closePreview: "Close preview",
+            imagePreviewHint: "Double click to preview",
           },
     [language],
   );
@@ -970,20 +1412,7 @@ function SimulationEditorInner({
     };
 
     const updatedNodes = [...nodes, newNode];
-    const sorted = [...updatedNodes].sort(
-      (a, b) => a.position.x - b.position.x || a.position.y - b.position.y,
-    );
-    const firstId = sorted[0].id;
-    const lastId = sorted[sorted.length - 1].id;
-
-    const finalNodes = updatedNodes.map((node) => ({
-      ...node,
-      data: {
-        ...node.data,
-        isStart: node.id === firstId,
-        isCompletion: updatedNodes.length > 1 && node.id === lastId,
-      },
-    }));
+    const finalNodes = withStartAndCompletionFlags(updatedNodes);
 
     setNodes(finalNodes);
     setSelectedNodeId(newId);
@@ -1038,20 +1467,7 @@ function SimulationEditorInner({
         };
 
         const updatedNodes = [...prev, newNode];
-        const sorted = [...updatedNodes].sort(
-          (a, b) => a.position.x - b.position.x || a.position.y - b.position.y,
-        );
-        const firstId = sorted[0].id;
-        const lastId = sorted[sorted.length - 1].id;
-
-        return updatedNodes.map((node) => ({
-          ...node,
-          data: {
-            ...node.data,
-            isStart: node.id === firstId,
-            isCompletion: updatedNodes.length > 1 && node.id === lastId,
-          },
-        }));
+        return withStartAndCompletionFlags(updatedNodes);
       });
       setSelectedNodeId(newId);
       setSelectedHotspotId(null);
@@ -1608,7 +2024,10 @@ function SimulationEditorInner({
   const handleCanvasDragOver = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       if (
-        event.dataTransfer.types.includes("application/x-simulation-screen")
+        event.dataTransfer.types.includes("application/x-simulation-screen") ||
+        event.dataTransfer.types.includes(
+          "application/x-simulation-library-item",
+        )
       ) {
         event.preventDefault();
         event.dataTransfer.dropEffect = "copy";
@@ -1618,7 +2037,30 @@ function SimulationEditorInner({
   );
 
   const handleCanvasDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
+    async (event: React.DragEvent<HTMLDivElement>) => {
+      const libraryPayloadRaw = event.dataTransfer.getData(
+        "application/x-simulation-library-item",
+      );
+      if (libraryPayloadRaw) {
+        event.preventDefault();
+        try {
+          const payload = JSON.parse(libraryPayloadRaw) as {
+            itemId: string;
+          };
+          if (!payload?.itemId) {
+            return;
+          }
+          const dropFlowPosition = screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          });
+          await handleInsertLibraryItem(payload.itemId, { dropFlowPosition });
+        } catch {
+          // Ignore malformed drag payload.
+        }
+        return;
+      }
+
       const payloadRaw = event.dataTransfer.getData(
         "application/x-simulation-screen",
       );
@@ -1646,7 +2088,7 @@ function SimulationEditorInner({
         // Ignore malformed drag payload.
       }
     },
-    [handleAddAppScreen, screenToFlowPosition],
+    [handleAddAppScreen, handleInsertLibraryItem, screenToFlowPosition],
   );
 
   const handleDrawHotspot: HotspotDrawHandler = useCallback(
@@ -1778,11 +2220,56 @@ function SimulationEditorInner({
     [],
   );
 
-  const isDraggingHotspot = Boolean(draggingHotspotRef.current);
+  const clearHotspotDragState = useCallback(() => {
+    draggingHotspotRef.current = null;
+    setDraggingHotspot(null);
+  }, []);
+
+  const updateHotspotTargetLink = useCallback(
+    (sourceNodeId: string, hotspotId: string, targetNodeId: string | null) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== sourceNodeId) return node;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              hotspots: node.data.hotspots.map((hotspot) =>
+                hotspot.id === hotspotId
+                  ? { ...hotspot, targetScreenId: targetNodeId }
+                  : hotspot,
+              ),
+            },
+          };
+        }),
+      );
+
+      setEdges((eds) => {
+        const filtered = eds.filter(
+          (edge) => edge.data?.hotspotId !== hotspotId,
+        );
+        if (!targetNodeId) {
+          return filtered;
+        }
+        return [
+          ...filtered,
+          {
+            id: `edge-${sourceNodeId}-${targetNodeId}-${hotspotId}`,
+            source: sourceNodeId,
+            target: targetNodeId,
+            type: "transition",
+            data: {
+              label: "",
+              hotspotId,
+            },
+          },
+        ];
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (!isDraggingHotspot) return;
-
     const handlePointerMove = (e: PointerEvent) => {
       if (!draggingHotspotRef.current) return;
       const current = draggingHotspotRef.current;
@@ -1797,10 +2284,7 @@ function SimulationEditorInner({
       const released = { ...current, currentX: e.clientX, currentY: e.clientY };
       draggingHotspotRef.current = released;
       setDraggingHotspot(released);
-      const finishDragging = () => {
-        draggingHotspotRef.current = null;
-        setDraggingHotspot(null);
-      };
+      const finishDragging = () => clearHotspotDragState();
 
       const dx = released.currentX - released.startX;
       const dy = released.currentY - released.startY;
@@ -1844,68 +2328,106 @@ function SimulationEditorInner({
           released.sourceNodeId,
         );
 
+      const currentHotspot = nodesRef.current
+        .find((node) => node.id === released.sourceNodeId)
+        ?.data.hotspots.find((hotspot) => hotspot.id === released.hotspotId);
+      const previousTargetNodeId = currentHotspot?.targetScreenId ?? null;
+
       if (targetNodeId && targetNodeId !== released.sourceNodeId) {
-        // Check if edge already exists
-        const existingEdge = edgesRef.current.find(
-          (edge) =>
-            edge.source === released.sourceNodeId &&
-            edge.target === targetNodeId,
-        );
-        if (!existingEdge) {
-          const newEdge: SimulationEdge = {
-            id: `edge-${released.sourceNodeId}-${targetNodeId}-${Date.now()}`,
-            source: released.sourceNodeId,
-            target: targetNodeId,
-            type: "transition",
-            data: {
-              label: "",
-              hotspotId: released.hotspotId,
-            },
-          };
-          setEdges((eds) => [...eds, newEdge]);
+        if (previousTargetNodeId !== targetNodeId) {
+          updateHotspotTargetLink(
+            released.sourceNodeId,
+            released.hotspotId,
+            targetNodeId,
+          );
         }
-        setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id !== released.sourceNodeId) return node;
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                hotspots: node.data.hotspots.map((h) =>
-                  h.id === released.hotspotId
-                    ? { ...h, targetScreenId: targetNodeId }
-                    : h,
-                ),
-              },
-            };
-          }),
-        );
         setSelectedNodeId(released.sourceNodeId);
         setSelectedEdgeId(null);
         setSelectedHotspotId(released.hotspotId);
       } else {
-        setDropHint({
-          message:
-            languageRef.current === "ru"
-              ? "Отпустите на экране для создания связи"
-              : "Drop on a screen to create connection",
-          x: released.currentX,
-          y: released.currentY - 40,
-        });
-        setTimeout(() => setDropHint(null), 2000);
+        if (previousTargetNodeId) {
+          updateHotspotTargetLink(
+            released.sourceNodeId,
+            released.hotspotId,
+            null,
+          );
+          setDropHint({
+            message:
+              languageRef.current === "ru"
+                ? "Связь удалена"
+                : "Connection removed",
+            x: released.currentX,
+            y: released.currentY - 40,
+          });
+          setTimeout(() => setDropHint(null), 1500);
+        } else {
+          setDropHint({
+            message:
+              languageRef.current === "ru"
+                ? "Отпустите на экране для создания связи"
+                : "Drop on a screen to create connection",
+            x: released.currentX,
+            y: released.currentY - 40,
+          });
+          setTimeout(() => setDropHint(null), 2000);
+        }
+        setSelectedNodeId(released.sourceNodeId);
+        setSelectedEdgeId(null);
+        setSelectedHotspotId(released.hotspotId);
       }
 
       finishDragging();
     };
 
+    const handlePointerCancel = () => {
+      if (!draggingHotspotRef.current) {
+        return;
+      }
+      clearHotspotDragState();
+      setDropHint(null);
+    };
+
+    const handleWindowBlur = () => {
+      if (!draggingHotspotRef.current) {
+        return;
+      }
+      clearHotspotDragState();
+      setDropHint(null);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        return;
+      }
+      if (!draggingHotspotRef.current) {
+        return;
+      }
+      clearHotspotDragState();
+      setDropHint(null);
+    };
+
     window.addEventListener("pointermove", handlePointerMove, true);
     window.addEventListener("pointerup", handlePointerUp, true);
+    window.addEventListener("pointercancel", handlePointerCancel, true);
+    window.addEventListener("blur", handleWindowBlur);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("pointermove", handlePointerMove, true);
       window.removeEventListener("pointerup", handlePointerUp, true);
+      window.removeEventListener("pointercancel", handlePointerCancel, true);
+      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [isDraggingHotspot]);
+  }, [clearHotspotDragState, updateHotspotTargetLink]);
+
+  useEffect(() => {
+    if (!isAddMediaModalOpen && !previewImage) {
+      return;
+    }
+    clearHotspotDragState();
+    setDropHint(null);
+  }, [clearHotspotDragState, isAddMediaModalOpen, previewImage]);
 
   const nodesWithMode = nodes.map((node) => ({
     ...node,
@@ -2013,8 +2535,30 @@ function SimulationEditorInner({
   }, [applyHistorySnapshot]);
 
   const viewportKey = `${viewport.x}:${viewport.y}:${viewport.zoom}`;
+  const draggingHotspotKey = draggingHotspot
+    ? `${draggingHotspot.sourceNodeId}:${draggingHotspot.hotspotId}`
+    : null;
+  const toCanvasPoint = useCallback(
+    (point: { x: number; y: number }): { x: number; y: number } => {
+      const canvasElement = canvasRef.current;
+      if (!canvasElement) {
+        return point;
+      }
+      const rect = canvasElement.getBoundingClientRect();
+      return {
+        x: point.x - rect.left,
+        y: point.y - rect.top,
+      };
+    },
+    [],
+  );
   const persistentConnections = useMemo(() => {
     void viewportKey;
+    void sidebarWidth;
+    void propertiesWidth;
+    void isSidebarResizing;
+    void isPropertiesResizing;
+    void canvasLayoutTick;
     const connections: Array<{
       id: string;
       path: string;
@@ -2044,6 +2588,9 @@ function SimulationEditorInner({
       );
 
       for (const hotspot of sourceNode.data.hotspots) {
+        if (draggingHotspotKey === `${sourceNode.id}:${hotspot.id}`) {
+          continue;
+        }
         if (!hotspot.targetScreenId) {
           continue;
         }
@@ -2092,8 +2639,12 @@ function SimulationEditorInner({
           height: targetHeight,
         });
 
-        const sourcePoint = flowToScreenPosition(sourceFlowPoint);
-        const targetPoint = flowToScreenPosition(targetAnchor.point);
+        const sourcePoint = toCanvasPoint(
+          flowToScreenPosition(sourceFlowPoint),
+        );
+        const targetPoint = toCanvasPoint(
+          flowToScreenPosition(targetAnchor.point),
+        );
         const path = buildCurvedConnectionPath(
           sourcePoint,
           targetPoint,
@@ -2121,18 +2672,195 @@ function SimulationEditorInner({
     selectedHotspotId,
     showAllConnections,
     flowToScreenPosition,
+    toCanvasPoint,
     viewportKey,
+    draggingHotspotKey,
+    sidebarWidth,
+    propertiesWidth,
+    isSidebarResizing,
+    isPropertiesResizing,
+    canvasLayoutTick,
   ]);
-  const oldEditorHref = courseId
-    ? `/simulation?lang=${language}&courseId=${encodeURIComponent(courseId)}`
-    : `/simulation?lang=${language}`;
+  const openImagePreview = useCallback(
+    (url: string, title: string) => {
+      const safeUrl = url.trim();
+      if (!safeUrl) {
+        return;
+      }
+      setPreviewImage({
+        url: safeUrl,
+        title: title.trim() || (language === "ru" ? "Экран" : "Screen"),
+      });
+    },
+    [language],
+  );
+
+  const closeImagePreview = useCallback(() => {
+    setPreviewImage(null);
+  }, []);
+
+  const clearTransientLinkVisuals = useCallback(() => {
+    clearHotspotDragState();
+    setDropHint(null);
+  }, [clearHotspotDragState]);
+
+  const finishSidebarResize = useCallback(() => {
+    sidebarResizeRef.current = null;
+    setIsSidebarResizing(false);
+    if (propertiesResizeRef.current) {
+      return;
+    }
+    document.body.style.removeProperty("cursor");
+    document.body.style.removeProperty("user-select");
+  }, []);
+
+  const finishPropertiesResize = useCallback(() => {
+    propertiesResizeRef.current = null;
+    setIsPropertiesResizing(false);
+    if (sidebarResizeRef.current) {
+      return;
+    }
+    document.body.style.removeProperty("cursor");
+    document.body.style.removeProperty("user-select");
+  }, []);
+
+  useEffect(() => {
+    const handleSidebarPointerMove = (event: PointerEvent) => {
+      const resizeState = sidebarResizeRef.current;
+      if (!resizeState || event.pointerId !== resizeState.pointerId) {
+        return;
+      }
+      const delta = event.clientX - resizeState.startX;
+      setSidebarWidth(clampSidebarWidth(resizeState.startWidth + delta));
+    };
+
+    const handleSidebarPointerUp = (event: PointerEvent) => {
+      const resizeState = sidebarResizeRef.current;
+      if (!resizeState || event.pointerId !== resizeState.pointerId) {
+        return;
+      }
+      finishSidebarResize();
+    };
+
+    window.addEventListener("pointermove", handleSidebarPointerMove, true);
+    window.addEventListener("pointerup", handleSidebarPointerUp, true);
+    window.addEventListener("pointercancel", handleSidebarPointerUp, true);
+
+    return () => {
+      window.removeEventListener("pointermove", handleSidebarPointerMove, true);
+      window.removeEventListener("pointerup", handleSidebarPointerUp, true);
+      window.removeEventListener("pointercancel", handleSidebarPointerUp, true);
+      finishSidebarResize();
+    };
+  }, [finishSidebarResize]);
+
+  const handleSidebarResizeStart = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      clearTransientLinkVisuals();
+      sidebarResizeRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startWidth: sidebarWidth,
+      };
+      setIsSidebarResizing(true);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [clearTransientLinkVisuals, sidebarWidth],
+  );
+
+  useEffect(() => {
+    const handlePropertiesPointerMove = (event: PointerEvent) => {
+      const resizeState = propertiesResizeRef.current;
+      if (!resizeState || event.pointerId !== resizeState.pointerId) {
+        return;
+      }
+      const delta = event.clientX - resizeState.startX;
+      setPropertiesWidth(clampPropertiesWidth(resizeState.startWidth - delta));
+    };
+
+    const handlePropertiesPointerUp = (event: PointerEvent) => {
+      const resizeState = propertiesResizeRef.current;
+      if (!resizeState || event.pointerId !== resizeState.pointerId) {
+        return;
+      }
+      finishPropertiesResize();
+    };
+
+    window.addEventListener("pointermove", handlePropertiesPointerMove, true);
+    window.addEventListener("pointerup", handlePropertiesPointerUp, true);
+    window.addEventListener("pointercancel", handlePropertiesPointerUp, true);
+
+    return () => {
+      window.removeEventListener(
+        "pointermove",
+        handlePropertiesPointerMove,
+        true,
+      );
+      window.removeEventListener("pointerup", handlePropertiesPointerUp, true);
+      window.removeEventListener(
+        "pointercancel",
+        handlePropertiesPointerUp,
+        true,
+      );
+      finishPropertiesResize();
+    };
+  }, [finishPropertiesResize]);
+
+  const handlePropertiesResizeStart = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      clearTransientLinkVisuals();
+      propertiesResizeRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startWidth: propertiesWidth,
+      };
+      setIsPropertiesResizing(true);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [clearTransientLinkVisuals, propertiesWidth],
+  );
+
+  useEffect(() => {
+    if (!isSidebarResizing && !isPropertiesResizing) {
+      return;
+    }
+    clearTransientLinkVisuals();
+  }, [clearTransientLinkVisuals, isPropertiesResizing, isSidebarResizing]);
+
+  useEffect(() => {
+    const canvasElement = canvasRef.current;
+    if (!canvasElement || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      setCanvasLayoutTick((tick) => tick + 1);
+    });
+    observer.observe(canvasElement);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) {
         return;
       }
+      if (event.key === "Escape" && previewImage) {
+        event.preventDefault();
+        closeImagePreview();
+        return;
+      }
       if (isEditableElement(event.target)) {
+        return;
+      }
+      if (previewImage) {
         return;
       }
       if (isAddMediaModalOpen) {
@@ -2182,11 +2910,13 @@ function SimulationEditorInner({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [
+    closeImagePreview,
     handleDeleteHotspot,
     handleDeleteScreen,
     handleRedo,
     handleUndo,
     isAddMediaModalOpen,
+    previewImage,
     selectedHotspotId,
     selectedNodeId,
   ]);
@@ -2237,28 +2967,17 @@ function SimulationEditorInner({
       onModalSubmit={handleSubmitAddMediaModal}
       modalSubmitDisabled={Boolean(modalMediaBindingError)}
       onModalScreenDragStart={handleModalScreenDragStart}
+      onPreviewImage={openImagePreview}
     />
-  );
-
-  const handleLoadDraft = useCallback(
-    (draft: SimulationDraft) => {
-      setTitle(draft.title);
-      setTargetApp(draft.targetApp ?? defaultTargetApp);
-      const { nodes: loadedNodes, edges: loadedEdges } =
-        draftToNodesEdges(draft);
-      setNodes(loadedNodes);
-      setEdges(loadedEdges);
-      setSelectedNodeId(null);
-      setTimeout(() => fitView({ padding: 0.2 }), 50);
-    },
-    [fitView],
   );
 
   const libraryTab = (
     <LibraryTab
       language={language}
       scopeKey={scopeKey}
-      onLoadDraft={handleLoadDraft}
+      quickFilter={libraryBindingFilter}
+      onSaveScenario={handleSaveLibraryScenario}
+      onInsertScenario={handleInsertLibraryItem}
     />
   );
 
@@ -2268,9 +2987,6 @@ function SimulationEditorInner({
         <div className={styles.toolbarLeft}>
           <a href={`/dashboard?lang=${language}`} className={styles.backButton}>
             ← {labels.backToMenu}
-          </a>
-          <a href={oldEditorHref} className={styles.oldEditorLink}>
-            {language === "ru" ? "Старый редактор" : "Old Editor"}
           </a>
           <span className={styles.scope}>{scopeLabel}</span>
         </div>
@@ -2315,16 +3031,29 @@ function SimulationEditorInner({
       </header>
 
       <div className={styles.main}>
-        <aside className={styles.sidebar}>
-          <ToolsPanel
-            language={language}
-            screensTab={screensTab}
-            appMediaTab={appMediaTab}
-            libraryTab={libraryTab}
+        <div
+          className={`${styles.sidebarContainer} ${isSidebarResizing ? styles.sidebarContainerResizing : ""}`}
+          style={{ width: `${sidebarWidth}px` }}
+        >
+          <aside className={styles.sidebar}>
+            <ToolsPanel
+              language={language}
+              screensTab={screensTab}
+              appMediaTab={appMediaTab}
+              libraryTab={libraryTab}
+            />
+          </aside>
+          <div
+            className={styles.sidebarResizeHandle}
+            onPointerDown={handleSidebarResizeStart}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={labels.resizeSidebar}
           />
-        </aside>
+        </div>
 
         <div
+          ref={canvasRef}
           className={styles.canvas}
           onDragOver={handleCanvasDragOver}
           onDrop={handleCanvasDrop}
@@ -2408,7 +3137,7 @@ function SimulationEditorInner({
             </svg>
           )}
 
-          {!isAddMediaModalOpen && draggingHotspot && (
+          {!isAddMediaModalOpen && !previewImage && draggingHotspot && (
             <svg className={styles.dragLine}>
               <path
                 d={buildDragPreviewPath(
@@ -2433,7 +3162,7 @@ function SimulationEditorInner({
             </svg>
           )}
 
-          {dropHint && (
+          {!previewImage && dropHint && (
             <div
               className={styles.dropHint}
               style={{
@@ -2446,176 +3175,260 @@ function SimulationEditorInner({
           )}
         </div>
 
-        <aside className={styles.properties}>
-          <h3 className={styles.propertiesTitle}>{labels.propertiesTitle}</h3>
-          {selectedNodeForProperties ? (
-            <div className={styles.propertiesContent}>
-              <div className={styles.field}>
-                <label className={styles.label}>{labels.screenTitle}</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={selectedNodeForProperties.data.title}
-                  onChange={(e) =>
-                    setNodes((nds) =>
-                      nds.map((n) =>
-                        n.id === selectedNodeId
-                          ? { ...n, data: { ...n.data, title: e.target.value } }
-                          : n,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>{labels.screenImage}</label>
-                {selectedNodeForProperties.data.imageUrl ? (
-                  <div className={styles.imagePreview}>
-                    <img
-                      src={selectedNodeForProperties.data.imageUrl}
-                      alt=""
-                      className={styles.previewImg}
-                    />
-                    <button
-                      className={styles.removeImageButton}
-                      onClick={() =>
-                        setNodes((nds) =>
-                          nds.map((n) =>
-                            n.id === selectedNodeId
-                              ? { ...n, data: { ...n.data, imageUrl: "" } }
-                              : n,
-                          ),
-                        )
-                      }
-                    >
-                      {labels.removeImage}
-                    </button>
+        <div
+          className={`${styles.propertiesContainer} ${isPropertiesResizing ? styles.propertiesContainerResizing : ""}`}
+          style={{ width: `${propertiesWidth}px` }}
+        >
+          <div
+            className={styles.propertiesResizeHandle}
+            onPointerDown={handlePropertiesResizeStart}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={labels.resizeProperties}
+          />
+          <aside className={styles.properties}>
+            <h3 className={styles.propertiesTitle}>{labels.propertiesTitle}</h3>
+            {selectedNodeForProperties ? (
+              <div className={styles.propertiesContent}>
+                {(selectedNodeForProperties.data.isStart ||
+                  selectedNodeForProperties.data.isCompletion) && (
+                  <div className={styles.screenFlags}>
+                    {selectedNodeForProperties.data.isStart && (
+                      <span className={styles.flagStart}>
+                        {labels.startScreen}
+                      </span>
+                    )}
+                    {selectedNodeForProperties.data.isCompletion && (
+                      <span className={styles.flagEnd}>{labels.endScreen}</span>
+                    )}
                   </div>
-                ) : (
-                  <div className={styles.imageGrid}>
-                    {appScreens.slice(0, 6).map((screen) => (
+                )}
+                <div className={styles.field}>
+                  <label className={styles.label}>{labels.screenTitle}</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={selectedNodeForProperties.data.title}
+                    onChange={(e) =>
+                      setNodes((nds) =>
+                        nds.map((n) =>
+                          n.id === selectedNodeId
+                            ? {
+                                ...n,
+                                data: { ...n.data, title: e.target.value },
+                              }
+                            : n,
+                        ),
+                      )
+                    }
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>{labels.screenImage}</label>
+                  {selectedNodeForProperties.data.imageUrl ? (
+                    <div className={styles.imagePreview}>
+                      <img
+                        src={selectedNodeForProperties.data.imageUrl}
+                        alt=""
+                        className={styles.previewImg}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() =>
+                          openImagePreview(
+                            selectedNodeForProperties.data.imageUrl,
+                            selectedNodeForProperties.data.title,
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openImagePreview(
+                              selectedNodeForProperties.data.imageUrl,
+                              selectedNodeForProperties.data.title,
+                            );
+                          }
+                        }}
+                      />
                       <button
-                        key={screen.id}
-                        className={styles.imageOption}
+                        className={styles.removeImageButton}
                         onClick={() =>
                           setNodes((nds) =>
                             nds.map((n) =>
                               n.id === selectedNodeId
-                                ? {
-                                    ...n,
-                                    data: {
-                                      ...n.data,
-                                      imageUrl: screen.imageUrl,
-                                      title: n.data.title || screen.title,
-                                    },
-                                  }
+                                ? { ...n, data: { ...n.data, imageUrl: "" } }
                                 : n,
                             ),
                           )
                         }
                       >
-                        <img src={screen.imageUrl} alt={screen.title} />
+                        {labels.removeImage}
                       </button>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    <div className={styles.imageGrid}>
+                      {appScreens.slice(0, 6).map((screen) => (
+                        <button
+                          key={screen.id}
+                          className={styles.imageOption}
+                          onClick={() =>
+                            setNodes((nds) =>
+                              nds.map((n) =>
+                                n.id === selectedNodeId
+                                  ? {
+                                      ...n,
+                                      data: {
+                                        ...n.data,
+                                        imageUrl: screen.imageUrl,
+                                        title: n.data.title || screen.title,
+                                      },
+                                    }
+                                  : n,
+                              ),
+                            )
+                          }
+                          onDoubleClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openImagePreview(
+                              screen.imageUrl,
+                              screen.title || screen.key,
+                            );
+                          }}
+                          title={labels.imagePreviewHint}
+                        >
+                          <img src={screen.imageUrl} alt={screen.title} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className={styles.hotspots}>
+                  <h4 className={styles.hotspotsTitle}>
+                    {labels.hotspotsTitle} (
+                    {selectedNodeForProperties.data.hotspots.length})
+                  </h4>
+                  {selectedNodeForProperties.data.hotspots.length === 0 ? (
+                    <p className={styles.noHotspots}>{labels.noHotspots}</p>
+                  ) : (
+                    <ul className={styles.hotspotList}>
+                      {selectedNodeForProperties.data.hotspots.map((h) => (
+                        <li
+                          key={h.id}
+                          className={`${styles.hotspotItem} ${selectedHotspotId === h.id ? styles.hotspotItemActive : ""}`}
+                          onClick={() => setSelectedHotspotId(h.id)}
+                        >
+                          <span>{h.label || "Untitled"}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
-              <div className={styles.screenFlags}>
-                {selectedNodeForProperties.data.isStart && (
-                  <span className={styles.flagStart}>{labels.startScreen}</span>
-                )}
-                {selectedNodeForProperties.data.isCompletion && (
-                  <span className={styles.flagEnd}>{labels.endScreen}</span>
-                )}
-              </div>
-              <div className={styles.hotspots}>
-                <h4 className={styles.hotspotsTitle}>
-                  {labels.hotspotsTitle} (
-                  {selectedNodeForProperties.data.hotspots.length})
-                </h4>
-                {selectedNodeForProperties.data.hotspots.length === 0 ? (
-                  <p className={styles.noHotspots}>{labels.noHotspots}</p>
-                ) : (
-                  <ul className={styles.hotspotList}>
-                    {selectedNodeForProperties.data.hotspots.map((h) => (
-                      <li
-                        key={h.id}
-                        className={`${styles.hotspotItem} ${selectedHotspotId === h.id ? styles.hotspotItemActive : ""}`}
-                        onClick={() => setSelectedHotspotId(h.id)}
-                      >
-                        <span>{h.label || "Untitled"}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          ) : selectedHotspot ? (
-            <div className={styles.propertiesContent}>
-              <div className={styles.hotspotHeader}>
-                <span className={styles.hotspotLabel}>
-                  {language === "ru" ? "Зона перехода" : "Hotspot"}
-                </span>
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>{labels.hotspotLabel}</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={selectedHotspot.label}
-                  onChange={(e) =>
-                    handleUpdateHotspot(selectedHotspotId!, {
-                      label: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>{labels.hotspotHint}</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={selectedHotspot.hint}
-                  onChange={(e) =>
-                    handleUpdateHotspot(selectedHotspotId!, {
-                      hint: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>{labels.hotspotTarget}</label>
-                <select
-                  className={styles.input}
-                  value={selectedHotspot.targetScreenId || ""}
-                  onChange={(e) =>
-                    handleUpdateHotspot(selectedHotspotId!, {
-                      targetScreenId: e.target.value || null,
-                    })
-                  }
+            ) : selectedHotspot ? (
+              <div className={styles.propertiesContent}>
+                <div className={styles.hotspotHeader}>
+                  <span className={styles.hotspotLabel}>
+                    {language === "ru" ? "Зона перехода" : "Hotspot"}
+                  </span>
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>{labels.hotspotLabel}</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={selectedHotspot.label}
+                    onChange={(e) =>
+                      handleUpdateHotspot(selectedHotspotId!, {
+                        label: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>{labels.hotspotHint}</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={selectedHotspot.hint}
+                    onChange={(e) =>
+                      handleUpdateHotspot(selectedHotspotId!, {
+                        hint: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>{labels.hotspotTarget}</label>
+                  <select
+                    className={styles.input}
+                    value={selectedHotspot.targetScreenId || ""}
+                    onChange={(e) =>
+                      handleUpdateHotspot(selectedHotspotId!, {
+                        targetScreenId: e.target.value || null,
+                      })
+                    }
+                  >
+                    <option value="">{labels.noTarget}</option>
+                    {nodes
+                      .filter((n) => n.id !== selectedNodeId)
+                      .map((n) => (
+                        <option key={n.id} value={n.id}>
+                          {n.data.title || n.data.key}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <button
+                  className={styles.deleteButton}
+                  onClick={() => handleDeleteHotspot(selectedHotspotId!)}
                 >
-                  <option value="">{labels.noTarget}</option>
-                  {nodes
-                    .filter((n) => n.id !== selectedNodeId)
-                    .map((n) => (
-                      <option key={n.id} value={n.id}>
-                        {n.data.title || n.data.key}
-                      </option>
-                    ))}
-                </select>
+                  {labels.deleteHotspot}
+                </button>
               </div>
-              <button
-                className={styles.deleteButton}
-                onClick={() => handleDeleteHotspot(selectedHotspotId!)}
-              >
-                {labels.deleteHotspot}
-              </button>
-            </div>
-          ) : (
-            <p className={styles.emptyText}>{labels.propertiesHint}</p>
-          )}
-        </aside>
+            ) : (
+              <p className={styles.emptyText}>{labels.propertiesHint}</p>
+            )}
+          </aside>
+        </div>
       </div>
+      {previewImage ? (
+        <div
+          className={styles.previewOverlay}
+          role="presentation"
+          onClick={closeImagePreview}
+        >
+          <div
+            className={styles.previewDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-label={previewImage.title}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.previewCloseButton}
+              onClick={closeImagePreview}
+              aria-label={labels.closePreview}
+              title={labels.closePreview}
+            >
+              <svg
+                className={styles.previewCloseIcon}
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path d="M5 5L15 15" />
+                <path d="M15 5L5 15" />
+              </svg>
+            </button>
+            <img
+              src={previewImage.url}
+              alt={previewImage.title}
+              className={styles.previewImage}
+            />
+            <p className={styles.previewTitle}>{previewImage.title}</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

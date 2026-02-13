@@ -115,7 +115,6 @@ export default async function SimulationV2Page({
         language={language}
         scopeKey={scope.scopeKey}
         scopeLabel={scopeLabel}
-        courseId={scope.courseId}
       />
     </main>
   );

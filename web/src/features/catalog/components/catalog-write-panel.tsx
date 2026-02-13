@@ -192,8 +192,8 @@ export function CatalogWritePanel({
       ? "Сначала подготовьте JSON в разделе «Конструктор симуляций»."
       : "Prepare JSON first in the Simulation Builder.";
   const simulationBuilderHref = selectedCourseId
-    ? `/simulation?lang=${language}&courseId=${selectedCourseId}`
-    : `/simulation?lang=${language}`;
+    ? `/simulation-v2?lang=${language}&courseId=${selectedCourseId}`
+    : `/simulation-v2?lang=${language}`;
 
   const [courseSlug, setCourseSlug] = useState("");
   const [courseTitle, setCourseTitle] = useState("");

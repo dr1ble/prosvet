@@ -12,6 +12,35 @@ type ToolsPanelProps = {
   libraryTab: ReactNode;
 };
 
+function TabIcon({ id }: { id: TabId }) {
+  if (id === "appMedia") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="2.5" width="17" height="19" rx="3" />
+        <circle cx="12" cy="17.5" r="1.2" />
+        <path d="M9 6.5h6" />
+      </svg>
+    );
+  }
+  if (id === "screens") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="14" rx="2.5" />
+        <path d="M8 20h8" />
+        <path d="M12 18v2" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="5" width="7" height="6" rx="1.5" />
+      <rect x="14" y="5" width="7" height="6" rx="1.5" />
+      <rect x="3" y="13" width="7" height="6" rx="1.5" />
+      <rect x="14" y="13" width="7" height="6" rx="1.5" />
+    </svg>
+  );
+}
+
 export function ToolsPanel({
   language,
   screensTab,
@@ -24,22 +53,60 @@ export function ToolsPanel({
     () =>
       language === "ru"
         ? {
-            screens: "Сценарий",
-            appMedia: "Приложение и медиа",
-            library: "Сценарии",
+            screens: {
+              short: "Редактор",
+              description: "Экранный редактор сценария",
+            },
+            appMedia: {
+              short: "Приложения",
+              description: "Приложения и медиаэкраны",
+            },
+            library: {
+              short: "Библиотека",
+              description: "Библиотека сценариев",
+            },
           }
         : {
-            screens: "Scenario",
-            appMedia: "App and Media",
-            library: "Scenarios",
+            screens: {
+              short: "Editor",
+              description: "Scenario screen editor",
+            },
+            appMedia: {
+              short: "Apps",
+              description: "Applications and media screens",
+            },
+            library: {
+              short: "Library",
+              description: "Scenario library",
+            },
           },
     [language],
   );
 
-  const tabs: { id: TabId; label: string; content: ReactNode }[] = [
-    { id: "appMedia", label: labels.appMedia, content: appMediaTab },
-    { id: "screens", label: labels.screens, content: screensTab },
-    { id: "library", label: labels.library, content: libraryTab },
+  const tabs: {
+    id: TabId;
+    label: string;
+    description: string;
+    content: ReactNode;
+  }[] = [
+    {
+      id: "appMedia",
+      label: labels.appMedia.short,
+      description: labels.appMedia.description,
+      content: appMediaTab,
+    },
+    {
+      id: "screens",
+      label: labels.screens.short,
+      description: labels.screens.description,
+      content: screensTab,
+    },
+    {
+      id: "library",
+      label: labels.library.short,
+      description: labels.library.description,
+      content: libraryTab,
+    },
   ];
 
   return (
@@ -50,8 +117,13 @@ export function ToolsPanel({
             key={tab.id}
             className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ""}`}
             onClick={() => setActiveTab(tab.id)}
+            title={tab.description}
+            aria-label={tab.description}
           >
-            {tab.label}
+            <span className={styles.tabIcon} aria-hidden="true">
+              <TabIcon id={tab.id} />
+            </span>
+            <span className={styles.tabLabel}>{tab.label}</span>
           </button>
         ))}
       </div>

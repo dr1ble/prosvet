@@ -80,6 +80,7 @@ type AppMediaTabProps = {
     event: React.DragEvent<HTMLElement>,
     screen: AppMediaAsset,
   ) => void;
+  onPreviewImage: (url: string, title: string) => void;
 };
 
 function stripExtension(filename: string): string {
@@ -146,6 +147,7 @@ export function AppMediaTab({
   onModalSubmit,
   modalSubmitDisabled,
   onModalScreenDragStart,
+  onPreviewImage,
 }: AppMediaTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [renamingScreenId, setRenamingScreenId] = useState<string | null>(null);
@@ -194,6 +196,7 @@ export function AppMediaTab({
             renameScreen: "Название экрана",
             deleteScreen: "Удалить экран",
             deletingScreen: "Удаляем...",
+            previewScreen: "Открыть превью",
             close: "Закрыть",
           }
         : {
@@ -234,6 +237,7 @@ export function AppMediaTab({
             renameScreen: "Screen title",
             deleteScreen: "Delete screen",
             deletingScreen: "Deleting...",
+            previewScreen: "Open preview",
             close: "Close",
           },
     [language],
@@ -258,7 +262,10 @@ export function AppMediaTab({
           title={labels.createHint}
           aria-label={labels.createHint}
         >
-          +
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
         </button>
       </div>
 
@@ -365,12 +372,24 @@ export function AppMediaTab({
                                         onScreenDragStart(event, screen)
                                       }
                                     >
-                                      <div className={styles.screenThumb}>
+                                      <button
+                                        type="button"
+                                        className={`${styles.screenThumb} ${styles.screenThumbButton}`}
+                                        onClick={() =>
+                                          onPreviewImage(
+                                            screen.url,
+                                            stripExtension(screen.filename),
+                                          )
+                                        }
+                                        title={labels.previewScreen}
+                                        aria-label={labels.previewScreen}
+                                        draggable={false}
+                                      >
                                         <img
                                           src={screen.url}
                                           alt={screen.filename}
                                         />
-                                      </div>
+                                      </button>
                                       <div className={styles.screenMeta}>
                                         <p>{stripExtension(screen.filename)}</p>
                                         <button
@@ -574,9 +593,21 @@ export function AppMediaTab({
                       onModalScreenDragStart(event, screen)
                     }
                   >
-                    <div className={styles.screenThumb}>
+                    <button
+                      type="button"
+                      className={`${styles.screenThumb} ${styles.screenThumbButton}`}
+                      onClick={() =>
+                        onPreviewImage(
+                          screen.url,
+                          stripExtension(screen.filename),
+                        )
+                      }
+                      title={labels.previewScreen}
+                      aria-label={labels.previewScreen}
+                      draggable={false}
+                    >
                       <img src={screen.url} alt={screen.filename} />
-                    </div>
+                    </button>
                     <div className={styles.screenMeta}>
                       <label className={styles.inlineField}>
                         <span>{labels.renameScreen}</span>

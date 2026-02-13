@@ -1,15 +1,6 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { fetchAdminAuthMeServer } from "@/features/auth/server";
-import { buildSimulationScope } from "@/features/simulation/model/scope";
-import { SimulationEditor } from "@/features/simulation/ui/editor";
-import { SimulationBuilder } from "@/features/simulation/ui/simulation-builder";
-import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
-import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
-import { resolveLanguage, type AppLanguage } from "@/shared/i18n/lang";
-
-import styles from "./simulation.module.css";
+import { resolveLanguage } from "@/shared/i18n/lang";
 
 type SimulationPageProps = {
   searchParams: Promise<{
@@ -17,125 +8,26 @@ type SimulationPageProps = {
     courseId?: string;
     moduleId?: string;
     lessonId?: string;
-    version?: string;
   }>;
 };
-
-function compactId(value: string): string {
-  if (value.length <= 16) {
-    return value;
-  }
-  return `${value.slice(0, 8)}…${value.slice(-4)}`;
-}
-
-function formatScopeLabel(
-  language: AppLanguage,
-  scope: ReturnType<typeof buildSimulationScope>,
-): string {
-  if (scope.isGlobal) {
-    return language === "ru"
-      ? "Без привязки к курсу"
-      : "Global (not attached to a course)";
-  }
-
-  const parts: string[] = [];
-  if (scope.courseId) {
-    parts.push(
-      language === "ru"
-        ? `Курс ${compactId(scope.courseId)}`
-        : `Course ${compactId(scope.courseId)}`,
-    );
-  }
-  if (scope.moduleId) {
-    parts.push(
-      language === "ru"
-        ? `Модуль ${compactId(scope.moduleId)}`
-        : `Module ${compactId(scope.moduleId)}`,
-    );
-  }
-  if (scope.lessonId) {
-    parts.push(
-      language === "ru"
-        ? `Урок ${compactId(scope.lessonId)}`
-        : `Lesson ${compactId(scope.lessonId)}`,
-    );
-  }
-  return parts.join(" • ");
-}
 
 export default async function SimulationPage({
   searchParams,
 }: SimulationPageProps) {
   const params = await searchParams;
   const language = resolveLanguage(params.lang);
-  const useNewEditor = params.version === "v2";
-  const scope = buildSimulationScope({
-    courseId: params.courseId,
-    moduleId: params.moduleId,
-    lessonId: params.lessonId,
+  const nextQuery = new URLSearchParams({
+    lang: language,
   });
-  const nextSearchParams = new URLSearchParams({ lang: language });
   if (params.courseId) {
-    nextSearchParams.set("courseId", params.courseId);
+    nextQuery.set("courseId", params.courseId);
   }
   if (params.moduleId) {
-    nextSearchParams.set("moduleId", params.moduleId);
+    nextQuery.set("moduleId", params.moduleId);
   }
   if (params.lessonId) {
-    nextSearchParams.set("lessonId", params.lessonId);
-  }
-  if (params.version) {
-    nextSearchParams.set("version", params.version);
-  }
-  const refreshRedirectHref = buildRefreshRedirectHref(
-    `/simulation?${nextSearchParams.toString()}`,
-    language,
-  );
-
-  const cookieStore = await cookies();
-  const accessToken =
-    cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ??
-    process.env.WEB_ADMIN_ACCESS_TOKEN ??
-    "";
-
-  if (!accessToken) {
-    redirect(refreshRedirectHref);
+    nextQuery.set("lessonId", params.lessonId);
   }
 
-  let profile;
-  try {
-    profile = await fetchAdminAuthMeServer(accessToken);
-  } catch {
-    redirect(refreshRedirectHref);
-  }
-
-  if (!profile.permissions.includes("simulation.builder")) {
-    redirect(`/dashboard?lang=${language}`);
-  }
-
-  const scopeLabel = formatScopeLabel(language, scope);
-
-  if (useNewEditor) {
-    return (
-      <main className={styles.page}>
-        <SimulationEditor
-          language={language}
-          scopeKey={scope.scopeKey}
-          scopeLabel={scopeLabel}
-          courseId={scope.courseId}
-        />
-      </main>
-    );
-  }
-
-  return (
-    <main className={styles.page}>
-      <SimulationBuilder
-        language={language}
-        scopeKey={scope.scopeKey}
-        scopeLabel={scopeLabel}
-        courseId={scope.courseId}
-      />
-    </main>
-  );
+  redirect(`/simulation-v2?${nextQuery.toString()}`);
 }

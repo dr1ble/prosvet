@@ -101,7 +101,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const profileLabel = language === "ru" ? "Профиль" : "Profile";
 
   const catalogHref = `/catalog?lang=${language}`;
-  const simulationHref = `/simulation?lang=${language}`;
+  const simulationHref = `/simulation-v2?lang=${language}`;
   const tiles: DashboardTile[] = [
     {
       id: "catalog",

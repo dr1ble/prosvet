@@ -62,6 +62,16 @@ type LibraryItemSummaryApiOut = {
   scope_key: string;
   title: string;
   target_app_name: string | null;
+  binding: {
+    app_package_name: string;
+    store_type: SimulationStoreType;
+    min_supported_version: string;
+    max_supported_version: string;
+    released_at: string | null;
+    icon_url: string | null;
+  } | null;
+  screens_count: number;
+  links_count: number;
   created_at: string;
   updated_at: string;
 };
@@ -118,9 +128,27 @@ export type SimulationLibraryItemSummary = {
   id: string;
   title: string;
   targetAppName: string | null;
+  binding: {
+    appPackageName: string;
+    storeType: SimulationStoreType;
+    minSupportedVersion: string;
+    maxSupportedVersion: string;
+    releasedAt: string | null;
+    iconUrl: string | null;
+  } | null;
+  screensCount: number;
+  linksCount: number;
   createdAt: string;
   updatedAt: string;
 };
+
+export type SimulationLibraryFilter = Partial<{
+  appPackageName: string;
+  storeType: SimulationStoreType;
+  minSupportedVersion: string;
+  maxSupportedVersion: string;
+  releasedAt: string;
+}>;
 
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(path, {
@@ -259,6 +287,18 @@ function mapLibraryItemSummary(
     id: value.id,
     title: value.title,
     targetAppName: value.target_app_name,
+    binding: value.binding
+      ? {
+          appPackageName: value.binding.app_package_name,
+          storeType: value.binding.store_type,
+          minSupportedVersion: value.binding.min_supported_version,
+          maxSupportedVersion: value.binding.max_supported_version,
+          releasedAt: value.binding.released_at,
+          iconUrl: value.binding.icon_url,
+        }
+      : null,
+    screensCount: value.screens_count ?? 0,
+    linksCount: value.links_count ?? 0,
     createdAt: value.created_at,
     updatedAt: value.updated_at,
   };
@@ -412,12 +452,28 @@ export async function resolveSimulationStoreAppRemote(
 export async function fetchSimulationLibraryRemote(
   scopeKey: string,
   searchQuery: string,
+  filter?: SimulationLibraryFilter,
 ): Promise<SimulationLibraryItemSummary[]> {
   const query = new URLSearchParams({
     scope_key: scopeKey,
     search_query: searchQuery,
     limit: "60",
   });
+  if (filter?.appPackageName?.trim()) {
+    query.set("app_package_name", filter.appPackageName.trim());
+  }
+  if (filter?.storeType?.trim()) {
+    query.set("store_type", filter.storeType.trim());
+  }
+  if (filter?.minSupportedVersion?.trim()) {
+    query.set("min_supported_version", filter.minSupportedVersion.trim());
+  }
+  if (filter?.maxSupportedVersion?.trim()) {
+    query.set("max_supported_version", filter.maxSupportedVersion.trim());
+  }
+  if (filter?.releasedAt?.trim()) {
+    query.set("released_at", filter.releasedAt.trim());
+  }
   const data = await getJson<LibraryListApiOut>(
     `/api/admin/simulation/library?${query.toString()}`,
   );

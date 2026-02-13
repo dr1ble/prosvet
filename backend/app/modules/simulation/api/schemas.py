@@ -76,14 +76,28 @@ class SimulationLibraryCreateIn(_BaseSchema):
     payload_json: dict[str, Any]
 
 
+class SimulationLibraryBindingOut(_BaseSchema):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+    app_package_name: str
+    store_type: str
+    min_supported_version: str
+    max_supported_version: str
+    released_at: date | None
+    icon_url: str | None
+
+
 class SimulationLibraryItemSummaryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     id: UUID
     owner_user_id: UUID
     scope_key: str
     title: str
     target_app_name: str | None
+    binding: SimulationLibraryBindingOut | None
+    screens_count: int
+    links_count: int
     created_at: datetime
     updated_at: datetime
 

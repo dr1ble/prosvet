@@ -1099,8 +1099,8 @@ export function SimulationBuilder({
     language,
   });
   const newEditorHref = courseId
-    ? `/simulation?lang=${language}&version=v2&courseId=${encodeURIComponent(courseId)}`
-    : `/simulation?lang=${language}&version=v2`;
+    ? `/simulation-v2?lang=${language}&courseId=${encodeURIComponent(courseId)}`
+    : `/simulation-v2?lang=${language}`;
   const storeTypeOptions: Array<{
     value: SimulationStoreType;
     label: string;
