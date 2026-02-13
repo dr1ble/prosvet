@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { fetchAdminAuthMeServer } from "@/features/auth/server";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
+import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage, type AppLanguage } from "@/shared/i18n/lang";
 import { getUiMessages } from "@/shared/i18n/messages";
 import { ActionLink } from "@/shared/ui/action-link";
@@ -66,20 +67,24 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const language = resolveLanguage(params.lang);
   const messages = getUiMessages(language);
+  const refreshRedirectHref = buildRefreshRedirectHref(
+    `/dashboard?lang=${language}`,
+    language,
+  );
   const cookieStore = await cookies();
   const accessToken =
     cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ??
     process.env.WEB_ADMIN_ACCESS_TOKEN ??
     "";
   if (!accessToken) {
-    redirect(`/auth?lang=${language}`);
+    redirect(refreshRedirectHref);
   }
 
   let profile;
   try {
     profile = await fetchAdminAuthMeServer(accessToken);
   } catch {
-    redirect(`/auth?lang=${language}`);
+    redirect(refreshRedirectHref);
   }
 
   const openLabel = language === "ru" ? "Перейти" : "Open";
@@ -166,8 +171,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <div className={styles.topActions}>
           <LanguageSwitch
             currentLanguage={language}
-            ruHref="/?lang=ru"
-            enHref="/?lang=en"
+            ruHref="/dashboard?lang=ru"
+            enHref="/dashboard?lang=en"
             label={messages.languageLabel}
           />
         </div>

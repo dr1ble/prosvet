@@ -2516,45 +2516,53 @@ export function SimulationBuilder({
                     <p className={styles.graphHint}>{labels.graphHint}</p>
 
                     <div className={styles.graphViewport}>
-                      <svg
-                        className={styles.graphSvg}
-                        viewBox={`0 0 ${graph.width} ${graph.height}`}
-                        preserveAspectRatio="xMinYMin meet"
+                      <div
+                        style={{
+                          width: graph.width,
+                          height: graph.height,
+                          position: "relative",
+                        }}
                       >
-                        {graph.edges.map((edge) => (
-                          <line
-                            key={edge.key}
-                            x1={edge.x1}
-                            y1={edge.y1}
-                            x2={edge.x2}
-                            y2={edge.y2}
-                          />
-                        ))}
-                      </svg>
-
-                      {graph.nodes.map((node) => (
-                        <button
-                          key={node.id}
-                          className={`${styles.graphNode} ${selectedScreen?.id === node.id ? styles.graphNodeActive : ""}`}
-                          style={{
-                            left: `${(node.x / graph.width) * 100}%`,
-                            top: `${(node.y / graph.height) * 100}%`,
-                          }}
-                          type="button"
-                          onClick={() => {
-                            setSelectedScreenId(node.id);
-                            setSelectedHotspotId(null);
-                          }}
+                        <svg
+                          className={styles.graphSvg}
+                          viewBox={`0 0 ${graph.width} ${graph.height}`}
+                          preserveAspectRatio="xMinYMin meet"
                         >
-                          <strong>{node.title}</strong>
-                          {draft.startScreenId === node.id && (
-                            <span>{labels.startScreen}</span>
-                          )}
-                          {node.isCompletion && (
-                            <span>{labels.screenCompletion}</span>
-                          )}
-                        </button>
-                      ))}
+                          {graph.edges.map((edge) => (
+                            <line
+                              key={edge.key}
+                              x1={edge.x1}
+                              y1={edge.y1}
+                              x2={edge.x2}
+                              y2={edge.y2}
+                            />
+                          ))}
+                        </svg>
+
+                        {graph.nodes.map((node) => (
+                          <button
+                            key={node.id}
+                            className={`${styles.graphNode} ${selectedScreen?.id === node.id ? styles.graphNodeActive : ""}`}
+                            style={{
+                              left: `${(node.x / graph.width) * 100}%`,
+                              top: `${(node.y / graph.height) * 100}%`,
+                            }}
+                            type="button"
+                            onClick={() => {
+                              setSelectedScreenId(node.id);
+                              setSelectedHotspotId(null);
+                            }}
+                          >
+                            <strong>{node.title}</strong>
+                            {draft.startScreenId === node.id && (
+                              <span>{labels.startScreen}</span>
+                            )}
+                            {node.isCompletion && (
+                              <span>{labels.screenCompletion}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </>
                 ) : null}

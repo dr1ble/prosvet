@@ -6,6 +6,7 @@ import { buildSimulationScope } from "@/features/simulation/model/scope";
 import { SimulationEditor } from "@/features/simulation/ui/editor";
 import { SimulationBuilder } from "@/features/simulation/ui/simulation-builder";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
+import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage, type AppLanguage } from "@/shared/i18n/lang";
 
 import styles from "./simulation.module.css";
@@ -73,6 +74,23 @@ export default async function SimulationPage({
     moduleId: params.moduleId,
     lessonId: params.lessonId,
   });
+  const nextSearchParams = new URLSearchParams({ lang: language });
+  if (params.courseId) {
+    nextSearchParams.set("courseId", params.courseId);
+  }
+  if (params.moduleId) {
+    nextSearchParams.set("moduleId", params.moduleId);
+  }
+  if (params.lessonId) {
+    nextSearchParams.set("lessonId", params.lessonId);
+  }
+  if (params.version) {
+    nextSearchParams.set("version", params.version);
+  }
+  const refreshRedirectHref = buildRefreshRedirectHref(
+    `/simulation?${nextSearchParams.toString()}`,
+    language,
+  );
 
   const cookieStore = await cookies();
   const accessToken =
@@ -81,14 +99,14 @@ export default async function SimulationPage({
     "";
 
   if (!accessToken) {
-    redirect(`/auth?lang=${language}`);
+    redirect(refreshRedirectHref);
   }
 
   let profile;
   try {
     profile = await fetchAdminAuthMeServer(accessToken);
   } catch {
-    redirect(`/auth?lang=${language}`);
+    redirect(refreshRedirectHref);
   }
 
   if (!profile.permissions.includes("simulation.builder")) {

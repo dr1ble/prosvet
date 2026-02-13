@@ -1871,7 +1871,17 @@ function SimulationEditorInner({
         if (!hotspot.targetScreenId) {
           continue;
         }
-        if (!showAllConnections && hotspot.id !== selectedHotspotId) {
+        const isConnectionRelatedToSelectedNode = selectedNodeId
+          ? sourceNode.id === selectedNodeId ||
+            hotspot.targetScreenId === selectedNodeId
+          : false;
+        const shouldRenderConnection = showAllConnections
+          ? true
+          : selectedHotspotId
+            ? hotspot.id === selectedHotspotId
+            : isConnectionRelatedToSelectedNode;
+
+        if (!shouldRenderConnection) {
           continue;
         }
         const targetNode = nodes.find(
@@ -1920,7 +1930,9 @@ function SimulationEditorInner({
           sourceY: sourcePoint.y,
           targetX: targetPoint.x,
           targetY: targetPoint.y,
-          isActive: hotspot.id === selectedHotspotId,
+          isActive:
+            hotspot.id === selectedHotspotId ||
+            (!selectedHotspotId && isConnectionRelatedToSelectedNode),
         });
       }
     }
@@ -1928,6 +1940,7 @@ function SimulationEditorInner({
     return connections;
   }, [
     nodes,
+    selectedNodeId,
     selectedHotspotId,
     showAllConnections,
     flowToScreenPosition,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { fetchAdminAuthMeServer } from "@/features/auth/server";
 import { fetchCourseReleases, fetchCourses } from "@/features/catalog/api";
 import { buildCatalogHref } from "@/features/catalog/catalog-navigation";
 import { CatalogReleaseList } from "@/features/catalog/components/catalog-release-list";
@@ -9,6 +10,7 @@ import { CatalogSidebar } from "@/features/catalog/components/catalog-sidebar";
 import { CatalogWritePanel } from "@/features/catalog/components/catalog-write-panel";
 import type { CourseDto, CourseReleaseDto } from "@/features/catalog/types";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
+import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { formatLocale, resolveLanguage } from "@/shared/i18n/lang";
 import { getUiMessages } from "@/shared/i18n/messages";
 import { ActionButton } from "@/shared/ui/action-button";
@@ -68,6 +70,26 @@ function parseCatalogTab(value: string | undefined): CatalogWorkspaceTab {
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const params = await searchParams;
   const language = resolveLanguage(params.lang);
+  const nextSearchParams = new URLSearchParams({ lang: language });
+  if (params.courseId) {
+    nextSearchParams.set("courseId", params.courseId);
+  }
+  if (params.releaseStatus) {
+    nextSearchParams.set("releaseStatus", params.releaseStatus);
+  }
+  if (params.releaseVersion) {
+    nextSearchParams.set("releaseVersion", params.releaseVersion);
+  }
+  if (params.releaseLimit) {
+    nextSearchParams.set("releaseLimit", params.releaseLimit);
+  }
+  if (params.tab) {
+    nextSearchParams.set("tab", params.tab);
+  }
+  const refreshRedirectHref = buildRefreshRedirectHref(
+    `/catalog?${nextSearchParams.toString()}`,
+    language,
+  );
   const messages = getUiMessages(language);
   const locale = formatLocale(language);
 
@@ -99,7 +121,12 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     process.env.WEB_ADMIN_ACCESS_TOKEN ??
     "";
   if (!adminAccessToken) {
-    redirect(`/auth?lang=${language}`);
+    redirect(refreshRedirectHref);
+  }
+  try {
+    await fetchAdminAuthMeServer(adminAccessToken);
+  } catch {
+    redirect(refreshRedirectHref);
   }
 
   let releases: CourseReleaseDto[] = [];
@@ -154,7 +181,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     language,
   });
 
-  const dashboardHref = `/?lang=${language}`;
+  const dashboardHref = `/dashboard?lang=${language}`;
   const dashboardLabel = language === "ru" ? "Панель" : "Dashboard";
   const totalCoursesLabel =
     language === "ru" ? "Всего курсов" : "Total courses";
