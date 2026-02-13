@@ -29,7 +29,7 @@ fi
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
-WEB_DIR="$ROOT_DIR/web-admin"
+WEB_DIR="$ROOT_DIR/web"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 STATE_DIR="$ROOT_DIR/.run"
 BACKEND_PID_FILE="$STATE_DIR/backend.pid"
@@ -183,15 +183,15 @@ kill_codegraph_watch_for_path() {
 cleanup_stale_processes() {
   kill_listening_on_port "$BACKEND_PORT" "backend"
   if [[ "$WEB_PORT" != "$BACKEND_PORT" ]]; then
-    kill_listening_on_port "$WEB_PORT" "web-admin"
+    kill_listening_on_port "$WEB_PORT" "web"
   fi
 
   kill_pid_from_file "$BACKEND_PID_FILE" "backend"
-  kill_pid_from_file "$WEB_PID_FILE" "web-admin"
+  kill_pid_from_file "$WEB_PID_FILE" "web"
   kill_pid_from_file "$CGC_PID_FILE" "codegraphcontext-watch"
   kill_matching_processes "uvicorn app.main:app" "backend"
-  kill_matching_processes "next dev -- --hostname" "web-admin"
-  kill_matching_processes "next dev --hostname" "web-admin"
+  kill_matching_processes "next dev -- --hostname" "web"
+  kill_matching_processes "next dev --hostname" "web"
 
   if [[ "$CGC_WATCH" == "1" ]]; then
     if [[ ! -d "$CGC_WATCH_PATH" ]]; then

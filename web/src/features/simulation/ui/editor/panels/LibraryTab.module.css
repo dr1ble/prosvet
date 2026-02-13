@@ -1,0 +1,86 @@
+.container {
+  padding: 12px;
+}
+
+.title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary, #666);
+  margin: 0 0 12px;
+  letter-spacing: 0.5px;
+}
+
+.loading {
+  font-size: 12px;
+  color: var(--text-tertiary, #999);
+  text-align: center;
+  padding: 16px 0;
+}
+
+.empty {
+  font-size: 12px;
+  color: var(--text-tertiary, #999);
+  text-align: center;
+  padding: 16px 0;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  padding: 10px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 6px;
+  border: 1px solid var(--border-default, #e0e0e0);
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #333);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemMeta {
+  font-size: 11px;
+  color: var(--text-tertiary, #999);
+  margin: 4px 0 8px;
+}
+
+.loadButton {
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--accent-primary, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.loadButton:hover {
+  background: var(--accent-hover, #2563eb);
+}
+
+.loadButton:disabled {
+  background: var(--bg-tertiary, #ccc);
+  cursor: not-allowed;
+}

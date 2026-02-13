@@ -1,0 +1,37 @@
+.page {
+  min-height: 100vh;
+  padding: clamp(12px, 2vw, 24px);
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(28, 137, 240, 0.12),
+      transparent 34%
+    ),
+    radial-gradient(circle at 0 100%, rgba(255, 146, 62, 0.1), transparent 32%),
+    #f3f6fb;
+  color: #1f2f3d;
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navLink {
+  min-width: 96px;
+}
+
+@media (max-width: 760px) {
+  .topBar {
+    flex-wrap: wrap;
+  }
+}

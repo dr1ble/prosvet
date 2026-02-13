@@ -45,7 +45,7 @@ need_backend_checks=0
 
 while IFS= read -r path; do
   case "$path" in
-    web-admin/*)
+    web/*)
       need_web_checks=1
       ;;
     backend/*)
@@ -57,16 +57,16 @@ $staged_files
 EOF
 
 if [ "$need_web_checks" -eq 1 ]; then
-  if [ ! -d "$ROOT_DIR/web-admin/node_modules" ]; then
-    if ! require_or_skip "web-admin/node_modules not found. Run: cd web-admin && npm install"; then
+  if [ ! -d "$ROOT_DIR/web/node_modules" ]; then
+    if ! require_or_skip "web/node_modules not found. Run: cd web && npm install"; then
       need_web_checks=0
     fi
   fi
 
   if [ "$need_web_checks" -eq 1 ]; then
-    echo "pre-commit: running lint-staged (prettier) for web-admin..."
+    echo "pre-commit: running lint-staged (prettier) for web..."
     (
-      cd "$ROOT_DIR/web-admin"
+      cd "$ROOT_DIR/web"
       npm exec lint-staged
     )
   fi

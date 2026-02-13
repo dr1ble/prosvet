@@ -1,0 +1,179 @@
+.page {
+  min-height: 100vh;
+  padding: clamp(16px, 2.2vw, 30px);
+  color: #172332;
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(42, 153, 255, 0.14),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 0 100%,
+      rgba(255, 154, 78, 0.12),
+      transparent 32%
+    ),
+    #f2f6fb;
+}
+
+.topBar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.brandBlock {
+  display: grid;
+  gap: 6px;
+}
+
+.brandName {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  font-weight: 700;
+  color: #56708b;
+  text-transform: uppercase;
+}
+
+.pageTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+  line-height: 0.97;
+  letter-spacing: -0.03em;
+}
+
+.brandCaption {
+  margin: 0;
+  max-width: 760px;
+  color: #4b637b;
+  line-height: 1.56;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statusStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.statusChip {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(40, 69, 95, 0.14);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 0 12px;
+}
+
+.statusChip span {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: #5a738d;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusChip strong {
+  color: #22425f;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.functions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.functionCard {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.tileHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.functionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.16rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.phaseBadge {
+  border-radius: 999px;
+  border: 1px solid rgba(57, 85, 112, 0.22);
+  color: #48627d;
+  background: rgba(236, 244, 255, 0.9);
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.functionDescription {
+  margin: 0;
+  color: #4f677f;
+  line-height: 1.55;
+}
+
+.functionLink {
+  align-self: end;
+  justify-self: start;
+}
+
+.functionLinkDisabled {
+  min-height: 40px;
+  align-self: end;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 11px;
+  padding: 0 12px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px dashed rgba(82, 108, 133, 0.38);
+  color: #5c748b;
+  background: rgba(238, 246, 255, 0.84);
+}
+
+.emptyState {
+  padding: 16px;
+  color: #4d667f;
+}
+
+@media (max-width: 840px) {
+  .topBar {
+    grid-template-columns: 1fr;
+  }
+
+  .topActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 14px;
+  }
+}

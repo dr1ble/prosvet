@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-outfit), sans-serif;
+  --font-body: var(--font-work), sans-serif;
+
+  --color-brand-500: #3b82f6;
+  --color-brand-300: #60a5fa;
+  --color-cta-500: #f97316;
+
+  --animate-blob: blob 8s ease-in-out infinite;
+
+  @keyframes blob {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(24px, -32px) scale(1.07);
+    }
+    66% {
+      transform: translate(-18px, 18px) scale(0.92);
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+  }
+}
+
+:root {
+  /* Style contract: shared primitives and dashboard CSS modules depend on these variables. */
+  --font-display: var(--font-outfit), sans-serif;
+  --font-body: var(--font-work), sans-serif;
+
+  --ink-950: #121516;
+  --ink-900: #1b1f21;
+  --ink-700: #3a4248;
+  --ink-500: #64707a;
+
+  --paper-100: #f7f9fd;
+  --paper-200: #eef3fa;
+  --paper-300: #e1e9f4;
+
+  --signal-blue: #1688ff;
+  --signal-orange: #ff7d2f;
+  --signal-green: #1fb989;
+  --signal-red: #d84343;
+
+  --surface-card: rgba(255, 255, 255, 0.92);
+  --surface-muted: rgba(231, 239, 248, 0.7);
+  --border-strong: rgba(35, 62, 89, 0.26);
+  --border-soft: rgba(74, 101, 128, 0.18);
+  --shadow-raised: 0 18px 34px rgba(24, 41, 60, 0.14);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--ink-700);
+  --text-muted: var(--ink-500);
+  --surface-page: var(--paper-100);
+  --surface-card-default: var(--surface-card);
+  --surface-card-muted: var(--surface-muted);
+  --border-default: var(--border-soft);
+  --border-emphasis: var(--border-strong);
+  --interactive-primary: var(--signal-blue);
+  --feedback-success: var(--signal-green);
+  --feedback-warning: var(--signal-orange);
+  --feedback-danger: var(--signal-red);
+}
+
+@layer base {
+  * {
+    min-width: 0;
+  }
+
+  html,
+  body {
+    width: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 font-body text-slate-900 antialiased selection:bg-brand-500/20;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display tracking-tight;
+  }
+
+  a,
+  button,
+  input,
+  textarea,
+  select {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgb(148 163 184 / 0.12) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(148 163 184 / 0.12) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

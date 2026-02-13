@@ -1,0 +1,151 @@
+.container {
+  background: var(--bg-primary, #ffffff);
+  border: 2px solid var(--border-default, #e0e0e0);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+.container:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.container.selected {
+  border-color: var(--accent-primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-bottom: 1px solid var(--border-default, #e0e0e0);
+  font-size: 12px;
+}
+
+.key {
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  font-family: monospace;
+}
+
+.title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary, #333);
+}
+
+.badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--accent-primary, #3b82f6);
+  color: white;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.thumbnail {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-tertiary, #f0f0f0);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary, #999);
+  font-size: 14px;
+}
+
+.hotspotsOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hotspot {
+  position: absolute;
+  background: rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  border-radius: 4px;
+  pointer-events: auto;
+  cursor: grab;
+  transition: background-color 0.2s;
+  z-index: 10;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hotspot.noway {
+  pointer-events: none;
+}
+
+.hotspot:hover {
+  background: rgba(59, 130, 246, 0.5);
+  cursor: grab;
+}
+
+.hotspot:active {
+  cursor: grabbing;
+}
+
+.hotspotSelected {
+  background: rgba(59, 130, 246, 0.6);
+  border-color: var(--accent-primary, #3b82f6);
+  border-width: 2px;
+}
+
+.hotspotConnected {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.hotspotConnected:hover {
+  background: rgba(16, 185, 129, 0.5);
+}
+
+.connectTarget {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+}
+
+.drawMode {
+  cursor: crosshair;
+}
+
+.drawHotspot {
+  position: absolute;
+  background: rgba(16, 185, 129, 0.3);
+  border: 2px dashed rgba(16, 185, 129, 0.8);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.handle {
+  width: 12px !important;
+  height: 12px !important;
+  background: var(--accent-primary, #3b82f6) !important;
+  border: 2px solid white !important;
+  transition: transform 0.2s;
+}
+
+.handle:hover {
+  transform: scale(1.2);
+}

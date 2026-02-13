@@ -26,8 +26,8 @@ install-hooks:
 	./scripts/install-git-hooks.sh
 
 deps-check:
-	@echo "== web-admin: npm outdated =="
-	@cd web-admin && npm outdated || true
+	@echo "== web: npm outdated =="
+	@cd web && npm outdated || true
 	@echo ""
 	@echo "== backend: pip dry-run upgrade check =="
 	@python3 -m pip install --dry-run --upgrade -r backend/requirements-dev.txt || true
