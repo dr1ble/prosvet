@@ -74,6 +74,14 @@ def _normalize_release_date(value: str | None) -> date | None:
         raise ValueError("released_at must use YYYY-MM-DD format.") from exc
 
 
+def _normalize_media_filename(value: str) -> str:
+    normalized = value.strip().replace("/", "_").replace("\\", "_")
+    normalized = normalized.replace("\x00", "")
+    if not normalized:
+        raise ValueError("original_filename is required.")
+    return normalized[:255]
+
+
 def _extract_library_metadata(
     title: str | None,
     payload_json: dict,
@@ -227,6 +235,7 @@ class SimulationService:
         safe_scope = _scope_to_folder(normalized_scope)
         extension = ALLOWED_IMAGE_TYPES[content_type]
         safe_name = original_filename.strip() or f"image.{extension}"
+        safe_name = _normalize_media_filename(safe_name)
         storage_root = Path(settings.simulation_media_dir).resolve()
         target_dir = storage_root / str(owner_user_id) / safe_scope
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -245,7 +254,7 @@ class SimulationService:
                 min_supported_version=normalized_min_version,
                 max_supported_version=normalized_max_version,
                 released_at=normalized_released_at,
-                original_filename=safe_name[:255],
+                original_filename=safe_name,
                 storage_key=storage_key,
                 content_type=content_type,
                 size_bytes=len(content),
@@ -270,6 +279,47 @@ class SimulationService:
         if not file_path.exists() or not file_path.is_file():
             return None
         return asset, file_path
+
+    def rename_media_asset(
+        self,
+        owner_user_id: UUID,
+        asset_id: UUID,
+        original_filename: str,
+    ) -> SimulationMediaAsset | None:
+        asset = self.repo.get_media_asset_by_id(
+            owner_user_id=owner_user_id,
+            asset_id=asset_id,
+        )
+        if asset is None:
+            return None
+
+        normalized_filename = _normalize_media_filename(original_filename)
+        updated = self.repo.update_media_asset_filename(
+            asset=asset,
+            original_filename=normalized_filename,
+        )
+        self.db.commit()
+        return updated
+
+    def delete_media_asset(
+        self,
+        owner_user_id: UUID,
+        asset_id: UUID,
+    ) -> bool:
+        asset = self.repo.get_media_asset_by_id(
+            owner_user_id=owner_user_id,
+            asset_id=asset_id,
+        )
+        if asset is None:
+            return False
+
+        storage_root = Path(settings.simulation_media_dir).resolve()
+        file_path = storage_root / asset.storage_key
+        self.repo.delete_media_asset(asset)
+        self.db.commit()
+        if file_path.exists():
+            file_path.unlink(missing_ok=True)
+        return True
 
     def list_library_items(
         self,

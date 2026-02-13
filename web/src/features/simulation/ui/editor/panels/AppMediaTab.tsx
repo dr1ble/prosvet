@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import type {
   SimulationDraft,
   SimulationStoreType,
@@ -69,7 +69,13 @@ type AppMediaTabProps = {
   modalMediaError: string | null;
   modalMediaHint: string | null;
   onModalUploadMedia: (file: File) => Promise<void>;
-  onModalScreenAdd: (screen: AppMediaAsset) => void;
+  onModalScreenRename: (
+    screen: AppMediaAsset,
+    nextName: string,
+  ) => Promise<void>;
+  onModalScreenDelete: (screen: AppMediaAsset) => Promise<void>;
+  onModalSubmit: () => void;
+  modalSubmitDisabled: boolean;
   onModalScreenDragStart: (
     event: React.DragEvent<HTMLElement>,
     screen: AppMediaAsset,
@@ -91,6 +97,19 @@ function formatVersionLabel(
   return language === "ru"
     ? `${range} • релиз ${version.releasedAt}`
     : `${range} • released ${version.releasedAt}`;
+}
+
+function getStoreGlyph(storeType: SimulationStoreType): string {
+  switch (storeType) {
+    case "play_market":
+      return "▶";
+    case "rustore":
+      return "R";
+    case "app_store":
+      return "A";
+    default:
+      return "•";
+  }
 }
 
 export function AppMediaTab({
@@ -122,10 +141,17 @@ export function AppMediaTab({
   modalMediaError,
   modalMediaHint,
   onModalUploadMedia,
-  onModalScreenAdd,
+  onModalScreenRename,
+  onModalScreenDelete,
+  onModalSubmit,
+  modalSubmitDisabled,
   onModalScreenDragStart,
 }: AppMediaTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [renamingScreenId, setRenamingScreenId] = useState<string | null>(null);
+  const [deletingScreenIds, setDeletingScreenIds] = useState<
+    Record<string, boolean>
+  >({});
 
   const labels = useMemo(
     () =>
@@ -158,10 +184,16 @@ export function AppMediaTab({
             resolveStore: "Получить данные",
             resolvingStore: "Получаем...",
             modalSearch: "Поиск по экранам",
-            uploadMedia: "Загрузить изображение",
+            uploadMedia: "Загрузить изображения",
             uploadingMedia: "Загрузка...",
+            uploadingManyMedia: "Загружаем изображения...",
             modalLoading: "Загружаем экраны...",
             modalEmpty: "Пока нет экранов для этой версии приложения.",
+            submitCreate: "Добавить приложение",
+            submitEdit: "Сохранить",
+            renameScreen: "Название экрана",
+            deleteScreen: "Удалить экран",
+            deletingScreen: "Удаляем...",
             close: "Закрыть",
           }
         : {
@@ -192,10 +224,16 @@ export function AppMediaTab({
             resolveStore: "Fetch data",
             resolvingStore: "Loading...",
             modalSearch: "Search screens",
-            uploadMedia: "Upload image",
+            uploadMedia: "Upload images",
             uploadingMedia: "Uploading...",
+            uploadingManyMedia: "Uploading images...",
             modalLoading: "Loading screens...",
             modalEmpty: "No screens for this app version yet.",
+            submitCreate: "Add application",
+            submitEdit: "Save",
+            renameScreen: "Screen title",
+            deleteScreen: "Delete screen",
+            deletingScreen: "Deleting...",
             close: "Close",
           },
     [language],
@@ -239,109 +277,124 @@ export function AppMediaTab({
         <p className={styles.empty}>{labels.noApps}</p>
       ) : (
         <div className={styles.appList}>
-          {applications.map((app) => (
-            <section key={app.key} className={styles.appCard}>
-              <div className={styles.appHeaderWrap}>
-                <button
-                  type="button"
-                  className={styles.appHeader}
-                  onClick={() => onToggleApplication(app.key)}
-                >
-                  <div className={styles.appIdentity}>
-                    <span className={styles.appIcon} aria-hidden="true">
-                      {app.iconUrl ? (
-                        <img src={app.iconUrl} alt="" />
-                      ) : (
-                        app.appName.trim().slice(0, 1).toUpperCase() || "•"
-                      )}
-                    </span>
-                    <strong>{app.appName}</strong>
-                  </div>
-                  <span className={styles.chevron}>
-                    {app.expanded ? "▴" : "▾"}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className={styles.editButton}
-                  onClick={() => onOpenEditModal(app.key)}
-                  title={labels.editApp}
-                  aria-label={labels.editApp}
-                >
-                  ✎
-                </button>
-              </div>
-
-              {app.expanded ? (
-                <div className={styles.appBody}>
-                  <p className={styles.subTitle}>{labels.versionsTitle}</p>
-                  <ul className={styles.versionList}>
-                    {app.versions.map((version) => (
-                      <li key={version.key} className={styles.versionItem}>
-                        <button
-                          type="button"
-                          className={styles.versionButton}
-                          onClick={() => onToggleVersion(app.key, version.key)}
-                        >
-                          <span>{formatVersionLabel(version, language)}</span>
-                          <span className={styles.versionMeta}>
-                            {version.assetsCount} {version.expanded ? "▴" : "▾"}
+          {applications.map((app) => {
+            const primaryVersion = app.versions[0];
+            const storeGlyph = getStoreGlyph(
+              primaryVersion?.storeType ?? "other",
+            );
+            return (
+              <section key={app.key} className={styles.appCard}>
+                <div className={styles.appHeaderWrap}>
+                  <button
+                    type="button"
+                    className={styles.appHeader}
+                    onClick={() => onToggleApplication(app.key)}
+                  >
+                    <div className={styles.appIdentity}>
+                      <span className={styles.appIcon} aria-hidden="true">
+                        {app.iconUrl ? (
+                          <img src={app.iconUrl} alt="" />
+                        ) : (
+                          <span className={styles.storeBadge}>
+                            {storeGlyph}
                           </span>
-                        </button>
-
-                        {version.expanded ? (
-                          <div className={styles.versionScreens}>
-                            <p className={styles.dragHint}>{labels.dragHint}</p>
-                            {version.screensError ? (
-                              <p className={styles.error}>
-                                {version.screensError}
-                              </p>
-                            ) : version.screensLoading ? (
-                              <p className={styles.empty}>
-                                {labels.screensLoading}
-                              </p>
-                            ) : version.screens.length === 0 ? (
-                              <p className={styles.empty}>{labels.noScreens}</p>
-                            ) : (
-                              <ul className={styles.screenList}>
-                                {version.screens.map((screen) => (
-                                  <li
-                                    key={screen.id}
-                                    className={styles.screenItem}
-                                    draggable
-                                    onDragStart={(event) =>
-                                      onScreenDragStart(event, screen)
-                                    }
-                                  >
-                                    <div className={styles.screenThumb}>
-                                      <img
-                                        src={screen.url}
-                                        alt={screen.filename}
-                                      />
-                                    </div>
-                                    <div className={styles.screenMeta}>
-                                      <p>{stripExtension(screen.filename)}</p>
-                                      <button
-                                        type="button"
-                                        className={styles.secondaryButton}
-                                        onClick={() => onScreenAdd(screen)}
-                                      >
-                                        {labels.addScreen}
-                                      </button>
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
+                        )}
+                      </span>
+                      <strong>{app.appName}</strong>
+                    </div>
+                    <span className={styles.chevron}>
+                      {app.expanded ? "▴" : "▾"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.editButton}
+                    onClick={() => onOpenEditModal(app.key)}
+                    title={labels.editApp}
+                    aria-label={labels.editApp}
+                  >
+                    ✎
+                  </button>
                 </div>
-              ) : null}
-            </section>
-          ))}
+
+                {app.expanded ? (
+                  <div className={styles.appBody}>
+                    <p className={styles.subTitle}>{labels.versionsTitle}</p>
+                    <ul className={styles.versionList}>
+                      {app.versions.map((version) => (
+                        <li key={version.key} className={styles.versionItem}>
+                          <button
+                            type="button"
+                            className={styles.versionButton}
+                            onClick={() =>
+                              onToggleVersion(app.key, version.key)
+                            }
+                          >
+                            <span>{formatVersionLabel(version, language)}</span>
+                            <span className={styles.versionMeta}>
+                              {version.assetsCount}{" "}
+                              {version.expanded ? "▴" : "▾"}
+                            </span>
+                          </button>
+
+                          {version.expanded ? (
+                            <div className={styles.versionScreens}>
+                              <p className={styles.dragHint}>
+                                {labels.dragHint}
+                              </p>
+                              {version.screensError ? (
+                                <p className={styles.error}>
+                                  {version.screensError}
+                                </p>
+                              ) : version.screensLoading ? (
+                                <p className={styles.empty}>
+                                  {labels.screensLoading}
+                                </p>
+                              ) : version.screens.length === 0 ? (
+                                <p className={styles.empty}>
+                                  {labels.noScreens}
+                                </p>
+                              ) : (
+                                <ul className={styles.screenList}>
+                                  {version.screens.map((screen) => (
+                                    <li
+                                      key={screen.id}
+                                      className={styles.screenItem}
+                                      draggable
+                                      onDragStart={(event) =>
+                                        onScreenDragStart(event, screen)
+                                      }
+                                    >
+                                      <div className={styles.screenThumb}>
+                                        <img
+                                          src={screen.url}
+                                          alt={screen.filename}
+                                        />
+                                      </div>
+                                      <div className={styles.screenMeta}>
+                                        <p>{stripExtension(screen.filename)}</p>
+                                        <button
+                                          type="button"
+                                          className={styles.secondaryButton}
+                                          onClick={() => onScreenAdd(screen)}
+                                        >
+                                          {labels.addScreen}
+                                        </button>
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
       )}
 
@@ -477,20 +530,23 @@ export function AppMediaTab({
                 disabled={Boolean(modalMediaHint) || modalMediaUploading}
               >
                 {modalMediaUploading
-                  ? labels.uploadingMedia
+                  ? labels.uploadingManyMedia
                   : labels.uploadMedia}
               </button>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/jpg"
+                multiple
                 className={styles.hiddenInput}
                 onChange={async (event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) {
+                  const files = Array.from(event.target.files ?? []);
+                  if (files.length === 0) {
                     return;
                   }
-                  await onModalUploadMedia(file);
+                  for (const file of files) {
+                    await onModalUploadMedia(file);
+                  }
                   event.currentTarget.value = "";
                 }}
               />
@@ -511,7 +567,7 @@ export function AppMediaTab({
               <ul className={styles.modalScreenList}>
                 {modalMediaAssets.map((screen) => (
                   <li
-                    key={screen.id}
+                    key={`${screen.id}:${screen.filename}`}
                     className={styles.screenItem}
                     draggable
                     onDragStart={(event) =>
@@ -522,19 +578,91 @@ export function AppMediaTab({
                       <img src={screen.url} alt={screen.filename} />
                     </div>
                     <div className={styles.screenMeta}>
-                      <p>{stripExtension(screen.filename)}</p>
+                      <label className={styles.inlineField}>
+                        <span>{labels.renameScreen}</span>
+                        <input
+                          defaultValue={stripExtension(screen.filename)}
+                          disabled={
+                            renamingScreenId === screen.id ||
+                            Boolean(deletingScreenIds[screen.id])
+                          }
+                          onBlur={async (event) => {
+                            const nextName = event.currentTarget.value.trim();
+                            if (!nextName) {
+                              event.currentTarget.value = stripExtension(
+                                screen.filename,
+                              );
+                              return;
+                            }
+                            if (nextName === stripExtension(screen.filename)) {
+                              return;
+                            }
+                            setRenamingScreenId(screen.id);
+                            try {
+                              await onModalScreenRename(screen, nextName);
+                            } finally {
+                              setRenamingScreenId((current) =>
+                                current === screen.id ? null : current,
+                              );
+                            }
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              (event.currentTarget as HTMLInputElement).blur();
+                            }
+                            if (event.key === "Escape") {
+                              event.currentTarget.value = stripExtension(
+                                screen.filename,
+                              );
+                              (event.currentTarget as HTMLInputElement).blur();
+                            }
+                          }}
+                        />
+                      </label>
                       <button
                         type="button"
-                        className={styles.secondaryButton}
-                        onClick={() => onModalScreenAdd(screen)}
+                        className={styles.dangerButton}
+                        disabled={
+                          renamingScreenId === screen.id ||
+                          Boolean(deletingScreenIds[screen.id])
+                        }
+                        onClick={async () => {
+                          setDeletingScreenIds((prev) => ({
+                            ...prev,
+                            [screen.id]: true,
+                          }));
+                          try {
+                            await onModalScreenDelete(screen);
+                          } finally {
+                            setDeletingScreenIds((prev) => {
+                              const next = { ...prev };
+                              delete next[screen.id];
+                              return next;
+                            });
+                          }
+                        }}
                       >
-                        {labels.addScreen}
+                        {deletingScreenIds[screen.id]
+                          ? labels.deletingScreen
+                          : labels.deleteScreen}
                       </button>
                     </div>
                   </li>
                 ))}
               </ul>
             )}
+            <div className={styles.modalFooter}>
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={onModalSubmit}
+                disabled={modalSubmitDisabled}
+              >
+                {modalMode === "create"
+                  ? labels.submitCreate
+                  : labels.submitEdit}
+              </button>
+            </div>
           </section>
         </div>
       ) : null}

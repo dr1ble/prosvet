@@ -20,6 +20,8 @@ from app.modules.simulation.api.schemas import (
     SimulationLibraryItemOut,
     SimulationLibraryListOut,
     SimulationMediaAppBindingListOut,
+    SimulationMediaAssetOut,
+    SimulationMediaAssetUpdateIn,
     SimulationMediaListOut,
     SimulationMediaUploadOut,
 )
@@ -184,6 +186,40 @@ def get_media_asset_file(
         media_type=asset.content_type,
         filename=asset.original_filename,
     )
+
+
+@router.patch("/media/{asset_id}", response_model=SimulationMediaAssetOut)
+def update_media_asset(
+    asset_id: UUID,
+    payload: SimulationMediaAssetUpdateIn,
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+) -> SimulationMediaAssetOut:
+    service = SimulationService(db)
+    try:
+        asset = service.rename_media_asset(
+            owner_user_id=actor.user_id,
+            asset_id=asset_id,
+            original_filename=payload.original_filename,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Media asset not found.")
+    return SimulationMediaAssetOut.model_validate(asset)
+
+
+@router.delete("/media/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_media_asset(
+    asset_id: UUID,
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+) -> Response:
+    service = SimulationService(db)
+    deleted = service.delete_media_asset(owner_user_id=actor.user_id, asset_id=asset_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Media asset not found.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/library", response_model=SimulationLibraryListOut)

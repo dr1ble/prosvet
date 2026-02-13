@@ -35,10 +35,12 @@ import { LibraryTab } from "./panels/LibraryTab";
 import type { AppScreen } from "./types";
 import type { SimulationDraft } from "@/features/simulation/model/types";
 import {
+  deleteSimulationMediaAssetRemote,
   fetchCurrentSimulationDraftRemote,
   fetchSimulationMediaAppBindingsRemote,
   saveCurrentSimulationDraftRemote,
   fetchSimulationMediaAssetsRemote,
+  renameSimulationMediaAssetRemote,
   resolveSimulationStoreAppRemote,
   uploadSimulationMediaAssetRemote,
 } from "@/features/simulation/api/client";
@@ -122,6 +124,13 @@ function mapMediaAssetToAppScreen(asset: MediaAsset): AppScreen {
     createdAt: asset.uploadedAt,
     updatedAt: asset.uploadedAt,
   };
+}
+
+function splitFilename(filename: string): { base: string; extension: string } {
+  const match = filename.match(/^(.*?)(\.[^.]*)?$/);
+  const base = match?.[1]?.trim() ?? filename.trim();
+  const extension = match?.[2] ?? "";
+  return { base, extension };
 }
 
 function findNodeIdAtPoint(
@@ -363,8 +372,9 @@ function SimulationEditorInner({
         modalTargetApp.appName,
       ),
       storeType: modalTargetApp.storeType,
-      minSupportedVersion: modalTargetApp.minSupportedVersion.trim(),
-      maxSupportedVersion: modalTargetApp.maxSupportedVersion.trim(),
+      minSupportedVersion: modalTargetApp.minSupportedVersion.trim() || "1.0.0",
+      maxSupportedVersion:
+        modalTargetApp.maxSupportedVersion.trim() || "99.99.99",
       releasedAt: modalTargetApp.releasedAt.trim(),
     }),
     [modalTargetApp],
@@ -376,12 +386,21 @@ function SimulationEditorInner({
         ? "Укажите название приложения, чтобы открыть медиатеку."
         : "Set app name to unlock media library.";
     }
-    const min = parseSemver(modalMediaBinding.minSupportedVersion);
-    const max = parseSemver(modalMediaBinding.maxSupportedVersion);
-    if (!min || !max || compareSemver(min, max) > 0) {
+    const minRaw = modalTargetApp.minSupportedVersion.trim();
+    const maxRaw = modalTargetApp.maxSupportedVersion.trim();
+    const min = parseSemver(minRaw || "1.0.0");
+    const max = parseSemver(maxRaw || "99.99.99");
+    const minFormatInvalid = minRaw.length > 0 && !parseSemver(minRaw);
+    const maxFormatInvalid = maxRaw.length > 0 && !parseSemver(maxRaw);
+    if (minFormatInvalid || maxFormatInvalid || !min || !max) {
       return language === "ru"
-        ? "Проверьте диапазон версий (формат X.Y.Z, min <= max)."
-        : "Check version range (X.Y.Z format, min <= max).";
+        ? "Проверьте формат версий (X.Y.Z)."
+        : "Check version format (X.Y.Z).";
+    }
+    if (compareSemver(min, max) > 0) {
+      return language === "ru"
+        ? "Мин. версия не может быть больше макс. версии."
+        : "Min version cannot be greater than max version.";
     }
     if (!isValidReleaseDate(modalMediaBinding.releasedAt)) {
       return language === "ru"
@@ -391,10 +410,10 @@ function SimulationEditorInner({
     return null;
   }, [
     language,
-    modalMediaBinding.maxSupportedVersion,
-    modalMediaBinding.minSupportedVersion,
     modalMediaBinding.releasedAt,
     modalTargetApp.appName,
+    modalTargetApp.maxSupportedVersion,
+    modalTargetApp.minSupportedVersion,
   ]);
 
   useEffect(() => {
@@ -829,6 +848,7 @@ function SimulationEditorInner({
         return;
       }
       setModalMediaUploading(true);
+      setModalMediaError(null);
       try {
         const asset = await uploadSimulationMediaAssetRemote(
           scopeKey,
@@ -1165,6 +1185,32 @@ function SimulationEditorInner({
     setIsAddMediaModalOpen(false);
   }, []);
 
+  const handleSubmitAddMediaModal = useCallback(() => {
+    if (modalMediaBindingError) {
+      return;
+    }
+    const normalizedAppName = modalTargetApp.appName.trim();
+    if (!normalizedAppName) {
+      return;
+    }
+    const normalizedTargetApp: SimulationDraft["targetApp"] = {
+      ...modalTargetApp,
+      appName: normalizedAppName,
+      packageName: ensurePackageName(
+        modalTargetApp.packageName,
+        normalizedAppName,
+      ),
+      storeUrl: modalTargetApp.storeUrl.trim(),
+      minSupportedVersion: modalTargetApp.minSupportedVersion.trim() || "1.0.0",
+      maxSupportedVersion:
+        modalTargetApp.maxSupportedVersion.trim() || "99.99.99",
+      releasedAt: modalTargetApp.releasedAt.trim(),
+    };
+    setModalTargetApp(normalizedTargetApp);
+    setTargetApp(normalizedTargetApp);
+    setIsAddMediaModalOpen(false);
+  }, [modalMediaBindingError, modalTargetApp]);
+
   const handleScreenAddFromAsset = useCallback(
     (asset: MediaAsset) => {
       handleAddAppScreen(mapMediaAssetToAppScreen(asset));
@@ -1172,12 +1218,102 @@ function SimulationEditorInner({
     [handleAddAppScreen],
   );
 
-  const handleModalScreenAdd = useCallback(
-    (asset: MediaAsset) => {
-      setTargetApp(modalTargetApp);
-      handleAddAppScreen(mapMediaAssetToAppScreen(asset));
+  const handleModalScreenRename = useCallback(
+    async (screen: MediaAsset, nextName: string) => {
+      const trimmedName = nextName.trim();
+      if (!trimmedName) {
+        return;
+      }
+      const parts = splitFilename(screen.filename);
+      if (trimmedName === parts.base) {
+        return;
+      }
+
+      const normalizedFilename = `${trimmedName}${parts.extension}`;
+      try {
+        const updatedAsset = await renameSimulationMediaAssetRemote(
+          screen.id,
+          normalizedFilename,
+        );
+        const mapped: MediaAsset = {
+          id: updatedAsset.id,
+          filename: updatedAsset.originalFilename,
+          url: updatedAsset.fileUrl,
+          uploadedAt: updatedAsset.createdAt,
+        };
+        setModalMediaAssets((prev) =>
+          prev.map((item) => (item.id === screen.id ? mapped : item)),
+        );
+        setApplications((prev) =>
+          prev.map((app) => ({
+            ...app,
+            versions: app.versions.map((version) => ({
+              ...version,
+              screens: version.screens.map((item) =>
+                item.id === screen.id ? mapped : item,
+              ),
+            })),
+          })),
+        );
+        setAppScreens((prev) =>
+          prev.map((item) =>
+            item.id === screen.id ? mapMediaAssetToAppScreen(mapped) : item,
+          ),
+        );
+        setModalMediaError(null);
+      } catch (error) {
+        setModalMediaError(
+          error instanceof Error
+            ? error.message
+            : language === "ru"
+              ? "Не удалось переименовать экран."
+              : "Failed to rename screen.",
+        );
+      }
     },
-    [handleAddAppScreen, modalTargetApp],
+    [language],
+  );
+
+  const handleModalScreenDelete = useCallback(
+    async (screen: MediaAsset) => {
+      try {
+        await deleteSimulationMediaAssetRemote(screen.id);
+        setModalMediaAssets((prev) =>
+          prev.filter((item) => item.id !== screen.id),
+        );
+        setApplications((prev) =>
+          prev.map((app) => ({
+            ...app,
+            versions: app.versions.map((version) => {
+              const removedCount = version.screens.some(
+                (item) => item.id === screen.id,
+              )
+                ? 1
+                : 0;
+              return {
+                ...version,
+                screens: version.screens.filter(
+                  (item) => item.id !== screen.id,
+                ),
+                assetsCount: Math.max(0, version.assetsCount - removedCount),
+              };
+            }),
+          })),
+        );
+        setAppScreens((prev) => prev.filter((item) => item.id !== screen.id));
+        setModalMediaError(null);
+        setAppsReloadToken((token) => token + 1);
+      } catch (error) {
+        setModalMediaError(
+          error instanceof Error
+            ? error.message
+            : language === "ru"
+              ? "Не удалось удалить экран."
+              : "Failed to delete screen.",
+        );
+      }
+    },
+    [language],
   );
 
   const handleScreenDragStart = useCallback(
@@ -1526,7 +1662,10 @@ function SimulationEditorInner({
       modalMediaError={modalMediaError}
       modalMediaHint={modalMediaBindingError}
       onModalUploadMedia={handleModalUploadMedia}
-      onModalScreenAdd={handleModalScreenAdd}
+      onModalScreenRename={handleModalScreenRename}
+      onModalScreenDelete={handleModalScreenDelete}
+      onModalSubmit={handleSubmitAddMediaModal}
+      modalSubmitDisabled={Boolean(modalMediaBindingError)}
       onModalScreenDragStart={handleModalScreenDragStart}
     />
   );

@@ -51,6 +51,10 @@ class SimulationMediaUploadOut(_BaseSchema):
     asset: SimulationMediaAssetOut
 
 
+class SimulationMediaAssetUpdateIn(_BaseSchema):
+    original_filename: str = Field(min_length=1, max_length=255)
+
+
 class SimulationMediaAppBindingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -190,6 +190,20 @@ async function patchJson<T>(path: string, payload: unknown): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
+async function deleteRequest(path: string): Promise<void> {
+  const response = await fetch(path, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `Request failed (${response.status}): ${raw || response.statusText}`,
+    );
+  }
+}
+
 async function postForm<T>(path: string, formData: FormData): Promise<T> {
   const response = await fetch(path, {
     method: "POST",
@@ -353,6 +367,27 @@ export async function uploadSimulationMediaAssetRemote(
     formData,
   );
   return mapMediaAsset(data.asset);
+}
+
+export async function renameSimulationMediaAssetRemote(
+  assetId: string,
+  originalFilename: string,
+): Promise<SimulationMediaAsset> {
+  const data = await patchJson<MediaAssetApiOut>(
+    `/api/admin/simulation/media/${encodeURIComponent(assetId)}`,
+    {
+      original_filename: originalFilename,
+    },
+  );
+  return mapMediaAsset(data);
+}
+
+export async function deleteSimulationMediaAssetRemote(
+  assetId: string,
+): Promise<void> {
+  await deleteRequest(
+    `/api/admin/simulation/media/${encodeURIComponent(assetId)}`,
+  );
 }
 
 export async function resolveSimulationStoreAppRemote(

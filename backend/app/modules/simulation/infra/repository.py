@@ -212,6 +212,19 @@ class SimulationRepository:
         stmt = select(SimulationMediaAsset).where(SimulationMediaAsset.id == asset_id)
         return self.db.scalar(stmt)
 
+    def update_media_asset_filename(
+        self,
+        asset: SimulationMediaAsset,
+        original_filename: str,
+    ) -> SimulationMediaAsset:
+        asset.original_filename = original_filename
+        self.db.flush()
+        return asset
+
+    def delete_media_asset(self, asset: SimulationMediaAsset) -> None:
+        self.db.delete(asset)
+        self.db.flush()
+
     def list_library_items(
         self,
         owner_user_id: UUID,
