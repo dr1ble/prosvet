@@ -319,6 +319,22 @@ function buildCurvedConnectionPath(
   return `M ${fromPoint.x} ${fromPoint.y} C ${sourceControl.x} ${sourceControl.y} ${targetControl.x} ${targetControl.y} ${toPoint.x} ${toPoint.y}`;
 }
 
+function isEditableElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  const tagName = target.tagName;
+  if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+    return true;
+  }
+  return (
+    target.closest("input, textarea, select, [contenteditable='true']") !== null
+  );
+}
+
 function buildDragPreviewPath(
   fromPoint: { x: number; y: number },
   toPoint: { x: number; y: number },
@@ -396,6 +412,24 @@ type SimulationEditorProps = {
   scopeLabel: string;
   courseId?: string | null;
 };
+
+type EditorHistorySnapshot = {
+  nodes: SimulationNode[];
+  edges: SimulationEdge[];
+};
+
+function cloneEditorHistorySnapshot(
+  snapshot: EditorHistorySnapshot,
+): EditorHistorySnapshot {
+  return structuredClone(snapshot);
+}
+
+function buildEditorHistorySignature(snapshot: EditorHistorySnapshot): string {
+  return JSON.stringify({
+    nodes: snapshot.nodes,
+    edges: snapshot.edges,
+  });
+}
 
 function draftToNodesEdges(draft: SimulationDraft): {
   nodes: SimulationNode[];
@@ -564,6 +598,12 @@ function SimulationEditorInner({
 
   const getIntersectingNodesRef = useRef(getIntersectingNodes);
   getIntersectingNodesRef.current = getIntersectingNodes;
+
+  const historyPastRef = useRef<EditorHistorySnapshot[]>([]);
+  const historyFutureRef = useRef<EditorHistorySnapshot[]>([]);
+  const historyLastSignatureRef = useRef<string | null>(null);
+  const historyLastSnapshotRef = useRef<EditorHistorySnapshot | null>(null);
+  const isApplyingHistoryRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -1887,6 +1927,91 @@ function SimulationEditorInner({
     (h) => h.id === selectedHotspotId,
   );
   const selectedNodeForProperties = selectedHotspot ? null : selectedNode;
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    const currentSnapshot: EditorHistorySnapshot = { nodes, edges };
+    const currentSignature = buildEditorHistorySignature(currentSnapshot);
+
+    if (historyLastSignatureRef.current === null) {
+      historyLastSignatureRef.current = currentSignature;
+      historyLastSnapshotRef.current =
+        cloneEditorHistorySnapshot(currentSnapshot);
+      historyPastRef.current = [];
+      historyFutureRef.current = [];
+      return;
+    }
+
+    if (isApplyingHistoryRef.current) {
+      historyLastSignatureRef.current = currentSignature;
+      historyLastSnapshotRef.current =
+        cloneEditorHistorySnapshot(currentSnapshot);
+      isApplyingHistoryRef.current = false;
+      return;
+    }
+
+    if (historyLastSignatureRef.current === currentSignature) {
+      return;
+    }
+
+    const previousSnapshot = historyLastSnapshotRef.current;
+    if (previousSnapshot) {
+      historyPastRef.current.push(cloneEditorHistorySnapshot(previousSnapshot));
+    }
+    if (historyPastRef.current.length > 100) {
+      historyPastRef.current.shift();
+    }
+    historyFutureRef.current = [];
+    historyLastSignatureRef.current = currentSignature;
+    historyLastSnapshotRef.current =
+      cloneEditorHistorySnapshot(currentSnapshot);
+  }, [edges, isLoading, nodes]);
+
+  const applyHistorySnapshot = useCallback(
+    (snapshot: EditorHistorySnapshot) => {
+      const nextSnapshot = cloneEditorHistorySnapshot(snapshot);
+      isApplyingHistoryRef.current = true;
+      setNodes(nextSnapshot.nodes);
+      setEdges(nextSnapshot.edges);
+      setSelectedEdgeId(null);
+      setSelectedHotspotId(null);
+      setSelectedNodeId(null);
+    },
+    [],
+  );
+
+  const handleUndo = useCallback((): boolean => {
+    const previousSnapshot = historyPastRef.current.pop();
+    if (!previousSnapshot) {
+      return false;
+    }
+
+    const currentSnapshot = cloneEditorHistorySnapshot({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+    });
+    historyFutureRef.current.push(currentSnapshot);
+    applyHistorySnapshot(previousSnapshot);
+    return true;
+  }, [applyHistorySnapshot]);
+
+  const handleRedo = useCallback((): boolean => {
+    const nextSnapshot = historyFutureRef.current.pop();
+    if (!nextSnapshot) {
+      return false;
+    }
+
+    const currentSnapshot = cloneEditorHistorySnapshot({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+    });
+    historyPastRef.current.push(currentSnapshot);
+    applyHistorySnapshot(nextSnapshot);
+    return true;
+  }, [applyHistorySnapshot]);
+
   const viewportKey = `${viewport.x}:${viewport.y}:${viewport.zoom}`;
   const persistentConnections = useMemo(() => {
     void viewportKey;
@@ -2001,6 +2126,70 @@ function SimulationEditorInner({
   const oldEditorHref = courseId
     ? `/simulation?lang=${language}&courseId=${encodeURIComponent(courseId)}`
     : `/simulation?lang=${language}`;
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return;
+      }
+      if (isEditableElement(event.target)) {
+        return;
+      }
+      if (isAddMediaModalOpen) {
+        return;
+      }
+      const hasPrimaryModifier = event.ctrlKey || event.metaKey;
+      const isUndoShortcut =
+        hasPrimaryModifier &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.code === "KeyZ";
+      if (isUndoShortcut) {
+        event.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      const isRedoShortcut =
+        hasPrimaryModifier &&
+        !event.altKey &&
+        ((event.shiftKey && event.code === "KeyZ") ||
+          (!event.shiftKey && event.code === "KeyY"));
+      if (isRedoShortcut) {
+        event.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      if (event.key !== "Delete" && event.key !== "Backspace") {
+        return;
+      }
+
+      if (selectedHotspotId && selectedNodeId) {
+        event.preventDefault();
+        handleDeleteHotspot(selectedHotspotId);
+        return;
+      }
+
+      if (selectedNodeId) {
+        event.preventDefault();
+        handleDeleteScreen(selectedNodeId);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    handleDeleteHotspot,
+    handleDeleteScreen,
+    handleRedo,
+    handleUndo,
+    isAddMediaModalOpen,
+    selectedHotspotId,
+    selectedNodeId,
+  ]);
 
   const screensTab = (
     <ScreensTab
@@ -2145,6 +2334,7 @@ function SimulationEditorInner({
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            deleteKeyCode={null}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             fitView
