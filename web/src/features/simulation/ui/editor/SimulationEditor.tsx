@@ -22,8 +22,11 @@ import {
   type ScreenNodeData,
   type HotspotData,
   type HotspotDrawHandler,
+  type HotspotChangeHandler,
+  type HotspotSelectHandler,
+  type ScreenSelectHandler,
 } from "./canvas/ScreenNode";
-import type { SimulationNode, SimulationEdge, EditorMode } from "./types";
+import type { SimulationNode, SimulationEdge } from "./types";
 import { ToolsPanel } from "./panels/ToolsPanel";
 import { ScreensTab } from "./panels/ScreensTab";
 import {
@@ -75,6 +78,8 @@ const defaultTargetApp: SimulationDraft["targetApp"] = {
 const SCREEN_NODE_FALLBACK_WIDTH = 200;
 const SCREEN_NODE_FALLBACK_HEIGHT = 390;
 const HOTSPOT_DROP_HITBOX_SIZE = 24;
+const HOTSPOT_LINK_DRAG_THRESHOLD_PX = 6;
+const SCREEN_NODE_HEADER_HEIGHT = 34;
 
 const emptyModalTargetApp: SimulationDraft["targetApp"] = {
   appName: "",
@@ -314,6 +319,14 @@ function buildCurvedConnectionPath(
   return `M ${fromPoint.x} ${fromPoint.y} C ${sourceControl.x} ${sourceControl.y} ${targetControl.x} ${targetControl.y} ${toPoint.x} ${toPoint.y}`;
 }
 
+function buildDragPreviewPath(
+  fromPoint: { x: number; y: number },
+  toPoint: { x: number; y: number },
+): string {
+  const targetSide = resolveSourceConnectionSide(toPoint, fromPoint);
+  return buildCurvedConnectionPath(fromPoint, toPoint, targetSide);
+}
+
 function resolveNearestTargetAnchor(
   sourcePoint: { x: number; y: number },
   targetRect: { x: number; y: number; width: number; height: number },
@@ -485,7 +498,6 @@ function SimulationEditorInner({
     null,
   );
   const [showAllConnections, setShowAllConnections] = useState(false);
-  const [mode, setMode] = useState<EditorMode>("select");
   const [draggingHotspot, setDraggingHotspot] = useState<{
     hotspotId: string;
     sourceNodeId: string;
@@ -849,15 +861,13 @@ function SimulationEditorInner({
             propertiesHint: "Выберите экран или зону для редактирования",
             scenarioTitle: "Название сценария",
             scenarioPlaceholder: "Введите название...",
-            modeSelect: "Выбор",
-            modeDraw: "Рисование зон",
             screenTitle: "Название экрана",
             screenImage: "Изображение",
             removeImage: "Удалить",
             startScreen: "Начальный экран",
             endScreen: "Финальный экран",
             hotspotsTitle: "Зоны перехода",
-            noHotspots: "Включите режим рисования для добавления зон",
+            noHotspots: "Перетащите по экрану, чтобы создать зону",
             hotspotLabel: "Название",
             hotspotHint: "Подсказка",
             hotspotTarget: "Целевой экран",
@@ -878,15 +888,13 @@ function SimulationEditorInner({
             propertiesHint: "Select a screen or hotspot to edit",
             scenarioTitle: "Scenario title",
             scenarioPlaceholder: "Enter title...",
-            modeSelect: "Select",
-            modeDraw: "Draw zones",
             screenTitle: "Screen title",
             screenImage: "Image",
             removeImage: "Remove",
             startScreen: "Start screen",
             endScreen: "End screen",
             hotspotsTitle: "Hotspots",
-            noHotspots: "Enable draw mode to add hotspots",
+            noHotspots: "Drag over screen image to create hotspot",
             hotspotLabel: "Label",
             hotspotHint: "Hint",
             hotspotTarget: "Target screen",
@@ -1602,8 +1610,7 @@ function SimulationEditorInner({
   );
 
   const handleDrawHotspot: HotspotDrawHandler = useCallback(
-    (hotspotData) => {
-      if (!selectedNodeId) return;
+    (nodeId, hotspotData) => {
       const newHotspot: HotspotData = {
         id: `hotspot-${Date.now()}`,
         label: "",
@@ -1613,7 +1620,7 @@ function SimulationEditorInner({
       };
       setNodes((nds) =>
         nds.map((node) =>
-          node.id === selectedNodeId
+          node.id === nodeId
             ? {
                 ...node,
                 data: {
@@ -1624,10 +1631,31 @@ function SimulationEditorInner({
             : node,
         ),
       );
+      setSelectedNodeId(nodeId);
+      setSelectedEdgeId(null);
       setSelectedHotspotId(newHotspot.id);
-      setMode("select");
     },
-    [selectedNodeId],
+    [],
+  );
+
+  const handleHotspotGeometryChange: HotspotChangeHandler = useCallback(
+    (hotspotId, nodeId, updates) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id !== nodeId) return node;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              hotspots: node.data.hotspots.map((h) =>
+                h.id === hotspotId ? { ...h, ...updates } : h,
+              ),
+            },
+          };
+        }),
+      );
+    },
+    [],
   );
 
   const handleUpdateHotspot = useCallback(
@@ -1670,6 +1698,21 @@ function SimulationEditorInner({
     },
     [selectedNodeId, selectedHotspotId],
   );
+
+  const handleHotspotSelect: HotspotSelectHandler = useCallback(
+    (hotspotId, nodeId) => {
+      setSelectedNodeId(nodeId);
+      setSelectedEdgeId(null);
+      setSelectedHotspotId(hotspotId);
+    },
+    [],
+  );
+
+  const handleScreenSelect: ScreenSelectHandler = useCallback((nodeId) => {
+    setSelectedNodeId(nodeId);
+    setSelectedEdgeId(null);
+    setSelectedHotspotId(null);
+  }, []);
 
   const handleHotspotDragStart = useCallback(
     (
@@ -1722,9 +1765,7 @@ function SimulationEditorInner({
       const dx = released.currentX - released.startX;
       const dy = released.currentY - released.startY;
       const distance = Math.sqrt(dx * dx + dy * dy);
-
-      // Click without drag: keep hotspot selected, no inline popup.
-      if (distance <= 5) {
+      if (distance <= HOTSPOT_LINK_DRAG_THRESHOLD_PX) {
         setSelectedNodeId(released.sourceNodeId);
         setSelectedEdgeId(null);
         setSelectedHotspotId(released.hotspotId);
@@ -1830,9 +1871,11 @@ function SimulationEditorInner({
     ...node,
     data: {
       ...node.data,
-      mode,
       onDrawHotspot: handleDrawHotspot,
+      onHotspotChange: handleHotspotGeometryChange,
       onHotspotDragStart: handleHotspotDragStart,
+      onHotspotSelect: handleHotspotSelect,
+      onScreenSelect: handleScreenSelect,
       selectedHotspotId,
       nodeId: node.id,
       language,
@@ -1866,6 +1909,14 @@ function SimulationEditorInner({
         sourceNode.height ??
         sourceNode.measured?.height ??
         SCREEN_NODE_FALLBACK_HEIGHT;
+      const sourceImageHeight = Math.max(
+        1,
+        sourceHeight - SCREEN_NODE_HEADER_HEIGHT,
+      );
+      const sourceImageTopOffset = Math.max(
+        0,
+        sourceHeight - sourceImageHeight,
+      );
 
       for (const hotspot of sourceNode.data.hotspots) {
         if (!hotspot.targetScreenId) {
@@ -1906,7 +1957,8 @@ function SimulationEditorInner({
             ((hotspot.x + hotspot.width / 2) / 100) * sourceWidth,
           y:
             sourceNode.position.y +
-            ((hotspot.y + hotspot.height / 2) / 100) * sourceHeight,
+            sourceImageTopOffset +
+            ((hotspot.y + hotspot.height / 2) / 100) * sourceImageHeight,
         };
         const targetAnchor = resolveNearestTargetAnchor(sourceFlowPoint, {
           x: targetNode.position.x,
@@ -2045,13 +2097,6 @@ function SimulationEditorInner({
         </div>
         <div className={styles.toolbarRight}>
           <button
-            className={`${styles.buttonSecondary} ${mode === "draw" ? styles.buttonActive : ""}`}
-            onClick={() => setMode(mode === "draw" ? "select" : "draw")}
-            disabled={isLoading}
-          >
-            {labels.modeDraw}
-          </button>
-          <button
             className={styles.button}
             onClick={handleAddScreen}
             disabled={isLoading}
@@ -2130,13 +2175,9 @@ function SimulationEditorInner({
             <Panel position="top-right">
               <div className={styles.panelControls}>
                 <div className={styles.helpText}>
-                  {mode === "draw"
-                    ? language === "ru"
-                      ? "Рисуйте зоны на выбранном экране"
-                      : "Draw hotspots on selected screen"
-                    : language === "ru"
-                      ? "Тяните зону к другому экрану для связи"
-                      : "Drag hotspot to another screen to connect"}
+                  {language === "ru"
+                    ? "Тяните по пустому месту скриншота, чтобы создать зону. Тяните зону для связи, а верхнюю полоску зоны — для перемещения."
+                    : "Drag on empty screen area to create a hotspot. Drag hotspot body to link and use top grip to move it."}
                 </div>
                 <button
                   type="button"
@@ -2151,7 +2192,7 @@ function SimulationEditorInner({
             </Panel>
           </ReactFlow>
 
-          {persistentConnections.length > 0 && (
+          {!isAddMediaModalOpen && persistentConnections.length > 0 && (
             <svg className={styles.persistentConnections}>
               {persistentConnections.map((connection) => (
                 <g key={connection.id}>
@@ -2177,16 +2218,21 @@ function SimulationEditorInner({
             </svg>
           )}
 
-          {draggingHotspot && (
+          {!isAddMediaModalOpen && draggingHotspot && (
             <svg className={styles.dragLine}>
-              <line
-                x1={draggingHotspot.startX}
-                y1={draggingHotspot.startY}
-                x2={draggingHotspot.currentX}
-                y2={draggingHotspot.currentY}
+              <path
+                d={buildDragPreviewPath(
+                  { x: draggingHotspot.startX, y: draggingHotspot.startY },
+                  {
+                    x: draggingHotspot.currentX,
+                    y: draggingHotspot.currentY,
+                  },
+                )}
                 stroke="#10b981"
                 strokeWidth={2}
                 strokeDasharray="5,5"
+                fill="none"
+                strokeLinecap="round"
               />
               <circle
                 cx={draggingHotspot.startX}
@@ -2367,12 +2413,6 @@ function SimulationEditorInner({
                       </option>
                     ))}
                 </select>
-              </div>
-              <div className={styles.hotspotCoords}>
-                <span>x: {selectedHotspot.x.toFixed(1)}%</span>
-                <span>y: {selectedHotspot.y.toFixed(1)}%</span>
-                <span>w: {selectedHotspot.width.toFixed(1)}%</span>
-                <span>h: {selectedHotspot.height.toFixed(1)}%</span>
               </div>
               <button
                 className={styles.deleteButton}

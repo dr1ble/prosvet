@@ -28,12 +28,6 @@
   font-size: 12px;
 }
 
-.key {
-  font-weight: 600;
-  color: var(--text-secondary, #666);
-  font-family: monospace;
-}
-
 .title {
   flex: 1;
   overflow: hidden;
@@ -59,10 +53,14 @@
 }
 
 .image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .placeholder {
@@ -78,75 +76,179 @@
 .hotspotsOverlay {
   position: absolute;
   inset: 0;
+  z-index: 5;
   pointer-events: none;
 }
 
 .hotspot {
   position: absolute;
-  background: rgba(59, 130, 246, 0.3);
-  border: 1px solid rgba(59, 130, 246, 0.6);
-  border-radius: 4px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1.5px solid rgba(37, 99, 235, 0.66);
+  border-radius: 6px;
   pointer-events: auto;
-  cursor: grab;
-  transition: background-color 0.2s;
+  cursor: crosshair;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
   z-index: 10;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
 }
 
-.hotspot.noway {
-  pointer-events: none;
-}
-
 .hotspot:hover {
-  background: rgba(59, 130, 246, 0.5);
-  cursor: grab;
-}
-
-.hotspot:active {
-  cursor: grabbing;
+  background: rgba(37, 99, 235, 0.14);
+  cursor: crosshair;
 }
 
 .hotspotSelected {
-  background: rgba(59, 130, 246, 0.6);
-  border-color: var(--accent-primary, #3b82f6);
+  background: rgba(37, 99, 235, 0.2);
+  border-color: var(--accent-primary, #2563eb);
   border-width: 2px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.78),
+    0 0 0 2px rgba(37, 99, 235, 0.2);
+  z-index: 20;
 }
 
 .hotspotConnected {
-  background: rgba(16, 185, 129, 0.3);
-  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.74);
 }
 
 .hotspotConnected:hover {
-  background: rgba(16, 185, 129, 0.5);
+  background: rgba(5, 150, 105, 0.2);
 }
 
-.connectTarget {
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+.hotspotGrip {
+  position: absolute;
+  left: 50%;
+  top: -16px;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 11px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 0;
+  cursor: move;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.drawMode {
-  cursor: crosshair;
+.hotspotGrip:hover {
+  border-color: rgba(37, 99, 235, 0.88);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.15);
+}
+
+.hotspotGripIcon {
+  width: 10px;
+  height: 3px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.35),
+    rgba(15, 23, 42, 0.35) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+
+.resizeGuides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.resizeGuide {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.92);
+  transition:
+    background-color 0.12s ease,
+    opacity 0.12s ease;
+  opacity: 1;
+}
+
+.resizeGuideTop,
+.resizeGuideBottom {
+  width: 14px;
+  height: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.resizeGuideTop {
+  top: -4px;
+}
+
+.resizeGuideBottom {
+  bottom: -4px;
+}
+
+.resizeGuideLeft,
+.resizeGuideRight {
+  width: 2px;
+  height: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.resizeGuideLeft {
+  left: -4px;
+}
+
+.resizeGuideRight {
+  right: -4px;
+}
+
+.resizeCornerGuide {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  pointer-events: none;
+}
+
+.resizeCornerGuideNw {
+  left: -5px;
+  top: -5px;
+  border-left: 2px solid rgba(37, 99, 235, 0.92);
+  border-top: 2px solid rgba(37, 99, 235, 0.92);
+  border-top-left-radius: 3px;
+}
+
+.resizeCornerGuideNe {
+  right: -5px;
+  top: -5px;
+  border-right: 2px solid rgba(37, 99, 235, 0.92);
+  border-top: 2px solid rgba(37, 99, 235, 0.92);
+  border-top-right-radius: 3px;
+}
+
+.resizeCornerGuideSe {
+  right: -5px;
+  bottom: -5px;
+  border-right: 2px solid rgba(37, 99, 235, 0.92);
+  border-bottom: 2px solid rgba(37, 99, 235, 0.92);
+  border-bottom-right-radius: 3px;
+}
+
+.resizeCornerGuideSw {
+  left: -5px;
+  bottom: -5px;
+  border-left: 2px solid rgba(37, 99, 235, 0.92);
+  border-bottom: 2px solid rgba(37, 99, 235, 0.92);
+  border-bottom-left-radius: 3px;
 }
 
 .drawHotspot {
   position: absolute;
-  background: rgba(16, 185, 129, 0.3);
-  border: 2px dashed rgba(16, 185, 129, 0.8);
+  background: rgba(16, 185, 129, 0.24);
+  border: 2px dashed rgba(16, 185, 129, 0.88);
   border-radius: 4px;
   pointer-events: none;
-}
-
-.handle {
-  width: 12px !important;
-  height: 12px !important;
-  background: var(--accent-primary, #3b82f6) !important;
-  border: 2px solid white !important;
-  transition: transform 0.2s;
-}
-
-.handle:hover {
-  transform: scale(1.2);
 }
