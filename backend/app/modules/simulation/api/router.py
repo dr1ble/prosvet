@@ -19,6 +19,7 @@ from app.modules.simulation.api.schemas import (
     SimulationLibraryCreateIn,
     SimulationLibraryItemOut,
     SimulationLibraryListOut,
+    SimulationMediaAppBindingListOut,
     SimulationMediaListOut,
     SimulationMediaUploadOut,
 )
@@ -102,6 +103,24 @@ def list_media_assets(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return SimulationMediaListOut(items=assets)
+
+
+@router.get("/media/apps", response_model=SimulationMediaAppBindingListOut)
+def list_media_app_bindings(
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    scope_key: str = Query(default="global", min_length=1, max_length=190),
+    search_query: str = Query(default="", max_length=120),
+    limit: int = Query(default=40, ge=1, le=100),
+) -> SimulationMediaAppBindingListOut:
+    service = SimulationService(db)
+    items = service.list_media_app_bindings(
+        owner_user_id=actor.user_id,
+        scope_key=scope_key,
+        search_query=search_query,
+        limit=limit,
+    )
+    return SimulationMediaAppBindingListOut(items=items)
 
 
 @router.post(

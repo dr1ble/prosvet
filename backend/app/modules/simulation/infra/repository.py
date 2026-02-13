@@ -1,4 +1,5 @@
-from datetime import date
+from dataclasses import dataclass
+from datetime import date, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, desc, func, or_, select
@@ -9,6 +10,17 @@ from app.modules.simulation.infra.models import (
     SimulationLibraryItem,
     SimulationMediaAsset,
 )
+
+
+@dataclass(frozen=True)
+class SimulationMediaAppBinding:
+    app_package_name: str
+    store_type: str
+    min_supported_version: str
+    max_supported_version: str
+    released_at: date | None
+    assets_count: int
+    latest_asset_at: datetime
 
 
 class SimulationRepository:
@@ -91,6 +103,64 @@ class SimulationRepository:
         stmt = stmt.order_by(desc(SimulationMediaAsset.created_at)).limit(limit)
         return list(self.db.scalars(stmt))
 
+    def list_media_app_bindings(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        search_query: str,
+        limit: int,
+    ) -> list[SimulationMediaAppBinding]:
+        stmt = (
+            select(
+                SimulationMediaAsset.app_package_name,
+                SimulationMediaAsset.store_type,
+                SimulationMediaAsset.min_supported_version,
+                SimulationMediaAsset.max_supported_version,
+                SimulationMediaAsset.released_at,
+                func.count(SimulationMediaAsset.id),
+                func.max(SimulationMediaAsset.created_at),
+            )
+            .where(
+                SimulationMediaAsset.owner_user_id == owner_user_id,
+                or_(
+                    SimulationMediaAsset.scope_key == "global",
+                    SimulationMediaAsset.scope_key == scope_key,
+                ),
+            )
+            .group_by(
+                SimulationMediaAsset.app_package_name,
+                SimulationMediaAsset.store_type,
+                SimulationMediaAsset.min_supported_version,
+                SimulationMediaAsset.max_supported_version,
+                SimulationMediaAsset.released_at,
+            )
+        )
+
+        normalized_query = search_query.strip().lower()
+        if normalized_query:
+            pattern = f"%{normalized_query}%"
+            stmt = stmt.where(func.lower(SimulationMediaAsset.app_package_name).like(pattern))
+
+        stmt = stmt.order_by(
+            desc(func.max(SimulationMediaAsset.created_at)),
+            SimulationMediaAsset.app_package_name,
+        ).limit(limit)
+        rows = self.db.execute(stmt).all()
+
+        return [
+            SimulationMediaAppBinding(
+                app_package_name=row[0],
+                store_type=row[1],
+                min_supported_version=row[2],
+                max_supported_version=row[3],
+                released_at=row[4],
+                assets_count=int(row[5]),
+                latest_asset_at=row[6],
+            )
+            for row in rows
+            if row[6] is not None
+        ]
+
     def create_media_asset(
         self,
         owner_user_id: UUID,
@@ -162,9 +232,9 @@ class SimulationRepository:
             stmt = stmt.where(
                 or_(
                     func.lower(SimulationLibraryItem.title).like(pattern),
-                    func.lower(
-                        func.coalesce(SimulationLibraryItem.target_app_name, "")
-                    ).like(pattern),
+                    func.lower(func.coalesce(SimulationLibraryItem.target_app_name, "")).like(
+                        pattern
+                    ),
                 )
             )
         stmt = stmt.order_by(desc(SimulationLibraryItem.updated_at)).limit(limit)

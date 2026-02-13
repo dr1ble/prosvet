@@ -3,48 +3,43 @@
 import { useState, useMemo, type ReactNode } from "react";
 import styles from "./ToolsPanel.module.css";
 
-type TabId = "screens" | "appScreens" | "library" | "media";
+type TabId = "screens" | "appMedia" | "library";
 
 type ToolsPanelProps = {
   language: "ru" | "en";
   screensTab: ReactNode;
-  appScreensTab: ReactNode;
+  appMediaTab: ReactNode;
   libraryTab: ReactNode;
-  mediaTab: ReactNode;
 };
 
 export function ToolsPanel({
   language,
   screensTab,
-  appScreensTab,
+  appMediaTab,
   libraryTab,
-  mediaTab,
 }: ToolsPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("appScreens");
+  const [activeTab, setActiveTab] = useState<TabId>("appMedia");
 
   const labels = useMemo(
     () =>
       language === "ru"
         ? {
             screens: "Сценарий",
-            appScreens: "Экраны приложения",
+            appMedia: "Приложение и медиа",
             library: "Сценарии",
-            media: "Медиа",
           }
         : {
             screens: "Scenario",
-            appScreens: "App Screens",
+            appMedia: "App and Media",
             library: "Scenarios",
-            media: "Media",
           },
     [language],
   );
 
   const tabs: { id: TabId; label: string; content: ReactNode }[] = [
-    { id: "appScreens", label: labels.appScreens, content: appScreensTab },
+    { id: "appMedia", label: labels.appMedia, content: appMediaTab },
     { id: "screens", label: labels.screens, content: screensTab },
     { id: "library", label: labels.library, content: libraryTab },
-    { id: "media", label: labels.media, content: mediaTab },
   ];
 
   return (

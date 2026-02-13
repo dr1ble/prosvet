@@ -6,21 +6,27 @@
 }
 
 .tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
   border-bottom: 1px solid var(--border-default, #e0e0e0);
   flex-shrink: 0;
 }
 
 .tab {
-  flex: 1;
-  padding: 10px 8px;
-  font-size: 12px;
+  min-width: 0;
+  padding: 10px 6px;
+  font-size: 11px;
+  line-height: 1.2;
   font-weight: 500;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-secondary, #666);
   cursor: pointer;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
   transition:
     color 0.2s,
     border-color 0.2s;

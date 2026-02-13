@@ -1098,6 +1098,9 @@ export function SimulationBuilder({
     tab: "builder",
     language,
   });
+  const newEditorHref = courseId
+    ? `/simulation?lang=${language}&version=v2&courseId=${encodeURIComponent(courseId)}`
+    : `/simulation?lang=${language}&version=v2`;
   const storeTypeOptions: Array<{
     value: SimulationStoreType;
     label: string;
@@ -1911,7 +1914,7 @@ export function SimulationBuilder({
               {labels.resetDraft}
             </button>
           ) : null}
-          <a className={styles.newEditorButton} href="?version=v2">
+          <a className={styles.newEditorButton} href={newEditorHref}>
             {language === "ru" ? "Новый редактор" : "New Editor"}
           </a>
           <ActionLink

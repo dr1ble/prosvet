@@ -25,22 +25,27 @@ import {
 import type { SimulationNode, SimulationEdge, EditorMode } from "./types";
 import { ToolsPanel } from "./panels/ToolsPanel";
 import { ScreensTab } from "./panels/ScreensTab";
-import { AppScreensTab } from "./panels/AppScreensTab";
-import { LibraryTab } from "./panels/LibraryTab";
-import { MediaTab } from "./panels/MediaTab";
-import type { AppScreen } from "./types";
 import {
-  createSimulationDraftFromPreset,
-  type SimulationPresetId,
-} from "@/features/simulation/model/factories";
+  AppMediaTab,
+  type AppMediaAsset,
+  type AppMediaApplication,
+  type AppMediaVersion,
+} from "./panels/AppMediaTab";
+import { LibraryTab } from "./panels/LibraryTab";
+import type { AppScreen } from "./types";
 import type { SimulationDraft } from "@/features/simulation/model/types";
 import {
   fetchCurrentSimulationDraftRemote,
+  fetchSimulationMediaAppBindingsRemote,
   saveCurrentSimulationDraftRemote,
   fetchSimulationMediaAssetsRemote,
+  resolveSimulationStoreAppRemote,
   uploadSimulationMediaAssetRemote,
-  type SimulationMediaAsset,
 } from "@/features/simulation/api/client";
+import {
+  deriveAppNameFromPackageName,
+  ensurePackageName,
+} from "@/features/simulation/model/app-id";
 import styles from "./SimulationEditor.module.css";
 
 const nodeTypes = {
@@ -53,20 +58,113 @@ const defaultEdgeOptions = {
   style: { stroke: "#3b82f6", strokeWidth: 2 },
 };
 
-const defaultMediaBinding = {
-  appPackageName: "com.example.app",
-  storeType: "other" as const,
+const defaultTargetApp: SimulationDraft["targetApp"] = {
+  appName: "",
+  packageName: "app.custom.app",
+  storeType: "other",
+  storeUrl: "",
+  iconUrl: "",
   minSupportedVersion: "1.0.0",
   maxSupportedVersion: "99.99.99",
   releasedAt: "",
 };
 
-type MediaAsset = {
-  id: string;
-  filename: string;
-  url: string;
-  uploadedAt: string;
+const emptyModalTargetApp: SimulationDraft["targetApp"] = {
+  appName: "",
+  packageName: "",
+  storeType: "other",
+  storeUrl: "",
+  iconUrl: "",
+  minSupportedVersion: "",
+  maxSupportedVersion: "",
+  releasedAt: "",
 };
+
+function parseSemver(value: string): [number, number, number] | null {
+  const match = value.trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) {
+    return null;
+  }
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function compareSemver(
+  left: [number, number, number],
+  right: [number, number, number],
+): number {
+  if (left[0] !== right[0]) {
+    return left[0] - right[0];
+  }
+  if (left[1] !== right[1]) {
+    return left[1] - right[1];
+  }
+  return left[2] - right[2];
+}
+
+function isValidReleaseDate(value: string): boolean {
+  if (!value.trim()) {
+    return true;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    return false;
+  }
+  const date = new Date(`${value.trim()}T00:00:00Z`);
+  return !Number.isNaN(date.getTime());
+}
+
+function mapMediaAssetToAppScreen(asset: MediaAsset): AppScreen {
+  const nameWithoutExt = asset.filename.replace(/\.[^/.]+$/, "");
+  return {
+    id: asset.id,
+    key: nameWithoutExt,
+    title: nameWithoutExt,
+    imageUrl: asset.url,
+    createdAt: asset.uploadedAt,
+    updatedAt: asset.uploadedAt,
+  };
+}
+
+function findNodeIdAtPoint(
+  clientX: number,
+  clientY: number,
+  sourceNodeId: string,
+): string | null {
+  const nodeElements = Array.from(
+    document.querySelectorAll<HTMLElement>(".react-flow__node[data-id]"),
+  );
+  const hit = nodeElements.find((element) => {
+    const nodeId = element.dataset.id;
+    if (!nodeId || nodeId === sourceNodeId) {
+      return false;
+    }
+    const rect = element.getBoundingClientRect();
+    return (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    );
+  });
+  return hit?.dataset.id ?? null;
+}
+
+type MediaAsset = AppMediaAsset;
+
+function buildAppVersionKey(input: {
+  appPackageName: string;
+  storeType: string;
+  minSupportedVersion: string;
+  maxSupportedVersion: string;
+  releasedAt: string | null;
+}): string {
+  return [
+    input.appPackageName,
+    input.storeType,
+    input.minSupportedVersion,
+    input.maxSupportedVersion,
+    input.releasedAt ?? "",
+  ].join("|");
+}
 
 type SimulationEditorProps = {
   language: "ru" | "en";
@@ -128,9 +226,8 @@ function draftToNodesEdges(draft: SimulationDraft): {
 
 function nodesEdgesToDraft(
   nodes: SimulationNode[],
-  edges: SimulationEdge[],
   title: string,
-  existingDraft: SimulationDraft | null,
+  targetApp: SimulationDraft["targetApp"],
 ): SimulationDraft {
   const screens = nodes.map((node) => ({
     id: node.id,
@@ -156,16 +253,7 @@ function nodesEdgesToDraft(
   return {
     version: 1,
     title,
-    targetApp: existingDraft?.targetApp || {
-      appName: "App",
-      packageName: "com.example.app",
-      storeType: "other",
-      storeUrl: "",
-      iconUrl: "",
-      minSupportedVersion: "1.0.0",
-      maxSupportedVersion: "1.0.0",
-      releasedAt: "",
-    },
+    targetApp,
     startScreenId,
     screens,
     updatedAt: new Date().toISOString(),
@@ -176,6 +264,7 @@ function SimulationEditorInner({
   language,
   scopeLabel,
   scopeKey,
+  courseId,
 }: SimulationEditorProps) {
   const [nodes, setNodes] = useState<SimulationNode[]>([]);
   const [edges, setEdges] = useState<SimulationEdge[]>([]);
@@ -204,15 +293,35 @@ function SimulationEditorInner({
     x: number;
     y: number;
   } | null>(null);
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
+  const [targetApp, setTargetApp] =
+    useState<SimulationDraft["targetApp"]>(defaultTargetApp);
+  const [applications, setApplications] = useState<AppMediaApplication[]>([]);
+  const [loadedVersionScreens, setLoadedVersionScreens] = useState<
+    Record<string, boolean>
+  >({});
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appsError, setAppsError] = useState<string | null>(null);
+  const [appSearchQuery, setAppSearchQuery] = useState("");
+  const [appsReloadToken, setAppsReloadToken] = useState(0);
   const [appScreens, setAppScreens] = useState<AppScreen[]>([]);
+  const [isAddMediaModalOpen, setIsAddMediaModalOpen] = useState(false);
+  const [addMediaModalMode, setAddMediaModalMode] = useState<"create" | "edit">(
+    "create",
+  );
+  const [modalTargetApp, setModalTargetApp] =
+    useState<SimulationDraft["targetApp"]>(defaultTargetApp);
+  const [modalMediaAssets, setModalMediaAssets] = useState<MediaAsset[]>([]);
+  const [modalMediaSearchQuery, setModalMediaSearchQuery] = useState("");
+  const [modalMediaLoading, setModalMediaLoading] = useState(false);
+  const [modalMediaUploading, setModalMediaUploading] = useState(false);
+  const [modalMediaError, setModalMediaError] = useState<string | null>(null);
+  const [modalResolvingStoreApp, setModalResolvingStoreApp] = useState(false);
   const [title, setTitle] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [loadedDraft, setLoadedDraft] = useState<SimulationDraft | null>(null);
 
-  const { fitView, screenToFlowPosition, getNodes } = useReactFlow();
+  const { fitView, screenToFlowPosition } = useReactFlow();
 
   const draggingHotspotRef = useRef(draggingHotspot);
   draggingHotspotRef.current = draggingHotspot;
@@ -227,8 +336,8 @@ function SimulationEditorInner({
         const draft = await fetchCurrentSimulationDraftRemote(scopeKey);
         if (!mounted) return;
         if (draft) {
-          setLoadedDraft(draft);
           setTitle(draft.title);
+          setTargetApp(draft.targetApp ?? defaultTargetApp);
           const { nodes: loadedNodes, edges: loadedEdges } =
             draftToNodesEdges(draft);
           setNodes(loadedNodes);
@@ -247,14 +356,150 @@ function SimulationEditorInner({
     };
   }, [scopeKey, fitView]);
 
+  const modalMediaBinding = useMemo(
+    () => ({
+      appPackageName: ensurePackageName(
+        modalTargetApp.packageName,
+        modalTargetApp.appName,
+      ),
+      storeType: modalTargetApp.storeType,
+      minSupportedVersion: modalTargetApp.minSupportedVersion.trim(),
+      maxSupportedVersion: modalTargetApp.maxSupportedVersion.trim(),
+      releasedAt: modalTargetApp.releasedAt.trim(),
+    }),
+    [modalTargetApp],
+  );
+
+  const modalMediaBindingError = useMemo(() => {
+    if (!modalTargetApp.appName.trim()) {
+      return language === "ru"
+        ? "Укажите название приложения, чтобы открыть медиатеку."
+        : "Set app name to unlock media library.";
+    }
+    const min = parseSemver(modalMediaBinding.minSupportedVersion);
+    const max = parseSemver(modalMediaBinding.maxSupportedVersion);
+    if (!min || !max || compareSemver(min, max) > 0) {
+      return language === "ru"
+        ? "Проверьте диапазон версий (формат X.Y.Z, min <= max)."
+        : "Check version range (X.Y.Z format, min <= max).";
+    }
+    if (!isValidReleaseDate(modalMediaBinding.releasedAt)) {
+      return language === "ru"
+        ? "Дата релиза должна быть в формате YYYY-MM-DD."
+        : "Release date must use YYYY-MM-DD format.";
+    }
+    return null;
+  }, [
+    language,
+    modalMediaBinding.maxSupportedVersion,
+    modalMediaBinding.minSupportedVersion,
+    modalMediaBinding.releasedAt,
+    modalTargetApp.appName,
+  ]);
+
   useEffect(() => {
     let mounted = true;
-    async function loadMedia() {
+    async function loadApps() {
+      setAppsLoading(true);
+      setAppsError(null);
+      try {
+        const items = await fetchSimulationMediaAppBindingsRemote(
+          scopeKey,
+          appSearchQuery,
+        );
+        if (!mounted) return;
+        setApplications((prev) => {
+          const prevByKey = new Map(prev.map((app) => [app.key, app]));
+          const grouped = new Map<string, AppMediaApplication>();
+
+          items.forEach((item) => {
+            const appKey = item.appPackageName;
+            const prevApp = prevByKey.get(appKey);
+            const app =
+              grouped.get(appKey) ??
+              ({
+                key: appKey,
+                appName: prevApp?.appName
+                  ? prevApp.appName
+                  : deriveAppNameFromPackageName(
+                      item.appPackageName,
+                      item.appPackageName,
+                    ),
+                iconUrl: prevApp?.iconUrl ?? null,
+                expanded: prevApp?.expanded ?? false,
+                versions: [],
+              } satisfies AppMediaApplication);
+
+            const versionKey = buildAppVersionKey({
+              appPackageName: item.appPackageName,
+              storeType: item.storeType,
+              minSupportedVersion: item.minSupportedVersion,
+              maxSupportedVersion: item.maxSupportedVersion,
+              releasedAt: item.releasedAt,
+            });
+            const prevVersion = prevApp?.versions.find(
+              (version) => version.key === versionKey,
+            );
+            app.versions.push({
+              key: versionKey,
+              storeType: item.storeType,
+              minSupportedVersion: item.minSupportedVersion,
+              maxSupportedVersion: item.maxSupportedVersion,
+              releasedAt: item.releasedAt,
+              assetsCount: item.assetsCount,
+              expanded: prevVersion?.expanded ?? false,
+              screensLoading: prevVersion?.screensLoading ?? false,
+              screensError: prevVersion?.screensError ?? null,
+              screens: prevVersion?.screens ?? [],
+            } satisfies AppMediaVersion);
+
+            grouped.set(appKey, app);
+          });
+
+          return Array.from(grouped.values()).sort((left, right) =>
+            left.appName.localeCompare(right.appName, "ru"),
+          );
+        });
+      } catch (error) {
+        if (!mounted) return;
+        setAppsError(
+          error instanceof Error
+            ? error.message
+            : language === "ru"
+              ? "Не удалось загрузить список приложений."
+              : "Failed to load applications.",
+        );
+      } finally {
+        if (mounted) {
+          setAppsLoading(false);
+        }
+      }
+    }
+    loadApps();
+    return () => {
+      mounted = false;
+    };
+  }, [appSearchQuery, appsReloadToken, language, scopeKey]);
+
+  useEffect(() => {
+    if (!isAddMediaModalOpen) {
+      return;
+    }
+    let mounted = true;
+    async function loadModalMedia() {
+      if (modalMediaBindingError) {
+        setModalMediaAssets([]);
+        setModalMediaError(null);
+        return;
+      }
+
+      setModalMediaLoading(true);
+      setModalMediaError(null);
       try {
         const assets = await fetchSimulationMediaAssetsRemote(
           scopeKey,
-          "",
-          defaultMediaBinding,
+          modalMediaSearchQuery,
+          modalMediaBinding,
         );
         if (!mounted) return;
         const mapped: MediaAsset[] = assets.map((a) => ({
@@ -263,34 +508,43 @@ function SimulationEditorInner({
           url: a.fileUrl,
           uploadedAt: a.createdAt,
         }));
-        setMediaAssets(mapped);
-        const appScreensMapped: AppScreen[] = assets.map((a) => ({
-          id: a.id,
-          key: a.originalFilename.replace(/\.[^/.]+$/, ""),
-          title: a.originalFilename.replace(/\.[^/.]+$/, ""),
-          imageUrl: a.fileUrl,
-          createdAt: a.createdAt,
-          updatedAt: a.createdAt,
-        }));
-        setAppScreens(appScreensMapped);
+        setModalMediaAssets(mapped);
       } catch (error) {
-        console.error("Failed to load media:", error);
+        if (!mounted) return;
+        setModalMediaError(
+          error instanceof Error
+            ? error.message
+            : language === "ru"
+              ? "Не удалось загрузить медиатеку."
+              : "Failed to load media library.",
+        );
+      } finally {
+        if (mounted) {
+          setModalMediaLoading(false);
+        }
       }
     }
-    loadMedia();
+    loadModalMedia();
     return () => {
       mounted = false;
     };
-  }, [scopeKey]);
+  }, [
+    isAddMediaModalOpen,
+    language,
+    modalMediaBinding,
+    modalMediaBindingError,
+    modalMediaSearchQuery,
+    scopeKey,
+  ]);
 
   const handleSave = useCallback(async () => {
     if (isSaving) return;
     setIsSaving(true);
     try {
-      const draft = nodesEdgesToDraft(nodes, edges, title, loadedDraft);
+      const draft = nodesEdgesToDraft(nodes, title, targetApp);
       const saved = await saveCurrentSimulationDraftRemote(draft, scopeKey);
       if (saved) {
-        setLoadedDraft(saved);
+        setTargetApp(saved.targetApp ?? defaultTargetApp);
         setLastSavedAt(new Date().toLocaleTimeString());
       }
     } catch (error) {
@@ -298,10 +552,10 @@ function SimulationEditorInner({
     } finally {
       setIsSaving(false);
     }
-  }, [nodes, edges, title, loadedDraft, scopeKey, isSaving]);
+  }, [nodes, title, targetApp, scopeKey, isSaving]);
 
   const handleExport = useCallback(() => {
-    const draft = nodesEdgesToDraft(nodes, edges, title, loadedDraft);
+    const draft = nodesEdgesToDraft(nodes, title, targetApp);
     const json = JSON.stringify(draft, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -310,7 +564,7 @@ function SimulationEditorInner({
     a.download = `${title || "simulation"}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [nodes, edges, title, loadedDraft]);
+  }, [nodes, title, targetApp]);
 
   const onNodesChange: OnNodesChange<SimulationNode> = useCallback(
     (changes) => {
@@ -326,7 +580,7 @@ function SimulationEditorInner({
           );
           const firstId = sorted[0].id;
           const lastId = sorted[sorted.length - 1].id;
-          return updated.map((node, index) => ({
+          return updated.map((node) => ({
             ...node,
             data: {
               ...node.data,
@@ -471,123 +725,115 @@ function SimulationEditorInner({
     [selectedNodeId, selectedEdgeId, edges],
   );
 
-  const handleDeleteEdge = useCallback((edgeId: string) => {
-    setEdges((eds) => eds.filter((e) => e.id !== edgeId));
-    setSelectedEdgeId(null);
-  }, []);
-
   const handleSelectNode = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
   }, []);
 
   const handleAddAppScreen = useCallback(
-    (appScreen: AppScreen) => {
-      const newId = `screen-${Date.now()}`;
-      const newNode: SimulationNode = {
-        id: newId,
-        type: "screen",
-        position: {
-          x: 50 + (nodes.length % 4) * 250,
-          y: 50 + Math.floor(nodes.length / 4) * 400,
-        },
-        data: {
-          key: appScreen.key,
-          title: appScreen.title,
-          imageUrl: appScreen.imageUrl,
-          isCompletion: false,
-          isStart: false,
-          hotspots: [],
-        },
-      };
+    (appScreen: AppScreen, position?: { x: number; y: number }) => {
+      const newId = `screen-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      setNodes((prev) => {
+        const nextIndex = prev.length;
+        const newNode: SimulationNode = {
+          id: newId,
+          type: "screen",
+          position: position ?? {
+            x: 50 + (nextIndex % 4) * 250,
+            y: 50 + Math.floor(nextIndex / 4) * 400,
+          },
+          data: {
+            key: appScreen.key,
+            title: appScreen.title,
+            imageUrl: appScreen.imageUrl,
+            isCompletion: false,
+            isStart: false,
+            hotspots: [],
+          },
+        };
 
-      const updatedNodes = [...nodes, newNode];
-      const sorted = [...updatedNodes].sort(
-        (a, b) => a.position.x - b.position.x || a.position.y - b.position.y,
-      );
-      const firstId = sorted[0].id;
-      const lastId = sorted[sorted.length - 1].id;
+        const updatedNodes = [...prev, newNode];
+        const sorted = [...updatedNodes].sort(
+          (a, b) => a.position.x - b.position.x || a.position.y - b.position.y,
+        );
+        const firstId = sorted[0].id;
+        const lastId = sorted[sorted.length - 1].id;
 
-      const finalNodes = updatedNodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          isStart: node.id === firstId,
-          isCompletion: updatedNodes.length > 1 && node.id === lastId,
-        },
-      }));
-
-      setNodes(finalNodes);
+        return updatedNodes.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            isStart: node.id === firstId,
+            isCompletion: updatedNodes.length > 1 && node.id === lastId,
+          },
+        }));
+      });
       setSelectedNodeId(newId);
       setSelectedHotspotId(null);
     },
-    [nodes],
+    [],
   );
 
-  const handleApplyPreset = useCallback(
-    (presetId: SimulationPresetId) => {
-      const draft = createSimulationDraftFromPreset(presetId, language);
-      setTitle(draft.title);
-
-      const newNodes: SimulationNode[] = draft.screens.map((screen, index) => ({
-        id: screen.id,
-        type: "screen",
-        position: {
-          x: 50 + (index % 4) * 250,
-          y: 50 + Math.floor(index / 4) * 400,
-        },
-        data: {
-          key: screen.key,
-          title: screen.title,
-          imageUrl: screen.imageUrl,
-          isCompletion: screen.isCompletion,
-          isStart: screen.id === draft.startScreenId,
-          hotspots: screen.hotspots.map((h) => ({
-            id: h.id,
-            label: h.label,
-            hint: h.hint,
-            x: h.x,
-            y: h.y,
-            width: h.width,
-            height: h.height,
-            targetScreenId: h.targetScreenId,
-          })),
-        },
-      }));
-
-      const newEdges: SimulationEdge[] = [];
-      draft.screens.forEach((screen) => {
-        screen.hotspots.forEach((hotspot, index) => {
-          if (hotspot.targetScreenId) {
-            newEdges.push({
-              id: `edge-${screen.id}-${hotspot.targetScreenId}-${index}`,
-              source: screen.id,
-              target: hotspot.targetScreenId,
-              type: "transition",
-              data: {
-                label: hotspot.label,
-                hotspotId: hotspot.id,
-              },
-            });
-          }
-        });
-      });
-
-      setNodes(newNodes);
-      setEdges(newEdges);
-      setSelectedNodeId(null);
-
-      setTimeout(() => fitView({ padding: 0.2 }), 50);
+  const handleModalTargetAppChange = useCallback(
+    (patch: Partial<SimulationDraft["targetApp"]>) => {
+      setModalTargetApp((prev) => ({ ...prev, ...patch }));
     },
-    [language, fitView],
+    [],
   );
 
-  const handleUploadMedia = useCallback(
+  const handleModalTargetAppNameChange = useCallback((value: string) => {
+    setModalTargetApp((prev) => ({
+      ...prev,
+      appName: value,
+      packageName: ensurePackageName(prev.packageName, value),
+    }));
+  }, []);
+
+  const handleModalResolveStoreData = useCallback(async () => {
+    if (!modalTargetApp.storeUrl.trim() || modalResolvingStoreApp) {
+      return;
+    }
+    setModalResolvingStoreApp(true);
+    try {
+      const resolved = await resolveSimulationStoreAppRemote(
+        modalTargetApp.storeUrl,
+      );
+      setModalTargetApp((prev) => ({
+        ...prev,
+        appName: resolved.appName || prev.appName,
+        packageName: ensurePackageName(
+          resolved.packageName || prev.packageName,
+          resolved.appName || prev.appName,
+        ),
+        storeType: resolved.storeType ?? prev.storeType,
+        storeUrl: resolved.canonicalUrl || prev.storeUrl,
+        iconUrl: resolved.iconUrl || prev.iconUrl,
+      }));
+      setModalMediaError(null);
+    } catch (error) {
+      setModalMediaError(
+        error instanceof Error
+          ? error.message
+          : language === "ru"
+            ? "Не удалось получить данные приложения по ссылке."
+            : "Failed to resolve app from store URL.",
+      );
+    } finally {
+      setModalResolvingStoreApp(false);
+    }
+  }, [language, modalResolvingStoreApp, modalTargetApp.storeUrl]);
+
+  const handleModalUploadMedia = useCallback(
     async (file: File) => {
+      if (modalMediaBindingError) {
+        setModalMediaError(modalMediaBindingError);
+        return;
+      }
+      setModalMediaUploading(true);
       try {
         const asset = await uploadSimulationMediaAssetRemote(
           scopeKey,
           file,
-          defaultMediaBinding,
+          modalMediaBinding,
         );
         const mapped: MediaAsset = {
           id: asset.id,
@@ -595,27 +841,409 @@ function SimulationEditorInner({
           url: asset.fileUrl,
           uploadedAt: asset.createdAt,
         };
-        setMediaAssets((assets) => [mapped, ...assets]);
+        const appKey = modalMediaBinding.appPackageName;
+        const versionKey = buildAppVersionKey({
+          appPackageName: modalMediaBinding.appPackageName,
+          storeType: modalMediaBinding.storeType,
+          minSupportedVersion: modalMediaBinding.minSupportedVersion,
+          maxSupportedVersion: modalMediaBinding.maxSupportedVersion,
+          releasedAt: modalMediaBinding.releasedAt || null,
+        });
+        setModalMediaAssets((assets) => [mapped, ...assets]);
+        setAppScreens((screens) => [
+          mapMediaAssetToAppScreen(mapped),
+          ...screens,
+        ]);
+        setLoadedVersionScreens((prev) => ({ ...prev, [versionKey]: true }));
+        setApplications((prev) => {
+          const existingAppIndex = prev.findIndex(
+            (item) => item.key === appKey,
+          );
+          if (existingAppIndex < 0) {
+            const nextApp: AppMediaApplication = {
+              key: appKey,
+              appName: modalTargetApp.appName.trim()
+                ? modalTargetApp.appName.trim()
+                : deriveAppNameFromPackageName(appKey, appKey),
+              iconUrl: modalTargetApp.iconUrl || null,
+              expanded: true,
+              versions: [
+                {
+                  key: versionKey,
+                  storeType: modalMediaBinding.storeType,
+                  minSupportedVersion: modalMediaBinding.minSupportedVersion,
+                  maxSupportedVersion: modalMediaBinding.maxSupportedVersion,
+                  releasedAt: modalMediaBinding.releasedAt || null,
+                  assetsCount: 1,
+                  expanded: true,
+                  screensLoading: false,
+                  screensError: null,
+                  screens: [mapped],
+                },
+              ],
+            };
+            return [nextApp, ...prev];
+          }
+
+          return prev.map((item) => {
+            if (item.key !== appKey) {
+              return item;
+            }
+            const versionExists = item.versions.some(
+              (version) => version.key === versionKey,
+            );
+            if (!versionExists) {
+              return {
+                ...item,
+                appName: modalTargetApp.appName.trim() || item.appName,
+                iconUrl: modalTargetApp.iconUrl || item.iconUrl,
+                expanded: true,
+                versions: [
+                  {
+                    key: versionKey,
+                    storeType: modalMediaBinding.storeType,
+                    minSupportedVersion: modalMediaBinding.minSupportedVersion,
+                    maxSupportedVersion: modalMediaBinding.maxSupportedVersion,
+                    releasedAt: modalMediaBinding.releasedAt || null,
+                    assetsCount: 1,
+                    expanded: true,
+                    screensLoading: false,
+                    screensError: null,
+                    screens: [mapped],
+                  },
+                  ...item.versions,
+                ],
+              };
+            }
+            return {
+              ...item,
+              appName: modalTargetApp.appName.trim() || item.appName,
+              iconUrl: modalTargetApp.iconUrl || item.iconUrl,
+              versions: item.versions.map((version) =>
+                version.key === versionKey
+                  ? {
+                      ...version,
+                      expanded: true,
+                      screens: [mapped, ...version.screens],
+                      assetsCount: version.assetsCount + 1,
+                    }
+                  : version,
+              ),
+            };
+          });
+        });
+        setAppsReloadToken((token) => token + 1);
       } catch (error) {
-        console.error("Failed to upload media:", error);
+        setModalMediaError(
+          error instanceof Error
+            ? error.message
+            : language === "ru"
+              ? "Не удалось загрузить изображение."
+              : "Failed to upload image.",
+        );
+      } finally {
+        setModalMediaUploading(false);
       }
     },
-    [scopeKey],
+    [
+      language,
+      modalMediaBinding,
+      modalMediaBindingError,
+      modalTargetApp.appName,
+      modalTargetApp.iconUrl,
+      scopeKey,
+    ],
   );
 
-  const handleSelectMedia = useCallback(
-    (asset: MediaAsset) => {
-      if (selectedNodeId) {
-        setNodes((nds) =>
-          nds.map((node) =>
-            node.id === selectedNodeId
-              ? { ...node, data: { ...node.data, imageUrl: asset.url } }
-              : node,
+  const toTargetAppFromVersion = useCallback(
+    (
+      app: AppMediaApplication,
+      version: AppMediaVersion,
+    ): SimulationDraft["targetApp"] => ({
+      appName: app.appName,
+      packageName: app.key,
+      storeType: version.storeType,
+      storeUrl: "",
+      iconUrl: app.iconUrl ?? "",
+      minSupportedVersion: version.minSupportedVersion,
+      maxSupportedVersion: version.maxSupportedVersion,
+      releasedAt: version.releasedAt ?? "",
+    }),
+    [],
+  );
+
+  const loadVersionScreens = useCallback(
+    async (app: AppMediaApplication, version: AppMediaVersion) => {
+      setApplications((prev) =>
+        prev.map((item) =>
+          item.key !== app.key
+            ? item
+            : {
+                ...item,
+                versions: item.versions.map((current) =>
+                  current.key === version.key
+                    ? {
+                        ...current,
+                        screensLoading: true,
+                        screensError: null,
+                      }
+                    : current,
+                ),
+              },
+        ),
+      );
+      try {
+        const assets = await fetchSimulationMediaAssetsRemote(scopeKey, "", {
+          appPackageName: app.key,
+          storeType: version.storeType,
+          minSupportedVersion: version.minSupportedVersion,
+          maxSupportedVersion: version.maxSupportedVersion,
+          releasedAt: version.releasedAt ?? "",
+        });
+        const mapped: MediaAsset[] = assets.map((asset) => ({
+          id: asset.id,
+          filename: asset.originalFilename,
+          url: asset.fileUrl,
+          uploadedAt: asset.createdAt,
+        }));
+        setApplications((prev) =>
+          prev.map((item) =>
+            item.key !== app.key
+              ? item
+              : {
+                  ...item,
+                  versions: item.versions.map((current) =>
+                    current.key === version.key
+                      ? {
+                          ...current,
+                          screensLoading: false,
+                          screensError: null,
+                          screens: mapped,
+                        }
+                      : current,
+                  ),
+                },
+          ),
+        );
+        setLoadedVersionScreens((prev) => ({
+          ...prev,
+          [version.key]: true,
+        }));
+        setAppScreens(mapped.map(mapMediaAssetToAppScreen));
+      } catch (error) {
+        setApplications((prev) =>
+          prev.map((item) =>
+            item.key !== app.key
+              ? item
+              : {
+                  ...item,
+                  versions: item.versions.map((current) =>
+                    current.key === version.key
+                      ? {
+                          ...current,
+                          screensLoading: false,
+                          screensError:
+                            error instanceof Error
+                              ? error.message
+                              : language === "ru"
+                                ? "Не удалось загрузить экраны приложения."
+                                : "Failed to load app screens.",
+                        }
+                      : current,
+                  ),
+                },
           ),
         );
       }
     },
-    [selectedNodeId],
+    [language, scopeKey],
+  );
+
+  const handleToggleApplication = useCallback(
+    (appKey: string) => {
+      const selected = applications.find((app) => app.key === appKey);
+      if (!selected) {
+        return;
+      }
+
+      const willOpen = !selected.expanded;
+      setApplications((prev) =>
+        prev.map((item) =>
+          item.key === appKey ? { ...item, expanded: willOpen } : item,
+        ),
+      );
+    },
+    [applications],
+  );
+
+  const handleToggleVersion = useCallback(
+    (appKey: string, versionKey: string) => {
+      const selectedApp = applications.find((app) => app.key === appKey);
+      const selectedVersion = selectedApp?.versions.find(
+        (version) => version.key === versionKey,
+      );
+      if (!selectedApp || !selectedVersion) {
+        return;
+      }
+
+      const willOpen = !selectedVersion.expanded;
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.key !== appKey
+            ? app
+            : {
+                ...app,
+                versions: app.versions.map((version) =>
+                  version.key === versionKey
+                    ? { ...version, expanded: willOpen }
+                    : version,
+                ),
+              },
+        ),
+      );
+      if (!willOpen) {
+        return;
+      }
+
+      setTargetApp(toTargetAppFromVersion(selectedApp, selectedVersion));
+      if (!loadedVersionScreens[versionKey]) {
+        void loadVersionScreens(selectedApp, selectedVersion);
+      } else {
+        setAppScreens(selectedVersion.screens.map(mapMediaAssetToAppScreen));
+      }
+    },
+    [
+      applications,
+      loadedVersionScreens,
+      loadVersionScreens,
+      toTargetAppFromVersion,
+    ],
+  );
+
+  const handleOpenCreateMediaModal = useCallback(() => {
+    setAddMediaModalMode("create");
+    setModalTargetApp(emptyModalTargetApp);
+    setModalMediaAssets([]);
+    setModalMediaSearchQuery("");
+    setModalMediaError(null);
+    setModalResolvingStoreApp(false);
+    setIsAddMediaModalOpen(true);
+  }, []);
+
+  const handleOpenEditMediaModal = useCallback(
+    (appKey: string) => {
+      const selectedApp = applications.find((app) => app.key === appKey);
+      const selectedVersion =
+        selectedApp?.versions.find((version) => version.expanded) ??
+        selectedApp?.versions[0];
+      if (!selectedApp || !selectedVersion) {
+        return;
+      }
+
+      setAddMediaModalMode("edit");
+      setModalTargetApp(toTargetAppFromVersion(selectedApp, selectedVersion));
+      setModalMediaAssets(selectedVersion.screens);
+      setModalMediaSearchQuery("");
+      setModalMediaError(null);
+      setModalResolvingStoreApp(false);
+      setIsAddMediaModalOpen(true);
+      if (!loadedVersionScreens[selectedVersion.key]) {
+        void loadVersionScreens(selectedApp, selectedVersion);
+      } else {
+        setAppScreens(selectedVersion.screens.map(mapMediaAssetToAppScreen));
+      }
+    },
+    [
+      applications,
+      loadVersionScreens,
+      loadedVersionScreens,
+      toTargetAppFromVersion,
+    ],
+  );
+
+  const handleCloseAddMediaModal = useCallback(() => {
+    setIsAddMediaModalOpen(false);
+  }, []);
+
+  const handleScreenAddFromAsset = useCallback(
+    (asset: MediaAsset) => {
+      handleAddAppScreen(mapMediaAssetToAppScreen(asset));
+    },
+    [handleAddAppScreen],
+  );
+
+  const handleModalScreenAdd = useCallback(
+    (asset: MediaAsset) => {
+      setTargetApp(modalTargetApp);
+      handleAddAppScreen(mapMediaAssetToAppScreen(asset));
+    },
+    [handleAddAppScreen, modalTargetApp],
+  );
+
+  const handleScreenDragStart = useCallback(
+    (event: React.DragEvent<HTMLElement>, screen: MediaAsset) => {
+      event.dataTransfer.effectAllowed = "copy";
+      event.dataTransfer.setData(
+        "application/x-simulation-screen",
+        JSON.stringify({ screen, targetApp }),
+      );
+    },
+    [targetApp],
+  );
+
+  const handleModalScreenDragStart = useCallback(
+    (event: React.DragEvent<HTMLElement>, screen: MediaAsset) => {
+      event.dataTransfer.effectAllowed = "copy";
+      event.dataTransfer.setData(
+        "application/x-simulation-screen",
+        JSON.stringify({ screen, targetApp: modalTargetApp }),
+      );
+    },
+    [modalTargetApp],
+  );
+
+  const handleCanvasDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (
+        event.dataTransfer.types.includes("application/x-simulation-screen")
+      ) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      }
+    },
+    [],
+  );
+
+  const handleCanvasDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      const payloadRaw = event.dataTransfer.getData(
+        "application/x-simulation-screen",
+      );
+      if (!payloadRaw) {
+        return;
+      }
+      event.preventDefault();
+      try {
+        const payload = JSON.parse(payloadRaw) as {
+          screen: MediaAsset;
+          targetApp?: SimulationDraft["targetApp"];
+        };
+        if (!payload?.screen?.id) {
+          return;
+        }
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        handleAddAppScreen(mapMediaAssetToAppScreen(payload.screen), position);
+        if (payload.targetApp) {
+          setTargetApp(payload.targetApp);
+        }
+      } catch {
+        // Ignore malformed drag payload.
+      }
+    },
+    [handleAddAppScreen, screenToFlowPosition],
   );
 
   const handleDrawHotspot: HotspotDrawHandler = useCallback(
@@ -695,7 +1323,6 @@ function SimulationEditorInner({
       startX: number,
       startY: number,
     ) => {
-      console.log("🚀 HOTSPOT DOWN:", hotspotId, sourceNodeId, startX, startY);
       const newDragging = {
         hotspotId,
         sourceNodeId,
@@ -704,7 +1331,6 @@ function SimulationEditorInner({
         currentX: startX,
         currentY: startY,
       };
-      console.log("🚀 Setting draggingHotspot:", newDragging);
       draggingHotspotRef.current = newDragging;
       setDraggingHotspot(newDragging);
     },
@@ -712,17 +1338,14 @@ function SimulationEditorInner({
   );
 
   useEffect(() => {
-    console.log("📡 useEffect running, draggingHotspot:", draggingHotspot);
     if (!draggingHotspot) return;
 
     const handlePointerMove = (e: PointerEvent) => {
-      console.log("📍 pointermove, current:", draggingHotspotRef.current);
       if (!draggingHotspotRef.current) return;
       const current = draggingHotspotRef.current;
       const dx = e.clientX - current.startX;
       const dy = e.clientY - current.startY;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      console.log("📍 pointermove, distance:", distance);
 
       // Start actual drag after moving > 5px
       if (distance > 5) {
@@ -734,34 +1357,20 @@ function SimulationEditorInner({
 
     const handlePointerUp = (e: PointerEvent) => {
       const current = draggingHotspotRef.current;
-      console.log("📍 pointerup, current:", current);
       if (!current) return;
 
       const dx = e.clientX - current.startX;
       const dy = e.clientY - current.startY;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      console.log("📍 pointerup, distance:", distance);
 
       // If moved <= 5px, it's a click
       if (distance <= 5) {
-        console.log(
-          "📍 CLICK detected, nodesRef has:",
-          nodesRef.current.length,
-          "nodes",
-        );
         const node = nodesRef.current.find(
           (n) => n.id === current.sourceNodeId,
-        );
-        console.log(
-          "📍 Found node:",
-          node?.id,
-          "hotspots:",
-          node?.data.hotspots.length,
         );
         const hotspot = node?.data.hotspots.find(
           (h) => h.id === current.hotspotId,
         );
-        console.log("📍 Found hotspot:", hotspot?.id);
         if (node && hotspot) {
           const nodeElement = document.querySelector(
             `[data-id="${current.sourceNodeId}"]`,
@@ -790,49 +1399,12 @@ function SimulationEditorInner({
       }
 
       // It's a drag - find target
-      const target = document.elementFromPoint(e.clientX, e.clientY);
-      console.log("📍 Target element:", target);
-
-      let targetNodeId: string | null = null;
-
-      const nodeElement = target?.closest("[data-id]");
-      console.log("📍 Node element:", nodeElement);
-      if (nodeElement) {
-        targetNodeId = nodeElement.getAttribute("data-id");
-      }
-      console.log("📍 Target node id from element:", targetNodeId);
-
-      if (!targetNodeId) {
-        const flowPosition = screenToFlowPosition({
-          x: e.clientX,
-          y: e.clientY,
-        });
-        console.log("📍 Flow position:", flowPosition);
-        const allNodes = getNodes();
-        const nodeUnderPoint = allNodes.find((node) => {
-          const nodeWidth = 200;
-          const nodeHeight = nodeWidth / (9 / 16) + 40;
-          return (
-            flowPosition.x >= node.position.x &&
-            flowPosition.x <= node.position.x + nodeWidth &&
-            flowPosition.y >= node.position.y &&
-            flowPosition.y <= node.position.y + nodeHeight
-          );
-        });
-        console.log("📍 Node under point:", nodeUnderPoint?.id);
-        if (nodeUnderPoint) {
-          targetNodeId = nodeUnderPoint.id;
-        }
-      }
-
-      console.log(
-        "📍 Final targetNodeId:",
-        targetNodeId,
-        "sourceNodeId:",
+      const targetNodeId = findNodeIdAtPoint(
+        e.clientX,
+        e.clientY,
         current.sourceNodeId,
       );
       if (targetNodeId && targetNodeId !== current.sourceNodeId) {
-        console.log("📍 CREATING CONNECTION!");
         // Check if edge already exists
         const existingEdge = edges.find(
           (edge) =>
@@ -890,7 +1462,7 @@ function SimulationEditorInner({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [draggingHotspot, screenToFlowPosition, getNodes, language]);
+  }, [draggingHotspot, edges, language]);
 
   const nodesWithMode = nodes.map((node) => ({
     ...node,
@@ -906,10 +1478,12 @@ function SimulationEditorInner({
   }));
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
-  const selectedEdge = edges.find((e) => e.id === selectedEdgeId);
   const selectedHotspot = selectedNode?.data.hotspots.find(
     (h) => h.id === selectedHotspotId,
   );
+  const oldEditorHref = courseId
+    ? `/simulation?lang=${language}&courseId=${encodeURIComponent(courseId)}`
+    : `/simulation?lang=${language}`;
 
   const screensTab = (
     <ScreensTab
@@ -922,18 +1496,45 @@ function SimulationEditorInner({
     />
   );
 
-  const appScreensTab = (
-    <AppScreensTab
+  const appMediaTab = (
+    <AppMediaTab
       language={language}
-      screens={appScreens}
-      onAddScreen={handleAddAppScreen}
+      applications={applications}
+      appsLoading={appsLoading}
+      appsError={appsError}
+      appSearchQuery={appSearchQuery}
+      onAppSearchQueryChange={setAppSearchQuery}
+      onToggleApplication={handleToggleApplication}
+      onToggleVersion={handleToggleVersion}
+      onOpenCreateModal={handleOpenCreateMediaModal}
+      onOpenEditModal={handleOpenEditMediaModal}
+      onScreenAdd={handleScreenAddFromAsset}
+      onScreenDragStart={handleScreenDragStart}
+      modalOpen={isAddMediaModalOpen}
+      modalMode={addMediaModalMode}
+      onCloseModal={handleCloseAddMediaModal}
+      modalTargetApp={modalTargetApp}
+      onModalTargetAppNameChange={handleModalTargetAppNameChange}
+      onModalTargetAppChange={handleModalTargetAppChange}
+      onModalResolveStoreData={handleModalResolveStoreData}
+      modalResolvingStoreData={modalResolvingStoreApp}
+      modalMediaSearchQuery={modalMediaSearchQuery}
+      onModalMediaSearchQueryChange={setModalMediaSearchQuery}
+      modalMediaAssets={modalMediaAssets}
+      modalMediaLoading={modalMediaLoading}
+      modalMediaUploading={modalMediaUploading}
+      modalMediaError={modalMediaError}
+      modalMediaHint={modalMediaBindingError}
+      onModalUploadMedia={handleModalUploadMedia}
+      onModalScreenAdd={handleModalScreenAdd}
+      onModalScreenDragStart={handleModalScreenDragStart}
     />
   );
 
   const handleLoadDraft = useCallback(
     (draft: SimulationDraft) => {
-      setLoadedDraft(draft);
       setTitle(draft.title);
+      setTargetApp(draft.targetApp ?? defaultTargetApp);
       const { nodes: loadedNodes, edges: loadedEdges } =
         draftToNodesEdges(draft);
       setNodes(loadedNodes);
@@ -952,23 +1553,14 @@ function SimulationEditorInner({
     />
   );
 
-  const mediaTab = (
-    <MediaTab
-      language={language}
-      assets={mediaAssets}
-      onUpload={handleUploadMedia}
-      onSelect={handleSelectMedia}
-    />
-  );
-
   return (
     <div className={styles.container}>
       <header className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <a href={`/?lang=${language}`} className={styles.backButton}>
+          <a href={`/dashboard?lang=${language}`} className={styles.backButton}>
             ← {labels.backToMenu}
           </a>
-          <a href="/simulation" className={styles.oldEditorLink}>
+          <a href={oldEditorHref} className={styles.oldEditorLink}>
             {language === "ru" ? "Старый редактор" : "Old Editor"}
           </a>
           <span className={styles.scope}>{scopeLabel}</span>
@@ -1025,13 +1617,16 @@ function SimulationEditorInner({
           <ToolsPanel
             language={language}
             screensTab={screensTab}
-            appScreensTab={appScreensTab}
+            appMediaTab={appMediaTab}
             libraryTab={libraryTab}
-            mediaTab={mediaTab}
           />
         </aside>
 
-        <div className={styles.canvas}>
+        <div
+          className={styles.canvas}
+          onDragOver={handleCanvasDragOver}
+          onDrop={handleCanvasDrop}
+        >
           <ReactFlow
             nodes={nodesWithMode}
             edges={edges}

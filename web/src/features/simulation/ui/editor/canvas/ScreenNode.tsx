@@ -54,12 +54,17 @@ function ScreenNodeComponent({ data, selected, id }: ScreenNodeProps) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
   const [drawCurrent, setDrawCurrent] = useState({ x: 0, y: 0 });
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
 
   const mode = data.mode || "select";
   const lang = data.language || "ru";
 
   const startLabel = lang === "ru" ? "Начало" : "Start";
   const endLabel = lang === "ru" ? "Финал" : "End";
+
+  const imageUnavailable = Boolean(
+    data.imageUrl && failedImageUrl === data.imageUrl,
+  );
 
   const getRelativePosition = useCallback(
     (clientX: number, clientY: number): { x: number; y: number } => {
@@ -119,7 +124,6 @@ function ScreenNodeComponent({ data, selected, id }: ScreenNodeProps) {
     (event: React.PointerEvent, hotspot: HotspotData) => {
       event.stopPropagation();
       event.preventDefault();
-      console.log("🎯 HOTSPOT POINTER DOWN:", hotspot.id);
       if (data.onHotspotDragStart && data.nodeId) {
         data.onHotspotDragStart(
           hotspot.id,
@@ -155,15 +159,22 @@ function ScreenNodeComponent({ data, selected, id }: ScreenNodeProps) {
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
       >
-        {data.imageUrl ? (
+        {data.imageUrl && !imageUnavailable ? (
           <img
             src={data.imageUrl}
             alt={data.title || "Screen"}
             className={styles.image}
+            onError={() => setFailedImageUrl(data.imageUrl)}
           />
         ) : (
           <div className={styles.placeholder}>
-            {lang === "ru" ? "Нет изображения" : "No image"}
+            {data.imageUrl
+              ? lang === "ru"
+                ? "Изображение недоступно"
+                : "Image unavailable"
+              : lang === "ru"
+                ? "Нет изображения"
+                : "No image"}
           </div>
         )}
 
@@ -181,7 +192,6 @@ function ScreenNodeComponent({ data, selected, id }: ScreenNodeProps) {
                 }}
                 title={hotspot.label || hotspot.hint || "Hotspot"}
                 onPointerDown={(e) => handleHotspotPointerDown(e, hotspot)}
-                onClick={() => console.log("🎯 HOTSPOT CLICK:", hotspot.id)}
               />
             ))}
           </div>

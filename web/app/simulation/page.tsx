@@ -92,7 +92,7 @@ export default async function SimulationPage({
   }
 
   if (!profile.permissions.includes("simulation.builder")) {
-    redirect(`/?lang=${language}`);
+    redirect(`/dashboard?lang=${language}`);
   }
 
   const scopeLabel = formatScopeLabel(language, scope);

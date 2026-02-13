@@ -51,6 +51,22 @@ class SimulationMediaUploadOut(_BaseSchema):
     asset: SimulationMediaAssetOut
 
 
+class SimulationMediaAppBindingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    app_package_name: str
+    store_type: str
+    min_supported_version: str
+    max_supported_version: str
+    released_at: date | None
+    assets_count: int
+    latest_asset_at: datetime
+
+
+class SimulationMediaAppBindingListOut(_BaseSchema):
+    items: list[SimulationMediaAppBindingOut]
+
+
 class SimulationLibraryCreateIn(_BaseSchema):
     title: str | None = Field(default=None, max_length=255)
     payload_json: dict[str, Any]

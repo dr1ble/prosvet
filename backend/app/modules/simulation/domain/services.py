@@ -11,7 +11,10 @@ from app.modules.simulation.infra.models import (
     SimulationLibraryItem,
     SimulationMediaAsset,
 )
-from app.modules.simulation.infra.repository import SimulationRepository
+from app.modules.simulation.infra.repository import (
+    SimulationMediaAppBinding,
+    SimulationRepository,
+)
 
 DEFAULT_SCOPE_KEY = "global"
 ALLOWED_STORE_TYPES = {"play_market", "rustore", "app_store", "other"}
@@ -41,17 +44,13 @@ def _normalize_store_type(value: str) -> str:
     normalized = value.strip()
     if normalized in ALLOWED_STORE_TYPES:
         return normalized
-    raise ValueError(
-        "Unsupported store_type. Use play_market, rustore, app_store, or other."
-    )
+    raise ValueError("Unsupported store_type. Use play_market, rustore, app_store, or other.")
 
 
 def _normalize_package_name(value: str) -> str:
     normalized = value.strip()
     if not PACKAGE_PATTERN.match(normalized):
-        raise ValueError(
-            "Invalid app_package_name. Expected value like com.example.app."
-        )
+        raise ValueError("Invalid app_package_name. Expected value like com.example.app.")
     return normalized[:255]
 
 
@@ -174,6 +173,22 @@ class SimulationService:
             limit=normalized_limit,
         )
 
+    def list_media_app_bindings(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        search_query: str,
+        limit: int,
+    ) -> list[SimulationMediaAppBinding]:
+        normalized_scope = normalize_scope_key(scope_key)
+        normalized_limit = max(1, min(limit, 100))
+        return self.repo.list_media_app_bindings(
+            owner_user_id=owner_user_id,
+            scope_key=normalized_scope,
+            search_query=search_query,
+            limit=normalized_limit,
+        )
+
     def create_media_asset(
         self,
         owner_user_id: UUID,
@@ -195,9 +210,7 @@ class SimulationService:
 
         max_bytes = max(1, settings.simulation_media_max_mb) * 1024 * 1024
         if len(content) > max_bytes:
-            raise ValueError(
-                f"Image exceeds size limit ({settings.simulation_media_max_mb} MB)."
-            )
+            raise ValueError(f"Image exceeds size limit ({settings.simulation_media_max_mb} MB).")
 
         normalized_scope = normalize_scope_key(scope_key)
         normalized_package = _normalize_package_name(app_package_name)

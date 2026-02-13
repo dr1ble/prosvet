@@ -30,6 +30,20 @@ type MediaListApiOut = {
   items: MediaAssetApiOut[];
 };
 
+type MediaAppBindingApiOut = {
+  app_package_name: string;
+  store_type: SimulationStoreType;
+  min_supported_version: string;
+  max_supported_version: string;
+  released_at: string | null;
+  assets_count: number;
+  latest_asset_at: string;
+};
+
+type MediaAppBindingListApiOut = {
+  items: MediaAppBindingApiOut[];
+};
+
 type MediaUploadApiOut = {
   asset: MediaAssetApiOut;
 };
@@ -80,6 +94,16 @@ export type SimulationMediaBinding = {
   minSupportedVersion: string;
   maxSupportedVersion: string;
   releasedAt: string;
+};
+
+export type SimulationMediaAppBinding = {
+  appPackageName: string;
+  storeType: SimulationStoreType;
+  minSupportedVersion: string;
+  maxSupportedVersion: string;
+  releasedAt: string | null;
+  assetsCount: number;
+  latestAssetAt: string;
 };
 
 export type SimulationStoreResolveResult = {
@@ -226,6 +250,20 @@ function mapLibraryItemSummary(
   };
 }
 
+function mapMediaAppBinding(
+  value: MediaAppBindingApiOut,
+): SimulationMediaAppBinding {
+  return {
+    appPackageName: value.app_package_name,
+    storeType: value.store_type,
+    minSupportedVersion: value.min_supported_version,
+    maxSupportedVersion: value.max_supported_version,
+    releasedAt: value.released_at,
+    assetsCount: value.assets_count,
+    latestAssetAt: value.latest_asset_at,
+  };
+}
+
 function buildMediaQuery(
   scopeKey: string,
   searchQuery: string,
@@ -285,6 +323,21 @@ export async function fetchSimulationMediaAssetsRemote(
     `/api/admin/simulation/media?${query.toString()}`,
   );
   return (data.items ?? []).map(mapMediaAsset);
+}
+
+export async function fetchSimulationMediaAppBindingsRemote(
+  scopeKey: string,
+  searchQuery: string,
+): Promise<SimulationMediaAppBinding[]> {
+  const query = new URLSearchParams({
+    scope_key: scopeKey,
+    search_query: searchQuery.trim(),
+    limit: "60",
+  });
+  const data = await getJson<MediaAppBindingListApiOut>(
+    `/api/admin/simulation/media/apps?${query.toString()}`,
+  );
+  return (data.items ?? []).map(mapMediaAppBinding);
 }
 
 export async function uploadSimulationMediaAssetRemote(
