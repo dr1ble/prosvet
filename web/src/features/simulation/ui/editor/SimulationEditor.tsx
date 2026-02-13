@@ -13,6 +13,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   Panel,
+  useViewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -70,6 +71,10 @@ const defaultTargetApp: SimulationDraft["targetApp"] = {
   maxSupportedVersion: "99.99.99",
   releasedAt: "",
 };
+
+const SCREEN_NODE_FALLBACK_WIDTH = 200;
+const SCREEN_NODE_FALLBACK_HEIGHT = 390;
+const HOTSPOT_DROP_HITBOX_SIZE = 24;
 
 const emptyModalTargetApp: SimulationDraft["targetApp"] = {
   appName: "",
@@ -138,6 +143,18 @@ function findNodeIdAtPoint(
   clientY: number,
   sourceNodeId: string,
 ): string | null {
+  const elementsAtPoint = document.elementsFromPoint(clientX, clientY);
+  for (const element of elementsAtPoint) {
+    const nodeElement = element.closest<HTMLElement>(
+      ".react-flow__node[data-id]",
+    );
+    const nodeId = nodeElement?.dataset.id;
+    if (nodeId && nodeId !== sourceNodeId) {
+      return nodeId;
+    }
+  }
+
+  const hitPadding = 8;
   const nodeElements = Array.from(
     document.querySelectorAll<HTMLElement>(".react-flow__node[data-id]"),
   );
@@ -148,13 +165,198 @@ function findNodeIdAtPoint(
     }
     const rect = element.getBoundingClientRect();
     return (
-      clientX >= rect.left &&
-      clientX <= rect.right &&
-      clientY >= rect.top &&
-      clientY <= rect.bottom
+      clientX >= rect.left - hitPadding &&
+      clientX <= rect.right + hitPadding &&
+      clientY >= rect.top - hitPadding &&
+      clientY <= rect.bottom + hitPadding
     );
   });
   return hit?.dataset.id ?? null;
+}
+
+function findNodeIdAtFlowPoint(
+  point: { x: number; y: number },
+  sourceNodeId: string,
+  nodes: SimulationNode[],
+): string | null {
+  let matchedNodeId: string | null = null;
+  let matchedArea = Number.POSITIVE_INFINITY;
+
+  for (const node of nodes) {
+    if (node.id === sourceNodeId) {
+      continue;
+    }
+
+    const width =
+      node.width ?? node.measured?.width ?? SCREEN_NODE_FALLBACK_WIDTH;
+    const height =
+      node.height ?? node.measured?.height ?? SCREEN_NODE_FALLBACK_HEIGHT;
+
+    const withinX =
+      point.x >= node.position.x && point.x <= node.position.x + width;
+    const withinY =
+      point.y >= node.position.y && point.y <= node.position.y + height;
+
+    if (!withinX || !withinY) {
+      continue;
+    }
+
+    const area = width * height;
+    if (area < matchedArea) {
+      matchedArea = area;
+      matchedNodeId = node.id;
+    }
+  }
+
+  return matchedNodeId;
+}
+
+function findClosestTargetNodeId(
+  candidates: SimulationNode[],
+  point: { x: number; y: number },
+  sourceNodeId: string,
+): string | null {
+  let matchedNodeId: string | null = null;
+  let closestDistance = Number.POSITIVE_INFINITY;
+
+  for (const node of candidates) {
+    if (node.id === sourceNodeId) {
+      continue;
+    }
+    const width =
+      node.width ?? node.measured?.width ?? SCREEN_NODE_FALLBACK_WIDTH;
+    const height =
+      node.height ?? node.measured?.height ?? SCREEN_NODE_FALLBACK_HEIGHT;
+    const centerX = node.position.x + width / 2;
+    const centerY = node.position.y + height / 2;
+    const dx = point.x - centerX;
+    const dy = point.y - centerY;
+    const distance = dx * dx + dy * dy;
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      matchedNodeId = node.id;
+    }
+  }
+
+  return matchedNodeId;
+}
+
+type ConnectionSide = "left" | "right" | "top" | "bottom";
+
+function clampValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function offsetPointBySide(
+  point: { x: number; y: number },
+  side: ConnectionSide,
+  offset: number,
+): { x: number; y: number } {
+  switch (side) {
+    case "left":
+      return { x: point.x - offset, y: point.y };
+    case "right":
+      return { x: point.x + offset, y: point.y };
+    case "top":
+      return { x: point.x, y: point.y - offset };
+    case "bottom":
+      return { x: point.x, y: point.y + offset };
+    default:
+      return point;
+  }
+}
+
+function resolveSourceConnectionSide(
+  fromPoint: { x: number; y: number },
+  toPoint: { x: number; y: number },
+): ConnectionSide {
+  const dx = toPoint.x - fromPoint.x;
+  const dy = toPoint.y - fromPoint.y;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0 ? "right" : "left";
+  }
+  return dy >= 0 ? "bottom" : "top";
+}
+
+function isHorizontalSide(side: ConnectionSide): boolean {
+  return side === "left" || side === "right";
+}
+
+function computeBezierHandleOffset(
+  fullDistance: number,
+  axisDistance: number,
+): number {
+  const distanceDriven = fullDistance * 0.45;
+  const axisDriven = axisDistance * 0.75;
+  return clampValue(Math.max(distanceDriven, axisDriven), 72, 300);
+}
+
+function buildCurvedConnectionPath(
+  fromPoint: { x: number; y: number },
+  toPoint: { x: number; y: number },
+  targetSide: ConnectionSide,
+): string {
+  const dx = toPoint.x - fromPoint.x;
+  const dy = toPoint.y - fromPoint.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const sourceSide = resolveSourceConnectionSide(fromPoint, toPoint);
+  const sourceAxisDistance = isHorizontalSide(sourceSide)
+    ? Math.abs(dx)
+    : Math.abs(dy);
+  const targetAxisDistance = isHorizontalSide(targetSide)
+    ? Math.abs(dx)
+    : Math.abs(dy);
+  const sourceOffset = computeBezierHandleOffset(distance, sourceAxisDistance);
+  const targetOffset = computeBezierHandleOffset(distance, targetAxisDistance);
+  const sourceControl = offsetPointBySide(fromPoint, sourceSide, sourceOffset);
+  const targetControl = offsetPointBySide(toPoint, targetSide, targetOffset);
+
+  return `M ${fromPoint.x} ${fromPoint.y} C ${sourceControl.x} ${sourceControl.y} ${targetControl.x} ${targetControl.y} ${toPoint.x} ${toPoint.y}`;
+}
+
+function resolveNearestTargetAnchor(
+  sourcePoint: { x: number; y: number },
+  targetRect: { x: number; y: number; width: number; height: number },
+): { side: ConnectionSide; point: { x: number; y: number } } {
+  const anchors = [
+    {
+      side: "left" as const,
+      point: { x: targetRect.x, y: targetRect.y + targetRect.height / 2 },
+    },
+    {
+      side: "right" as const,
+      point: {
+        x: targetRect.x + targetRect.width,
+        y: targetRect.y + targetRect.height / 2,
+      },
+    },
+    {
+      side: "top" as const,
+      point: { x: targetRect.x + targetRect.width / 2, y: targetRect.y },
+    },
+    {
+      side: "bottom" as const,
+      point: {
+        x: targetRect.x + targetRect.width / 2,
+        y: targetRect.y + targetRect.height,
+      },
+    },
+  ];
+
+  let nearestAnchor = anchors[0];
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  for (const anchor of anchors) {
+    const dx = sourcePoint.x - anchor.point.x;
+    const dy = sourcePoint.y - anchor.point.y;
+    const distance = dx * dx + dy * dy;
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestAnchor = anchor;
+    }
+  }
+
+  return nearestAnchor;
 }
 
 type MediaAsset = AppMediaAsset;
@@ -282,6 +484,7 @@ function SimulationEditorInner({
   const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(
     null,
   );
+  const [showAllConnections, setShowAllConnections] = useState(false);
   const [mode, setMode] = useState<EditorMode>("select");
   const [draggingHotspot, setDraggingHotspot] = useState<{
     hotspotId: string;
@@ -293,12 +496,6 @@ function SimulationEditorInner({
   } | null>(null);
   const [dropHint, setDropHint] = useState<{
     message: string;
-    x: number;
-    y: number;
-  } | null>(null);
-  const [editingHint, setEditingHint] = useState<{
-    hotspotId: string;
-    nodeId: string;
     x: number;
     y: number;
   } | null>(null);
@@ -330,13 +527,31 @@ function SimulationEditorInner({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
-  const { fitView, screenToFlowPosition } = useReactFlow();
+  const {
+    fitView,
+    screenToFlowPosition,
+    flowToScreenPosition,
+    getIntersectingNodes,
+  } = useReactFlow<SimulationNode, SimulationEdge>();
+  const viewport = useViewport();
 
   const draggingHotspotRef = useRef(draggingHotspot);
   draggingHotspotRef.current = draggingHotspot;
 
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
+
+  const languageRef = useRef(language);
+  languageRef.current = language;
+
+  const screenToFlowPositionRef = useRef(screenToFlowPosition);
+  screenToFlowPositionRef.current = screenToFlowPosition;
+
+  const getIntersectingNodesRef = useRef(getIntersectingNodes);
+  getIntersectingNodesRef.current = getIntersectingNodes;
 
   useEffect(() => {
     let mounted = true;
@@ -650,6 +865,8 @@ function SimulationEditorInner({
             deleteHotspot: "Удалить зону",
             deleteScreen: "Удалить экран",
             backToMenu: "Назад",
+            showAllConnections: "Показать все связи",
+            showOnlySelectedConnections: "Показывать только выбранную зону",
           }
         : {
             title: "Simulation Editor",
@@ -677,6 +894,8 @@ function SimulationEditorInner({
             deleteHotspot: "Delete hotspot",
             deleteScreen: "Delete screen",
             backToMenu: "Back",
+            showAllConnections: "Show all links",
+            showOnlySelectedConnections: "Show selected hotspot only",
           },
     [language],
   );
@@ -1459,6 +1678,9 @@ function SimulationEditorInner({
       startX: number,
       startY: number,
     ) => {
+      setSelectedNodeId(sourceNodeId);
+      setSelectedEdgeId(null);
+      setSelectedHotspotId(hotspotId);
       const newDragging = {
         hotspotId,
         sourceNodeId,
@@ -1473,102 +1695,103 @@ function SimulationEditorInner({
     [],
   );
 
+  const isDraggingHotspot = Boolean(draggingHotspotRef.current);
+
   useEffect(() => {
-    if (!draggingHotspot) return;
+    if (!isDraggingHotspot) return;
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!draggingHotspotRef.current) return;
       const current = draggingHotspotRef.current;
-      const dx = e.clientX - current.startX;
-      const dy = e.clientY - current.startY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      // Start actual drag after moving > 5px
-      if (distance > 5) {
-        setDraggingHotspot((prev) =>
-          prev ? { ...prev, currentX: e.clientX, currentY: e.clientY } : null,
-        );
-      }
+      const next = { ...current, currentX: e.clientX, currentY: e.clientY };
+      draggingHotspotRef.current = next;
+      setDraggingHotspot(next);
     };
 
     const handlePointerUp = (e: PointerEvent) => {
       const current = draggingHotspotRef.current;
       if (!current) return;
+      const released = { ...current, currentX: e.clientX, currentY: e.clientY };
+      draggingHotspotRef.current = released;
+      setDraggingHotspot(released);
+      const finishDragging = () => {
+        draggingHotspotRef.current = null;
+        setDraggingHotspot(null);
+      };
 
-      const dx = e.clientX - current.startX;
-      const dy = e.clientY - current.startY;
+      const dx = released.currentX - released.startX;
+      const dy = released.currentY - released.startY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // If moved <= 5px, it's a click
+      // Click without drag: keep hotspot selected, no inline popup.
       if (distance <= 5) {
-        const node = nodesRef.current.find(
-          (n) => n.id === current.sourceNodeId,
-        );
-        const hotspot = node?.data.hotspots.find(
-          (h) => h.id === current.hotspotId,
-        );
-        if (node && hotspot) {
-          const nodeElement = document.querySelector(
-            `[data-id="${current.sourceNodeId}"]`,
-          );
-          if (nodeElement) {
-            const rect = nodeElement.getBoundingClientRect();
-            const hotspotX =
-              rect.left +
-              (hotspot.x / 100) * rect.width +
-              (hotspot.width / 200) * rect.width;
-            const hotspotY =
-              rect.top +
-              (hotspot.y / 100) * rect.height +
-              (hotspot.height / 200) * rect.height;
-            setEditingHint({
-              hotspotId: current.hotspotId,
-              nodeId: current.sourceNodeId,
-              x: hotspotX,
-              y: hotspotY,
-            });
-          }
-          setSelectedHotspotId(current.hotspotId);
-        }
-        setDraggingHotspot(null);
+        setSelectedNodeId(released.sourceNodeId);
+        setSelectedEdgeId(null);
+        setSelectedHotspotId(released.hotspotId);
+        finishDragging();
         return;
       }
 
       // It's a drag - find target
-      const targetNodeId = findNodeIdAtPoint(
-        e.clientX,
-        e.clientY,
-        current.sourceNodeId,
-      );
-      if (targetNodeId && targetNodeId !== current.sourceNodeId) {
+      const flowPoint = screenToFlowPositionRef.current({
+        x: released.currentX,
+        y: released.currentY,
+      });
+      const intersectingNodes = getIntersectingNodesRef.current(
+        {
+          x: flowPoint.x - HOTSPOT_DROP_HITBOX_SIZE / 2,
+          y: flowPoint.y - HOTSPOT_DROP_HITBOX_SIZE / 2,
+          width: HOTSPOT_DROP_HITBOX_SIZE,
+          height: HOTSPOT_DROP_HITBOX_SIZE,
+        },
+        true,
+      ) as SimulationNode[];
+      const targetNodeId =
+        findClosestTargetNodeId(
+          intersectingNodes,
+          flowPoint,
+          released.sourceNodeId,
+        ) ??
+        findNodeIdAtFlowPoint(
+          flowPoint,
+          released.sourceNodeId,
+          nodesRef.current,
+        ) ??
+        findNodeIdAtPoint(
+          released.currentX,
+          released.currentY,
+          released.sourceNodeId,
+        );
+
+      if (targetNodeId && targetNodeId !== released.sourceNodeId) {
         // Check if edge already exists
-        const existingEdge = edges.find(
+        const existingEdge = edgesRef.current.find(
           (edge) =>
-            edge.source === current.sourceNodeId &&
+            edge.source === released.sourceNodeId &&
             edge.target === targetNodeId,
         );
         if (!existingEdge) {
           const newEdge: SimulationEdge = {
-            id: `edge-${current.sourceNodeId}-${targetNodeId}-${Date.now()}`,
-            source: current.sourceNodeId,
+            id: `edge-${released.sourceNodeId}-${targetNodeId}-${Date.now()}`,
+            source: released.sourceNodeId,
             target: targetNodeId,
             type: "transition",
             data: {
               label: "",
-              hotspotId: current.hotspotId,
+              hotspotId: released.hotspotId,
             },
           };
           setEdges((eds) => [...eds, newEdge]);
         }
         setNodes((nds) =>
           nds.map((node) => {
-            if (node.id !== current.sourceNodeId) return node;
+            if (node.id !== released.sourceNodeId) return node;
             return {
               ...node,
               data: {
                 ...node.data,
                 hotspots: node.data.hotspots.map((h) =>
-                  h.id === current.hotspotId
+                  h.id === released.hotspotId
                     ? { ...h, targetScreenId: targetNodeId }
                     : h,
                 ),
@@ -1576,29 +1799,32 @@ function SimulationEditorInner({
             };
           }),
         );
+        setSelectedNodeId(released.sourceNodeId);
+        setSelectedEdgeId(null);
+        setSelectedHotspotId(released.hotspotId);
       } else {
         setDropHint({
           message:
-            language === "ru"
+            languageRef.current === "ru"
               ? "Отпустите на экране для создания связи"
               : "Drop on a screen to create connection",
-          x: e.clientX,
-          y: e.clientY - 40,
+          x: released.currentX,
+          y: released.currentY - 40,
         });
         setTimeout(() => setDropHint(null), 2000);
       }
 
-      setDraggingHotspot(null);
+      finishDragging();
     };
 
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointermove", handlePointerMove, true);
+    window.addEventListener("pointerup", handlePointerUp, true);
 
     return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointermove", handlePointerMove, true);
+      window.removeEventListener("pointerup", handlePointerUp, true);
     };
-  }, [draggingHotspot, edges, language]);
+  }, [isDraggingHotspot]);
 
   const nodesWithMode = nodes.map((node) => ({
     ...node,
@@ -1617,6 +1843,96 @@ function SimulationEditorInner({
   const selectedHotspot = selectedNode?.data.hotspots.find(
     (h) => h.id === selectedHotspotId,
   );
+  const selectedNodeForProperties = selectedHotspot ? null : selectedNode;
+  const viewportKey = `${viewport.x}:${viewport.y}:${viewport.zoom}`;
+  const persistentConnections = useMemo(() => {
+    void viewportKey;
+    const connections: Array<{
+      id: string;
+      path: string;
+      sourceX: number;
+      sourceY: number;
+      targetX: number;
+      targetY: number;
+      isActive: boolean;
+    }> = [];
+
+    for (const sourceNode of nodes) {
+      const sourceWidth =
+        sourceNode.width ??
+        sourceNode.measured?.width ??
+        SCREEN_NODE_FALLBACK_WIDTH;
+      const sourceHeight =
+        sourceNode.height ??
+        sourceNode.measured?.height ??
+        SCREEN_NODE_FALLBACK_HEIGHT;
+
+      for (const hotspot of sourceNode.data.hotspots) {
+        if (!hotspot.targetScreenId) {
+          continue;
+        }
+        if (!showAllConnections && hotspot.id !== selectedHotspotId) {
+          continue;
+        }
+        const targetNode = nodes.find(
+          (node) => node.id === hotspot.targetScreenId,
+        );
+        if (!targetNode) {
+          continue;
+        }
+
+        const targetWidth =
+          targetNode.width ??
+          targetNode.measured?.width ??
+          SCREEN_NODE_FALLBACK_WIDTH;
+        const targetHeight =
+          targetNode.height ??
+          targetNode.measured?.height ??
+          SCREEN_NODE_FALLBACK_HEIGHT;
+
+        const sourceFlowPoint = {
+          x:
+            sourceNode.position.x +
+            ((hotspot.x + hotspot.width / 2) / 100) * sourceWidth,
+          y:
+            sourceNode.position.y +
+            ((hotspot.y + hotspot.height / 2) / 100) * sourceHeight,
+        };
+        const targetAnchor = resolveNearestTargetAnchor(sourceFlowPoint, {
+          x: targetNode.position.x,
+          y: targetNode.position.y,
+          width: targetWidth,
+          height: targetHeight,
+        });
+
+        const sourcePoint = flowToScreenPosition(sourceFlowPoint);
+        const targetPoint = flowToScreenPosition(targetAnchor.point);
+        const path = buildCurvedConnectionPath(
+          sourcePoint,
+          targetPoint,
+          targetAnchor.side,
+        );
+
+        connections.push({
+          id: `hotspot-link-${sourceNode.id}-${hotspot.id}-${targetNode.id}`,
+          path,
+          sourceX: sourcePoint.x,
+          sourceY: sourcePoint.y,
+          targetX: targetPoint.x,
+          targetY: targetPoint.y,
+          isActive: hotspot.id === selectedHotspotId,
+        });
+      }
+    }
+
+    return connections;
+  }, [
+    nodes,
+    selectedHotspotId,
+    showAllConnections,
+    flowToScreenPosition,
+    viewportKey,
+  ]);
   const oldEditorHref = courseId
     ? `/simulation?lang=${language}&courseId=${encodeURIComponent(courseId)}`
     : `/simulation?lang=${language}`;
@@ -1799,17 +2115,54 @@ function SimulationEditorInner({
               maskColor="rgba(0, 0, 0, 0.1)"
             />
             <Panel position="top-right">
-              <div className={styles.helpText}>
-                {mode === "draw"
-                  ? language === "ru"
-                    ? "Рисуйте зоны на выбранном экране"
-                    : "Draw hotspots on selected screen"
-                  : language === "ru"
-                    ? "Тяните зону к другому экрану для связи"
-                    : "Drag hotspot to another screen to connect"}
+              <div className={styles.panelControls}>
+                <div className={styles.helpText}>
+                  {mode === "draw"
+                    ? language === "ru"
+                      ? "Рисуйте зоны на выбранном экране"
+                      : "Draw hotspots on selected screen"
+                    : language === "ru"
+                      ? "Тяните зону к другому экрану для связи"
+                      : "Drag hotspot to another screen to connect"}
+                </div>
+                <button
+                  type="button"
+                  className={styles.connectionsToggle}
+                  onClick={() => setShowAllConnections((prev) => !prev)}
+                >
+                  {showAllConnections
+                    ? labels.showOnlySelectedConnections
+                    : labels.showAllConnections}
+                </button>
               </div>
             </Panel>
           </ReactFlow>
+
+          {persistentConnections.length > 0 && (
+            <svg className={styles.persistentConnections}>
+              {persistentConnections.map((connection) => (
+                <g key={connection.id}>
+                  <path
+                    d={connection.path}
+                    className={`${styles.persistentConnectionLine} ${connection.isActive ? styles.persistentConnectionLineActive : ""}`}
+                    fill="none"
+                  />
+                  <circle
+                    cx={connection.sourceX}
+                    cy={connection.sourceY}
+                    r={4}
+                    className={styles.persistentConnectionPoint}
+                  />
+                  <circle
+                    cx={connection.targetX}
+                    cy={connection.targetY}
+                    r={3}
+                    className={styles.persistentConnectionTargetPoint}
+                  />
+                </g>
+              ))}
+            </svg>
+          )}
 
           {draggingHotspot && (
             <svg className={styles.dragLine}>
@@ -1842,69 +2195,18 @@ function SimulationEditorInner({
               {dropHint.message}
             </div>
           )}
-
-          {editingHint &&
-            (() => {
-              const node = nodes.find((n) => n.id === editingHint.nodeId);
-              const hotspot = node?.data.hotspots.find(
-                (h) => h.id === editingHint.hotspotId,
-              );
-              if (!hotspot) return null;
-              return (
-                <div
-                  className={styles.hintInputPopup}
-                  style={{
-                    left: editingHint.x,
-                    top: editingHint.y,
-                  }}
-                >
-                  <input
-                    type="text"
-                    className={styles.hintInput}
-                    placeholder={language === "ru" ? "Подсказка..." : "Hint..."}
-                    value={hotspot.hint}
-                    autoFocus
-                    onChange={(e) => {
-                      setNodes((nds) =>
-                        nds.map((n) =>
-                          n.id === editingHint.nodeId
-                            ? {
-                                ...n,
-                                data: {
-                                  ...n.data,
-                                  hotspots: n.data.hotspots.map((h) =>
-                                    h.id === editingHint.hotspotId
-                                      ? { ...h, hint: e.target.value }
-                                      : h,
-                                  ),
-                                },
-                              }
-                            : n,
-                        ),
-                      );
-                    }}
-                    onBlur={() => setEditingHint(null)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === "Escape") {
-                        setEditingHint(null);
-                      }
-                    }}
-                  />
-                </div>
-              );
-            })()}
         </div>
 
         <aside className={styles.properties}>
           <h3 className={styles.propertiesTitle}>{labels.propertiesTitle}</h3>
-          {selectedNode ? (
+          {selectedNodeForProperties ? (
             <div className={styles.propertiesContent}>
               <div className={styles.field}>
                 <label className={styles.label}>{labels.screenTitle}</label>
                 <input
                   type="text"
                   className={styles.input}
-                  value={selectedNode.data.title}
+                  value={selectedNodeForProperties.data.title}
                   onChange={(e) =>
                     setNodes((nds) =>
                       nds.map((n) =>
@@ -1918,10 +2220,10 @@ function SimulationEditorInner({
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>{labels.screenImage}</label>
-                {selectedNode.data.imageUrl ? (
+                {selectedNodeForProperties.data.imageUrl ? (
                   <div className={styles.imagePreview}>
                     <img
-                      src={selectedNode.data.imageUrl}
+                      src={selectedNodeForProperties.data.imageUrl}
                       alt=""
                       className={styles.previewImg}
                     />
@@ -1970,22 +2272,23 @@ function SimulationEditorInner({
                 )}
               </div>
               <div className={styles.screenFlags}>
-                {selectedNode.data.isStart && (
+                {selectedNodeForProperties.data.isStart && (
                   <span className={styles.flagStart}>{labels.startScreen}</span>
                 )}
-                {selectedNode.data.isCompletion && (
+                {selectedNodeForProperties.data.isCompletion && (
                   <span className={styles.flagEnd}>{labels.endScreen}</span>
                 )}
               </div>
               <div className={styles.hotspots}>
                 <h4 className={styles.hotspotsTitle}>
-                  {labels.hotspotsTitle} ({selectedNode.data.hotspots.length})
+                  {labels.hotspotsTitle} (
+                  {selectedNodeForProperties.data.hotspots.length})
                 </h4>
-                {selectedNode.data.hotspots.length === 0 ? (
+                {selectedNodeForProperties.data.hotspots.length === 0 ? (
                   <p className={styles.noHotspots}>{labels.noHotspots}</p>
                 ) : (
                   <ul className={styles.hotspotList}>
-                    {selectedNode.data.hotspots.map((h) => (
+                    {selectedNodeForProperties.data.hotspots.map((h) => (
                       <li
                         key={h.id}
                         className={`${styles.hotspotItem} ${selectedHotspotId === h.id ? styles.hotspotItemActive : ""}`}

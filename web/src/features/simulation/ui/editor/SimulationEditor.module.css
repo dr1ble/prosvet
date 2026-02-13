@@ -166,6 +166,36 @@
   z-index: 9999;
 }
 
+.persistentConnections {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9000;
+}
+
+.persistentConnectionLine {
+  stroke: rgba(59, 130, 246, 0.85);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.persistentConnectionLineActive {
+  stroke: rgba(16, 185, 129, 0.9);
+  stroke-width: 3;
+}
+
+.persistentConnectionPoint {
+  fill: #3b82f6;
+}
+
+.persistentConnectionTargetPoint {
+  fill: #3b82f6;
+}
+
 .dropHint {
   position: fixed;
   padding: 8px 16px;
@@ -432,6 +462,33 @@
   padding: 4px 10px;
   border-radius: 4px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.panelControls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.connectionsToggle {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary, #333);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border-default, #d9dce2);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.connectionsToggle:hover {
+  background: #ffffff;
+  border-color: var(--accent-primary, #3b82f6);
 }
 
 .edgeInfo {
