@@ -1,5 +1,4 @@
-from functools import lru_cache
-from typing import Annotated, Callable
+from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy.orm import Session

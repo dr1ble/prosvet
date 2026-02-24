@@ -14,7 +14,6 @@ from app.modules.catalog.api.schemas import (
     ReleaseScreenOut,
 )
 from app.modules.catalog.domain.errors import CatalogError
-from app.modules.catalog.domain.services import CatalogService
 from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen
 from app.modules.users.models import UserRole
 from app.shared.auth.deps import require_roles
