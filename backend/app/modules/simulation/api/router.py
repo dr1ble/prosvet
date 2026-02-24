@@ -27,6 +27,7 @@ from app.modules.simulation.api.schemas import (
     SimulationMediaUploadOut,
 )
 from app.modules.simulation.domain.services import SimulationService
+from app.modules.simulation.infra.models import SimulationMediaAsset
 from app.modules.users.models import UserRole
 from app.shared.auth.deps import get_current_actor, require_roles
 from app.shared.auth.schemas import CurrentActor
@@ -38,6 +39,10 @@ simulation_builder_roles = (
     UserRole.ADMINISTRATOR,
     UserRole.METHODOLOGIST,
 )
+
+
+def _to_media_asset_out(asset: SimulationMediaAsset) -> SimulationMediaAssetOut:
+    return SimulationMediaAssetOut.model_validate(asset)
 
 
 @router.get("/drafts/current", response_model=SimulationDraftOut | None)
@@ -105,7 +110,7 @@ def list_media_assets(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return SimulationMediaListOut(items=assets)
+    return SimulationMediaListOut(items=[_to_media_asset_out(a) for a in assets])
 
 
 @router.get("/media/apps", response_model=SimulationMediaAppBindingListOut)
@@ -123,7 +128,7 @@ def list_media_app_bindings(
         search_query=search_query,
         limit=limit,
     )
-    return SimulationMediaAppBindingListOut(items=items)
+    return SimulationMediaAppBindingListOut(items=items)  # type: ignore[arg-type]
 
 
 @router.post(
@@ -165,7 +170,7 @@ async def upload_media_asset(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    return SimulationMediaUploadOut(asset=asset)
+    return SimulationMediaUploadOut(asset=asset)  # type: ignore[arg-type]
 
 
 @router.get("/media/{asset_id}/file")

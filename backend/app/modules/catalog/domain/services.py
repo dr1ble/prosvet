@@ -279,10 +279,10 @@ class CatalogService:
                     status_code=422,
                 )
 
-        x = float(coordinates["x"])
-        y = float(coordinates["y"])
-        width = float(coordinates["width"])
-        height = float(coordinates["height"])
+        x = float(coordinates["x"])  # type: ignore[arg-type]
+        y = float(coordinates["y"])  # type: ignore[arg-type]
+        width = float(coordinates["width"])  # type: ignore[arg-type]
+        height = float(coordinates["height"])  # type: ignore[arg-type]
 
         if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > 100 or y + height > 100:
             raise CatalogError(

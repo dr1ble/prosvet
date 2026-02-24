@@ -142,9 +142,9 @@ class AuthService:
 
         # For now, create a user for one-time QR flow if not pre-bound.
         if qr_token.issued_by_user_id is None:
-            user = self.repo.create_user(phone_hash=stable_hash(f"qr:{qr_token.id}", settings.security_pepper))
-            user_id = user.id
-            role = user.role.value
+            created_user = self.repo.create_user(phone_hash=stable_hash(f"qr:{qr_token.id}", settings.security_pepper))
+            user_id = created_user.id
+            role = created_user.role.value
         else:
             user = self.repo.get_user_by_id(qr_token.issued_by_user_id)
             if user is None or user.status != UserStatus.ACTIVE:
