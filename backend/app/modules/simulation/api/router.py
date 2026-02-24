@@ -11,7 +11,6 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
 
 from app.modules.simulation.api.schemas import (
     SimulationDraftOut,
@@ -26,12 +25,11 @@ from app.modules.simulation.api.schemas import (
     SimulationMediaListOut,
     SimulationMediaUploadOut,
 )
-from app.modules.simulation.domain.services import SimulationService
 from app.modules.simulation.infra.models import SimulationMediaAsset
 from app.modules.users.models import UserRole
 from app.shared.auth.deps import get_current_actor, require_roles
 from app.shared.auth.schemas import CurrentActor
-from app.shared.db.deps import get_db
+from app.shared.di.services import SimulationServiceDep
 
 router = APIRouter()
 
@@ -47,11 +45,10 @@ def _to_media_asset_out(asset: SimulationMediaAsset) -> SimulationMediaAssetOut:
 
 @router.get("/drafts/current", response_model=SimulationDraftOut | None)
 def get_current_draft(
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
 ) -> SimulationDraftOut | None:
-    service = SimulationService(db)
     draft = service.get_current_draft(owner_user_id=actor.user_id, scope_key=scope_key)
     if draft is None:
         return None
@@ -65,14 +62,13 @@ def get_current_draft(
 )
 def upsert_current_draft(
     payload: SimulationDraftUpsertIn,
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
 ) -> SimulationDraftOut:
     if not isinstance(payload.payload_json, dict):
         raise HTTPException(status_code=422, detail="payload_json must be a JSON object")
 
-    service = SimulationService(db)
     draft = service.upsert_current_draft(
         owner_user_id=actor.user_id,
         scope_key=scope_key,
@@ -84,7 +80,7 @@ def upsert_current_draft(
 
 @router.get("/media", response_model=SimulationMediaListOut)
 def list_media_assets(
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     app_package_name: str = Query(min_length=3, max_length=255),
@@ -95,7 +91,6 @@ def list_media_assets(
     search_query: str = Query(default="", max_length=120),
     limit: int = Query(default=40, ge=1, le=100),
 ) -> SimulationMediaListOut:
-    service = SimulationService(db)
     try:
         assets = service.list_media_assets(
             owner_user_id=actor.user_id,
@@ -115,13 +110,12 @@ def list_media_assets(
 
 @router.get("/media/apps", response_model=SimulationMediaAppBindingListOut)
 def list_media_app_bindings(
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     search_query: str = Query(default="", max_length=120),
     limit: int = Query(default=40, ge=1, le=100),
 ) -> SimulationMediaAppBindingListOut:
-    service = SimulationService(db)
     items = service.list_media_app_bindings(
         owner_user_id=actor.user_id,
         scope_key=scope_key,
@@ -137,8 +131,8 @@ def list_media_app_bindings(
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_media_asset(
+    service: SimulationServiceDep,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     app_package_name: str = Query(min_length=3, max_length=255),
@@ -153,7 +147,6 @@ async def upload_media_asset(
         raise HTTPException(status_code=422, detail="File content type is required.")
 
     content = await file.read()
-    service = SimulationService(db)
     try:
         asset = service.create_media_asset(
             owner_user_id=actor.user_id,
@@ -176,10 +169,9 @@ async def upload_media_asset(
 @router.get("/media/{asset_id}/file")
 def get_media_asset_file(
     asset_id: UUID,
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(get_current_actor),
 ) -> FileResponse:
-    service = SimulationService(db)
     asset_data = service.get_media_asset_with_path(
         asset_id=asset_id,
     )
@@ -198,10 +190,9 @@ def get_media_asset_file(
 def update_media_asset(
     asset_id: UUID,
     payload: SimulationMediaAssetUpdateIn,
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
 ) -> SimulationMediaAssetOut:
-    service = SimulationService(db)
     try:
         asset = service.rename_media_asset(
             owner_user_id=actor.user_id,
@@ -218,10 +209,9 @@ def update_media_asset(
 @router.delete("/media/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_media_asset(
     asset_id: UUID,
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
 ) -> Response:
-    service = SimulationService(db)
     deleted = service.delete_media_asset(owner_user_id=actor.user_id, asset_id=asset_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Media asset not found.")
@@ -230,7 +220,7 @@ def delete_media_asset(
 
 @router.get("/library", response_model=SimulationLibraryListOut)
 def list_library_items(
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     search_query: str = Query(default="", max_length=120),
@@ -241,7 +231,6 @@ def list_library_items(
     released_at: str | None = Query(default=None, max_length=20),
     limit: int = Query(default=40, ge=1, le=100),
 ) -> SimulationLibraryListOut:
-    service = SimulationService(db)
     try:
         items = service.list_library_items(
             owner_user_id=actor.user_id,
@@ -268,11 +257,10 @@ def list_library_items(
 )
 def create_library_item(
     payload: SimulationLibraryCreateIn,
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
 ) -> SimulationLibraryItemOut:
-    service = SimulationService(db)
     try:
         item = service.create_library_item(
             owner_user_id=actor.user_id,
@@ -288,10 +276,9 @@ def create_library_item(
 @router.get("/library/{item_id}", response_model=SimulationLibraryItemOut)
 def get_library_item(
     item_id: UUID,
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
 ) -> SimulationLibraryItemOut:
-    service = SimulationService(db)
     item = service.get_library_item(owner_user_id=actor.user_id, item_id=item_id)
     if item is None:
         raise HTTPException(status_code=404, detail="Library item not found.")
@@ -302,10 +289,9 @@ def get_library_item(
 def update_library_item(
     item_id: UUID,
     payload: SimulationLibraryCreateIn,
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
 ) -> SimulationLibraryItemOut:
-    service = SimulationService(db)
     try:
         item = service.update_library_item(
             owner_user_id=actor.user_id,
@@ -324,10 +310,9 @@ def update_library_item(
 @router.delete("/library/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_library_item(
     item_id: UUID,
-    db: Session = Depends(get_db),
+    service: SimulationServiceDep,
     actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
 ) -> Response:
-    service = SimulationService(db)
     deleted = service.delete_library_item(owner_user_id=actor.user_id, item_id=item_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Library item not found.")
