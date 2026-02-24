@@ -14,7 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
 import com.digitaledu.core.model.ScreenPayload
 import com.digitaledu.feature.home.impl.player.PlayerIntent
@@ -63,8 +65,8 @@ fun VideoStory(
         
         // Play/Pause Icon Overlay (Visible when paused)
         if (!isPlaying) {
-             androidx.compose.material3.Icon(
-                 imageVector = androidx.compose.material.icons.Icons.Default.PlayArrow,
+             Icon(
+                 imageVector = Icons.Default.PlayArrow,
                  contentDescription = "Play",
                  tint = Color.White,
                  modifier = Modifier.align(Alignment.Center).fillMaxSize(0.2f)

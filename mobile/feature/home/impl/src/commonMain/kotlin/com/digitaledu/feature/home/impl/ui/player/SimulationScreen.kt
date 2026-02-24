@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -184,7 +185,7 @@ private fun HotspotOverlay(
             )
             .clickable(
                 onClick = onClick,
-                indication = androidx.compose.material3.ripple(),
+                indication = ripple(),
                 interactionSource = remember { MutableInteractionSource() },
             ),
         contentAlignment = Alignment.Center,
