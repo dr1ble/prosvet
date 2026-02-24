@@ -2,8 +2,8 @@
 
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Generator
+from collections.abc import Generator
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,16 +12,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.modules.auth.infra.models import Base as AuthBase
-from app.modules.auth.infra.models import (
-    OtpChallenge,
-    QrLoginToken,
-    UserSession,
-)
 from app.modules.catalog.infra.models import Base as CatalogBase
-from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen
+from app.modules.catalog.infra.models import Course, CourseRelease
 from app.modules.simulation.infra.models import Base as SimulationBase
-from app.modules.users.models import User, UserRole
-
+from app.modules.users.models import UserRole
 
 # Use main database (test database needs pg_hba config for external creation)
 # For isolated tests, use mock repositories instead of real DB

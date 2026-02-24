@@ -206,7 +206,7 @@ class AuthService:
             expires_at=now + timedelta(days=settings.refresh_session_days),
             device_id_hash=device_id_hash,
         )
-        return AuthResponse(access_token=access_token, refresh_token=refresh_token)
+        return AuthResponse(access_token=access_token, refresh_token=refresh_token, user_id=user_id)
 
     @staticmethod
     def _resolve_role_for_phone(normalized_phone: str) -> UserRole:

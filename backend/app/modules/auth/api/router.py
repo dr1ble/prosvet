@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.modules.auth.api.schemas import (
@@ -18,8 +18,17 @@ from app.modules.auth.domain.services import AuthService
 from app.modules.users.models import User
 from app.shared.auth.deps import get_current_user
 from app.shared.db.deps import get_db
+from app.shared.security.audit import log_login_attempt
 
 router = APIRouter()
+
+
+def get_client_ip(request: Request) -> str | None:
+    """Extract client IP from request."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else None
 
 
 @router.post("/otp/request", response_model=OtpRequestOut)
@@ -42,11 +51,15 @@ def verify_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> AuthRespo
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(payload: LoginIn, db: Session = Depends(get_db)) -> AuthResponse:
+def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)) -> AuthResponse:
     service = AuthService(db)
+    ip = get_client_ip(request)
     try:
-        return service.login(login=payload.login, password=payload.password)
+        response = service.login(login=payload.login, password=payload.password)
+        log_login_attempt(login=payload.login, success=True, user_id=str(response.user_id), ip_address=ip)
+        return response
     except AuthError as exc:
+        log_login_attempt(login=payload.login, success=False, ip_address=ip)
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
