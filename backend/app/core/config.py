@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     app_name: str = "Digital Education Platform API"
     app_version: str = "0.1.0"
     environment: str = "development"
+    cors_origins: str = "*"
 
     database_url: str = "postgresql+psycopg://app:app@localhost:5432/app"
 
@@ -54,6 +55,22 @@ class Settings(BaseSettings):
         if info.data.get("environment") == "production" and "dev-" in v.lower():
             raise ValueError("security_pepper must be set for production")
         return v
+
+    @field_validator("cors_origins")
+    @classmethod
+    def validate_cors_origins(cls, v: str, info) -> str:
+        if info.data.get("environment") == "production" and v.strip() == "*":
+            raise ValueError("cors_origins must be explicit in production")
+        return v
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        raw = self.cors_origins.strip()
+        if not raw:
+            return []
+        if raw == "*":
+            return ["*"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
 settings = Settings()

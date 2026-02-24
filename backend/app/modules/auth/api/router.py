@@ -17,6 +17,7 @@ from app.modules.users.models import User
 from app.shared.auth.deps import get_current_user
 from app.shared.di.services import AuthServiceDep
 from app.shared.security.audit import log_login_attempt
+from app.shared.security.rate_limit import limiter
 
 router = APIRouter()
 
@@ -30,7 +31,8 @@ def get_client_ip(request: Request) -> str | None:
 
 
 @router.post("/otp/request", response_model=OtpRequestOut)
-def request_otp(payload: OtpRequestIn, service: AuthServiceDep) -> OtpRequestOut:
+@limiter.limit("5/minute")
+def request_otp(request: Request, payload: OtpRequestIn, service: AuthServiceDep) -> OtpRequestOut:
     try:
         challenge_id, dev_code = service.request_otp(payload.phone)
     except AuthError as exc:
@@ -39,7 +41,8 @@ def request_otp(payload: OtpRequestIn, service: AuthServiceDep) -> OtpRequestOut
 
 
 @router.post("/otp/verify", response_model=AuthResponse)
-def verify_otp(payload: OtpVerifyIn, service: AuthServiceDep) -> AuthResponse:
+@limiter.limit("10/minute")
+def verify_otp(request: Request, payload: OtpVerifyIn, service: AuthServiceDep) -> AuthResponse:
     try:
         return service.verify_otp(payload.phone, payload.code)
     except AuthError as exc:
@@ -47,6 +50,7 @@ def verify_otp(payload: OtpVerifyIn, service: AuthServiceDep) -> AuthResponse:
 
 
 @router.post("/login", response_model=AuthResponse)
+@limiter.limit("10/minute")
 def login(payload: LoginIn, request: Request, service: AuthServiceDep) -> AuthResponse:
     ip = get_client_ip(request)
     try:
@@ -60,7 +64,8 @@ def login(payload: LoginIn, request: Request, service: AuthServiceDep) -> AuthRe
 
 
 @router.post("/qr/activate", response_model=AuthResponse)
-def activate_qr(payload: QrActivateIn, service: AuthServiceDep) -> AuthResponse:
+@limiter.limit("10/minute")
+def activate_qr(request: Request, payload: QrActivateIn, service: AuthServiceDep) -> AuthResponse:
     try:
         return service.activate_qr(payload.token)
     except AuthError as exc:
@@ -68,7 +73,8 @@ def activate_qr(payload: QrActivateIn, service: AuthServiceDep) -> AuthResponse:
 
 
 @router.post("/refresh", response_model=AuthResponse)
-def refresh_session(payload: RefreshTokenIn, service: AuthServiceDep) -> AuthResponse:
+@limiter.limit("20/minute")
+def refresh_session(request: Request, payload: RefreshTokenIn, service: AuthServiceDep) -> AuthResponse:
     try:
         return service.refresh_session(payload.refresh_token)
     except AuthError as exc:

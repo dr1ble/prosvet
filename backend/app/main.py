@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from app.api.router import api_router
 from app.core.config import settings
 from app.shared.middleware.logging import LoggingMiddleware
+from app.shared.security.rate_limit import limiter
 
 
 def create_app() -> FastAPI:
@@ -15,11 +17,14 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
+    cors_origins = settings.cors_origins_list
+    allow_any_origin = "*" in cors_origins
+
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Configure appropriately for production
-        allow_credentials=True,
+        allow_origins=cors_origins,
+        allow_credentials=not allow_any_origin,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -27,11 +32,6 @@ def create_app() -> FastAPI:
     # Logging middleware
     app.add_middleware(LoggingMiddleware)
 
-    from slowapi import Limiter
-    from slowapi.errors import RateLimitExceeded
-    from slowapi.util import get_remote_address
-
-    limiter = Limiter(key_func=get_remote_address)
     app.state.limiter = limiter
 
     @app.exception_handler(RateLimitExceeded)
