@@ -1,11 +1,5 @@
 package com.digitaledu.core.model
 
-/**
- * Represents different types of screen content payloads.
- * 
- * This sealed interface allows type-safe handling of different content types
- * (simulation, text, video, etc.) while maintaining a common interface.
- */
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
