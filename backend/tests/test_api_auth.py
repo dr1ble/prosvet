@@ -20,8 +20,12 @@ class TestAuthOTPEndpoints:
             "/api/v1/auth/otp/request",
             json={"phone": "+79991234567"},
         )
-        # Returns 200 if rate limit not exceeded
         assert response.status_code in (200, 429)
+        if response.status_code == 200:
+            body = response.json()
+            assert body["status"] == "otp_sent"
+            assert isinstance(body["challenge_id"], str)
+            assert body["challenge_id"]
 
     def test_otp_request_invalid_phone(self, client: TestClient) -> None:
         """Test OTP request with invalid phone."""
@@ -75,6 +79,7 @@ class TestAuthProtectedEndpoints:
         """Test /me without auth token."""
         response = client.get("/api/v1/auth/me")
         assert response.status_code == 401
+        assert "detail" in response.json()
 
     def test_me_with_invalid_token(self, client: TestClient) -> None:
         """Test /me with invalid token."""
@@ -83,6 +88,7 @@ class TestAuthProtectedEndpoints:
             headers={"Authorization": "Bearer invalid-token"},
         )
         assert response.status_code in (401, 403)
+        assert "detail" in response.json()
 
     def test_refresh_without_token(self, client: TestClient) -> None:
         """Test refresh without token."""
@@ -118,5 +124,5 @@ class TestAuthQrEndpoints:
             "/api/v1/auth/qr/activate",
             json={"token": "invalid-token-123"},
         )
-        # Returns 401 for invalid token
         assert response.status_code == 401
+        assert response.json().get("detail")
