@@ -1,8 +1,11 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.shared.middleware.logging import LoggingMiddleware
 
 
 def create_app() -> FastAPI:
@@ -12,6 +15,18 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
     )
+
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Configure appropriately for production
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Logging middleware
+    app.add_middleware(LoggingMiddleware)
 
     from slowapi import Limiter
     from slowapi.errors import RateLimitExceeded

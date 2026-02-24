@@ -2,7 +2,6 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
 
 from app.modules.catalog.api.schemas import (
     CourseBundleOut,
@@ -20,7 +19,7 @@ from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleas
 from app.modules.users.models import UserRole
 from app.shared.auth.deps import require_roles
 from app.shared.auth.schemas import CurrentActor
-from app.shared.db.deps import get_db
+from app.shared.di.services import CatalogServiceDep
 
 router = APIRouter()
 catalog_write_roles = (UserRole.ADMINISTRATOR, UserRole.METHODOLOGIST, UserRole.MODERATOR)
@@ -58,12 +57,11 @@ def _to_screen_out(screen: CourseReleaseScreen) -> ReleaseScreenOut:
 
 @router.get("/courses", response_model=list[CourseOut])
 def list_courses(
+    service: CatalogServiceDep,
     include_drafts: bool = Query(default=False),
     include_archived: bool = Query(default=False),
-    db: Session = Depends(get_db),
 ) -> list[CourseOut]:
     query = CourseListQuery(include_drafts=include_drafts, include_archived=include_archived)
-    service = CatalogService(db)
     courses = service.list_courses(query)
     return [_to_course_out(course) for course in courses]
 
@@ -71,12 +69,11 @@ def list_courses(
 @router.post("/courses", response_model=CourseOut, status_code=status.HTTP_201_CREATED)
 def create_course(
     payload: CourseCreateIn,
-    db: Session = Depends(get_db),
+    service: CatalogServiceDep,
     _actor: CurrentActor = Depends(
         require_roles(*catalog_write_roles)
     ),
 ) -> CourseOut:
-    service = CatalogService(db)
     try:
         course = service.create_course(payload)
     except CatalogError as exc:
@@ -92,12 +89,11 @@ def create_course(
 def create_course_release(
     course_id: UUID,
     payload: CourseReleaseCreateIn,
-    db: Session = Depends(get_db),
+    service: CatalogServiceDep,
     _actor: CurrentActor = Depends(
         require_roles(*catalog_write_roles)
     ),
 ) -> CourseReleaseOut:
-    service = CatalogService(db)
     try:
         release, screens, _ = service.create_release(course_id=course_id, payload=payload)
     except CatalogError as exc:
@@ -108,10 +104,10 @@ def create_course_release(
 @router.get("/courses/{course_id}/releases", response_model=list[CourseReleaseOut])
 def list_course_releases(
     course_id: UUID,
+    service: CatalogServiceDep,
     release_status: Literal["draft", "published"] | None = Query(default=None, alias="status"),
     version_query: str | None = Query(default=None, max_length=32),
     limit: int = Query(default=50, ge=1, le=200),
-    db: Session = Depends(get_db),
     _actor: CurrentActor = Depends(require_roles(*catalog_write_roles)),
 ) -> list[CourseReleaseOut]:
     query = ReleaseListQuery(
@@ -119,7 +115,6 @@ def list_course_releases(
         version_query=version_query,
         limit=limit,
     )
-    service = CatalogService(db)
     try:
         releases = service.list_course_releases(course_id=course_id, query=query)
     except CatalogError as exc:
@@ -128,8 +123,7 @@ def list_course_releases(
 
 
 @router.get("/courses/{course_slug}/releases/latest", response_model=CourseBundleOut)
-def get_latest_course_release(course_slug: str, db: Session = Depends(get_db)) -> CourseBundleOut:
-    service = CatalogService(db)
+def get_latest_course_release(course_slug: str, service: CatalogServiceDep) -> CourseBundleOut:
     try:
         course, release, screens = service.get_latest_course_bundle(course_slug=course_slug)
     except CatalogError as exc:

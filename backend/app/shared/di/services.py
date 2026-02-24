@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Callable
 
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -10,31 +10,19 @@ from app.modules.simulation.domain.services import SimulationService
 from app.shared.db.deps import get_db
 
 
-@lru_cache
-def get_auth_service_factory():
-    """Factory for AuthService with proper DI."""
-    def _create(db: Session = Depends(get_db)) -> AuthService:
-        return AuthService(db)
-    return _create
+def _create_auth_service(db: Session = Depends(get_db)) -> AuthService:
+    return AuthService(db)
 
 
-@lru_cache
-def get_catalog_service_factory():
-    """Factory for CatalogService with proper DI."""
-    def _create(db: Session = Depends(get_db)) -> CatalogService:
-        return CatalogService(db)
-    return _create
+def _create_catalog_service(db: Session = Depends(get_db)) -> CatalogService:
+    return CatalogService(db)
 
 
-@lru_cache
-def get_simulation_service_factory():
-    """Factory for SimulationService with proper DI."""
-    def _create(db: Session = Depends(get_db)) -> SimulationService:
-        return SimulationService(db)
-    return _create
+def _create_simulation_service(db: Session = Depends(get_db)) -> SimulationService:
+    return SimulationService(db)
 
 
 # Annotated dependencies for use in routers
-AuthServiceDep = Annotated[AuthService, Depends(get_auth_service_factory)]
-CatalogServiceDep = Annotated[CatalogService, Depends(get_catalog_service_factory)]
-SimulationServiceDep = Annotated[SimulationService, Depends(get_simulation_service_factory)]
+AuthServiceDep = Annotated[AuthService, Depends(_create_auth_service)]
+CatalogServiceDep = Annotated[CatalogService, Depends(_create_catalog_service)]
+SimulationServiceDep = Annotated[SimulationService, Depends(_create_simulation_service)]
