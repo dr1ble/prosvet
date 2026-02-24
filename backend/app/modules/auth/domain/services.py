@@ -61,7 +61,6 @@ class AuthService:
         )
 
         # SMS provider integration will deliver otp_code to user phone.
-        self.db.commit()
         dev_code = otp_code if settings.debug_return_otp_code else None
         return str(challenge.id), dev_code
 
@@ -85,7 +84,6 @@ class AuthService:
                 raise AuthError("Invalid credentials.", status_code=401)
 
         auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
-        self.db.commit()
         return auth_response
 
     def verify_otp(self, phone: str, code: str) -> AuthResponse:
@@ -102,7 +100,6 @@ class AuthService:
 
         if latest.expires_at <= now:
             self.repo.mark_challenge_expired(latest)
-            self.db.commit()
             raise AuthError("OTP challenge expired.", status_code=401)
 
         code_hash = stable_hash(code, settings.security_pepper)
@@ -112,8 +109,7 @@ class AuthService:
             if next_attempt >= settings.otp_max_attempts:
                 blocked_until = now + timedelta(minutes=settings.otp_block_minutes)
             self.repo.register_failed_attempt(latest, blocked_until=blocked_until)
-            self.db.commit()
-
+    
             if blocked_until is not None:
                 raise AuthError("Too many attempts. OTP flow is temporarily blocked.", status_code=429)
             raise AuthError("Invalid OTP code.", status_code=401)
@@ -127,7 +123,6 @@ class AuthService:
             user.role = promoted_role
 
         auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
-        self.db.commit()
         return auth_response
 
     def activate_qr(self, token: str) -> AuthResponse:
@@ -153,7 +148,6 @@ class AuthService:
             role = user.role.value
 
         auth_response = self._issue_session_tokens(user_id=user_id, role=role, now=now)
-        self.db.commit()
         return auth_response
 
     def refresh_session(self, refresh_token: str) -> AuthResponse:
@@ -174,7 +168,6 @@ class AuthService:
             now=now,
             device_id_hash=current_session.device_id_hash,
         )
-        self.db.commit()
         return auth_response
 
     def logout(self, refresh_token: str) -> None:
@@ -183,7 +176,6 @@ class AuthService:
         session = self.repo.get_active_session_by_refresh_hash(refresh_token_hash=refresh_token_hash, now=now)
         if session is not None:
             self.repo.revoke_session(session, now)
-        self.db.commit()
 
     def _issue_session_tokens(
         self,

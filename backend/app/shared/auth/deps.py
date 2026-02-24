@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.modules.users.models import User, UserRole, UserStatus
+from app.shared.auth.policies import POLICY_ROLE_MAP
 from app.shared.auth.schemas import CurrentActor
 from app.shared.db.deps import get_db
 from app.shared.security.tokens import TokenError, parse_access_token
@@ -69,3 +70,10 @@ def require_roles(*allowed_roles: UserRole) -> Callable[[CurrentActor], CurrentA
         return actor
 
     return _dependency
+
+
+def require_policy(policy_key: str) -> Callable[[CurrentActor], CurrentActor]:
+    allowed_roles = POLICY_ROLE_MAP.get(policy_key)
+    if not allowed_roles:
+        raise ValueError(f"Unknown policy: {policy_key}")
+    return require_roles(*allowed_roles)

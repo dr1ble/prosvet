@@ -26,18 +26,11 @@ from app.modules.simulation.api.schemas import (
     SimulationMediaUploadOut,
 )
 from app.modules.simulation.infra.models import SimulationMediaAsset
-from app.modules.users.models import UserRole
-from app.shared.auth.deps import get_current_actor, require_roles
+from app.shared.auth.deps import get_current_actor, require_policy
 from app.shared.auth.schemas import CurrentActor
 from app.shared.di.services import SimulationServiceDep
 
 router = APIRouter()
-
-simulation_builder_roles = (
-    UserRole.ADMINISTRATOR,
-    UserRole.METHODOLOGIST,
-)
-
 
 def _to_media_asset_out(asset: SimulationMediaAsset) -> SimulationMediaAssetOut:
     return SimulationMediaAssetOut.model_validate(asset)
@@ -46,7 +39,7 @@ def _to_media_asset_out(asset: SimulationMediaAsset) -> SimulationMediaAssetOut:
 @router.get("/drafts/current", response_model=SimulationDraftOut | None)
 def get_current_draft(
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
 ) -> SimulationDraftOut | None:
     draft = service.get_current_draft(owner_user_id=actor.user_id, scope_key=scope_key)
@@ -63,7 +56,7 @@ def get_current_draft(
 def upsert_current_draft(
     payload: SimulationDraftUpsertIn,
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
 ) -> SimulationDraftOut:
     if not isinstance(payload.payload_json, dict):
@@ -81,7 +74,7 @@ def upsert_current_draft(
 @router.get("/media", response_model=SimulationMediaListOut)
 def list_media_assets(
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     app_package_name: str = Query(min_length=3, max_length=255),
     store_type: str = Query(default="other", max_length=30),
@@ -111,7 +104,7 @@ def list_media_assets(
 @router.get("/media/apps", response_model=SimulationMediaAppBindingListOut)
 def list_media_app_bindings(
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     search_query: str = Query(default="", max_length=120),
     limit: int = Query(default=40, ge=1, le=100),
@@ -133,7 +126,7 @@ def list_media_app_bindings(
 async def upload_media_asset(
     service: SimulationServiceDep,
     file: UploadFile = File(...),
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     app_package_name: str = Query(min_length=3, max_length=255),
     store_type: str = Query(default="other", max_length=30),
@@ -191,7 +184,7 @@ def update_media_asset(
     asset_id: UUID,
     payload: SimulationMediaAssetUpdateIn,
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
 ) -> SimulationMediaAssetOut:
     try:
         asset = service.rename_media_asset(
@@ -210,7 +203,7 @@ def update_media_asset(
 def delete_media_asset(
     asset_id: UUID,
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
 ) -> Response:
     deleted = service.delete_media_asset(owner_user_id=actor.user_id, asset_id=asset_id)
     if not deleted:
@@ -221,7 +214,7 @@ def delete_media_asset(
 @router.get("/library", response_model=SimulationLibraryListOut)
 def list_library_items(
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
     search_query: str = Query(default="", max_length=120),
     app_package_name: str | None = Query(default=None, min_length=3, max_length=255),
@@ -258,7 +251,7 @@ def list_library_items(
 def create_library_item(
     payload: SimulationLibraryCreateIn,
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
     scope_key: str = Query(default="global", min_length=1, max_length=190),
 ) -> SimulationLibraryItemOut:
     try:
@@ -277,7 +270,7 @@ def create_library_item(
 def get_library_item(
     item_id: UUID,
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
 ) -> SimulationLibraryItemOut:
     item = service.get_library_item(owner_user_id=actor.user_id, item_id=item_id)
     if item is None:
@@ -290,7 +283,7 @@ def update_library_item(
     item_id: UUID,
     payload: SimulationLibraryCreateIn,
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
 ) -> SimulationLibraryItemOut:
     try:
         item = service.update_library_item(
@@ -311,7 +304,7 @@ def update_library_item(
 def delete_library_item(
     item_id: UUID,
     service: SimulationServiceDep,
-    actor: CurrentActor = Depends(require_roles(*simulation_builder_roles)),
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
 ) -> Response:
     deleted = service.delete_library_item(owner_user_id=actor.user_id, item_id=item_id)
     if not deleted:

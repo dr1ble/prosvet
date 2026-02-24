@@ -15,13 +15,11 @@ from app.modules.catalog.api.schemas import (
 )
 from app.modules.catalog.domain.errors import CatalogError
 from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen
-from app.modules.users.models import UserRole
-from app.shared.auth.deps import require_roles
+from app.shared.auth.deps import require_policy
 from app.shared.auth.schemas import CurrentActor
 from app.shared.di.services import CatalogServiceDep
 
 router = APIRouter()
-catalog_write_roles = (UserRole.ADMINISTRATOR, UserRole.METHODOLOGIST, UserRole.MODERATOR)
 
 
 def _to_course_out(course: Course) -> CourseOut:
@@ -70,7 +68,7 @@ def create_course(
     payload: CourseCreateIn,
     service: CatalogServiceDep,
     _actor: CurrentActor = Depends(
-        require_roles(*catalog_write_roles)
+        require_policy("catalog.write")
     ),
 ) -> CourseOut:
     try:
@@ -90,7 +88,7 @@ def create_course_release(
     payload: CourseReleaseCreateIn,
     service: CatalogServiceDep,
     _actor: CurrentActor = Depends(
-        require_roles(*catalog_write_roles)
+        require_policy("catalog.write")
     ),
 ) -> CourseReleaseOut:
     try:
@@ -107,7 +105,7 @@ def list_course_releases(
     release_status: Literal["draft", "published"] | None = Query(default=None, alias="status"),
     version_query: str | None = Query(default=None, max_length=32),
     limit: int = Query(default=50, ge=1, le=200),
-    _actor: CurrentActor = Depends(require_roles(*catalog_write_roles)),
+    _actor: CurrentActor = Depends(require_policy("catalog.releases.read")),
 ) -> list[CourseReleaseOut]:
     query = ReleaseListQuery(
         status=release_status,

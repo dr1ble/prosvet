@@ -1,6 +1,7 @@
 import logging
 import time
 from collections.abc import Callable
+from uuid import uuid4
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -13,10 +14,13 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         start_time = time.perf_counter()
+        request_id = request.headers.get("X-Request-ID") or uuid4().hex
+        request.state.request_id = request_id
 
         logger.info(
             "request_started",
             extra={
+                "request_id": request_id,
                 "method": request.method,
                 "path": request.url.path,
                 "client_ip": request.client.host if request.client else None,
@@ -31,6 +35,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             logger.info(
                 "request_completed",
                 extra={
+                    "request_id": request_id,
                     "method": request.method,
                     "path": request.url.path,
                     "status_code": response.status_code,
@@ -39,6 +44,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             )
 
             response.headers["X-Process-Time"] = str(round(process_time * 1000, 2))
+            response.headers["X-Request-ID"] = request_id
             return response
 
         except Exception as exc:
@@ -47,6 +53,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             logger.error(
                 "request_failed",
                 extra={
+                    "request_id": request_id,
                     "method": request.method,
                     "path": request.url.path,
                     "error": str(exc),

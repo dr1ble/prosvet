@@ -71,7 +71,6 @@ class CatalogService:
             description=payload.description,
             status=payload.status,
         )
-        self.db.commit()
         return course
 
     def create_release(
@@ -115,7 +114,6 @@ class CatalogService:
         if release_status == ReleaseStatus.PUBLISHED.value and course.status != CourseStatus.ARCHIVED.value:
             course.status = CourseStatus.ACTIVE.value
 
-        self.db.commit()
         return release, screens, course
 
     def get_latest_course_bundle(self, course_slug: str) -> tuple[Course, CourseRelease, list[CourseReleaseScreen]]:

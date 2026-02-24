@@ -235,7 +235,6 @@ class SimulationService:
                 title=normalized_title,
                 payload_json=payload_json,
             )
-            self.db.commit()
             return draft
 
         draft = self.repo.update_draft(
@@ -243,7 +242,6 @@ class SimulationService:
             title=normalized_title,
             payload_json=payload_json,
         )
-        self.db.commit()
         return draft
 
     def list_media_assets(
@@ -361,7 +359,6 @@ class SimulationService:
                 content_type=content_type,
                 size_bytes=len(content),
             )
-            self.db.commit()
         except Exception:
             if storage_path.exists():
                 storage_path.unlink(missing_ok=True)
@@ -400,7 +397,6 @@ class SimulationService:
             asset=asset,
             original_filename=normalized_filename,
         )
-        self.db.commit()
         return updated
 
     def delete_media_asset(
@@ -418,7 +414,6 @@ class SimulationService:
         storage_root = Path(settings.simulation_media_dir).resolve()
         file_path = storage_root / asset.storage_key
         self.repo.delete_media_asset(asset)
-        self.db.commit()
         if file_path.exists():
             file_path.unlink(missing_ok=True)
         return True
@@ -563,7 +558,6 @@ class SimulationService:
             target_app_name=target_app_name,
             payload_json=payload_json,
         )
-        self.db.commit()
         return self._build_library_item_payload(item)
 
     def update_library_item(
@@ -593,7 +587,6 @@ class SimulationService:
             target_app_name=target_app_name,
             payload_json=payload_json,
         )
-        self.db.commit()
         return self._build_library_item_payload(updated)
 
     def get_library_item(
@@ -621,5 +614,4 @@ class SimulationService:
         if item is None:
             return False
         self.repo.delete_library_item(item)
-        self.db.commit()
         return True

@@ -6,6 +6,7 @@ from slowapi.errors import RateLimitExceeded
 from app.api.router import api_router
 from app.core.config import settings
 from app.shared.middleware.logging import LoggingMiddleware
+from app.shared.middleware.security import SecurityHeadersMiddleware
 from app.shared.security.rate_limit import limiter
 
 
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
 
     # Logging middleware
     app.add_middleware(LoggingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     app.state.limiter = limiter
 
