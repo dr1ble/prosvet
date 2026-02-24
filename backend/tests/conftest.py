@@ -3,6 +3,7 @@
 import os
 import uuid
 from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
@@ -18,6 +19,7 @@ from app.modules.catalog.infra.models import Base as CatalogBase
 from app.modules.catalog.infra.models import Course, CourseRelease
 from app.modules.simulation.infra.models import Base as SimulationBase
 from app.modules.users.models import UserRole
+from app.shared.auth.schemas import CurrentActor
 
 # Use main database (test database needs pg_hba config for external creation)
 # For isolated tests, use mock repositories instead of real DB
@@ -145,3 +147,29 @@ def published_course():
 def api_client() -> TestClient:
     """Shared API client for integration tests."""
     return TestClient(app)
+
+
+@pytest.fixture
+def dependency_overrider():
+    """Temporarily override FastAPI dependencies in tests."""
+
+    @contextmanager
+    def _overrider(overrides: dict):
+        previous = dict(app.dependency_overrides)
+        app.dependency_overrides.update(overrides)
+        try:
+            yield
+        finally:
+            app.dependency_overrides = previous
+
+    return _overrider
+
+
+@pytest.fixture
+def actor_factory():
+    """Build CurrentActor for role-based endpoint tests."""
+
+    def _build(role: UserRole) -> CurrentActor:
+        return CurrentActor(user_id=uuid.uuid4(), role=role)
+
+    return _build
