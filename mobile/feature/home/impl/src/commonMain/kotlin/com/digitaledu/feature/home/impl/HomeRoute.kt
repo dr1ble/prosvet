@@ -30,6 +30,7 @@ fun HomeRoute(
     val catalogViewModel = remember { koin.get<CatalogViewModel>() }
     val playerViewModel = remember { koin.get<PlayerViewModel>() }
     val profileViewModel = remember { koin.get<ProfileViewModel>() }
+    val authRepository = remember { koin.get<AuthRepository>() }
 
     val catalogUiState by catalogViewModel.uiState.collectAsState()
     val playerUiState by playerViewModel.uiState.collectAsState()
@@ -39,14 +40,14 @@ fun HomeRoute(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(catalogUiState.errorMessage, profileUiState.errorMessage) {
-        catalogUiState.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message = message)
-            catalogViewModel.processIntent(CatalogIntent.DismissError)
-        }
-        profileUiState.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message = message)
-            profileViewModel.processIntent(ProfileIntent.DismissError)
-        }
+        snackbarHostState.showAndDismissIfNeeded(
+            message = catalogUiState.errorMessage,
+            dismiss = { catalogViewModel.processIntent(CatalogIntent.DismissError) },
+        )
+        snackbarHostState.showAndDismissIfNeeded(
+            message = profileUiState.errorMessage,
+            dismiss = { profileViewModel.processIntent(ProfileIntent.DismissError) },
+        )
     }
 
     ObserveEffects(catalogViewModel.effects) { effect ->
@@ -68,8 +69,8 @@ fun HomeRoute(
         }
     }
 
-    val authTokens by remember { koin.get<AuthRepository>().observeTokens() }
-        .collectAsState(initial = koin.get<AuthRepository>().getCachedTokens())
+    val authTokens by remember { authRepository.observeTokens() }
+        .collectAsState(initial = authRepository.getCachedTokens())
 
     val mediaAccessToken = authTokens?.accessToken
 
@@ -87,4 +88,16 @@ fun HomeRoute(
         onProfileIntent = profileViewModel::processIntent,
         modifier = modifier,
     )
+}
+
+private suspend fun SnackbarHostState.showAndDismissIfNeeded(
+    message: String?,
+    dismiss: () -> Unit,
+) {
+    message ?: return
+    try {
+        showSnackbar(message = message)
+    } finally {
+        dismiss()
+    }
 }

@@ -4,7 +4,6 @@ import com.digitaledu.core.common.BaseViewModel
 import com.digitaledu.core.model.CatalogBundle
 import com.digitaledu.core.model.Hotspot
 import com.digitaledu.feature.home.impl.utils.SimulationUrlResolver
-
 import androidx.lifecycle.viewModelScope
 import com.digitaledu.core.data.catalog.CatalogRepository
 import com.digitaledu.core.model.ScreenPayload
@@ -49,8 +48,7 @@ class PlayerViewModel(
                 activeHotspotHint = null,
             )
         }
-        persistCurrentProgress()
-        currentState.currentScreen?.payload?.let { loadLessonReference(it) }
+        refreshProgressAndReference()
     }
 
     fun resolveImageUrl(rawUrl: String): String = urlResolver.resolve(rawUrl)
@@ -60,26 +58,23 @@ class PlayerViewModel(
             val nextIndex = (currentScreenIndex - 1).coerceAtLeast(0)
             copy(currentScreenIndex = nextIndex)
         }
-        persistCurrentProgress()
-        currentState.currentScreen?.payload?.let { loadLessonReference(it) }
+        refreshProgressAndReference()
     }
 
     private fun goToNextScreen() {
         updateState {
             val currentBundle = bundle ?: return@updateState this
             val nextIndex = (currentScreenIndex + 1).coerceIn(0, currentBundle.screens.lastIndex)
-            val updatedCompleted = if (nextIndex > currentScreenIndex) {
-                completedScreens + currentScreenIndex
-            } else {
-                completedScreens
-            }
             copy(
                 currentScreenIndex = nextIndex,
-                completedScreens = updatedCompleted,
+                completedScreens = markCompletedIfMovedForward(
+                    sourceIndex = currentScreenIndex,
+                    targetIndex = nextIndex,
+                    completedScreens = completedScreens,
+                ),
             )
         }
-        persistCurrentProgress()
-        currentState.currentScreen?.payload?.let { loadLessonReference(it) }
+        refreshProgressAndReference()
     }
 
     private fun enterFullscreenPlayer() {
@@ -95,21 +90,19 @@ class PlayerViewModel(
             val currentBundle = bundle ?: return@updateState this
             val targetIndex = currentBundle.screens.indexOfFirst { it.screenKey == screenKey }
             if (targetIndex >= 0) {
-                val updatedCompleted = if (targetIndex > currentScreenIndex) {
-                    completedScreens + currentScreenIndex
-                } else {
-                    completedScreens
-                }
                 copy(
                     currentScreenIndex = targetIndex,
-                    completedScreens = updatedCompleted,
+                    completedScreens = markCompletedIfMovedForward(
+                        sourceIndex = currentScreenIndex,
+                        targetIndex = targetIndex,
+                        completedScreens = completedScreens,
+                    ),
                 )
             } else {
                 this
             }
         }
-        persistCurrentProgress()
-        currentState.currentScreen?.payload?.let { loadLessonReference(it) }
+        refreshProgressAndReference()
     }
 
     private fun onHotspotClick(hotspot: Hotspot) {
@@ -160,30 +153,55 @@ class PlayerViewModel(
         )
     }
 
+    private fun markCompletedIfMovedForward(
+        sourceIndex: Int,
+        targetIndex: Int,
+        completedScreens: Set<Int>,
+    ): Set<Int> {
+        return if (targetIndex > sourceIndex) {
+            completedScreens + sourceIndex
+        } else {
+            completedScreens
+        }
+    }
+
+    private fun refreshProgressAndReference() {
+        persistCurrentProgress()
+        currentState.currentScreen?.payload?.let(::loadLessonReference)
+    }
+
     private fun CatalogBundle.progressKey(): String = "${course.id}:${release.id}"
 
     private fun loadLessonReference(screenPayload: ScreenPayload) {
         referenceFetchJob?.cancel()
-        
-        val refId = when (screenPayload) {
-            is ScreenPayload.Simulation -> screenPayload.contextRef
-            is ScreenPayload.CheatSheet -> screenPayload.referenceId
-            else -> null
-        }
 
-        if (refId == null) {
-            updateState { copy(activeLessonReference = null) }
+        val referenceId = screenPayload.referenceIdOrNull()
+        if (referenceId == null) {
+            clearActiveLessonReference()
             return
         }
 
         referenceFetchJob = viewModelScope.launch {
-            try {
-                val reference = catalogRepository.getLessonReference(refId)
+            runCatching {
+                catalogRepository.getLessonReference(referenceId)
+            }.onSuccess { reference ->
                 updateState { copy(activeLessonReference = reference) }
-            } catch (e: Exception) {
+            }.onFailure {
                 // Error is ignored for now as it's auxiliary content
-                updateState { copy(activeLessonReference = null) }
+                clearActiveLessonReference()
             }
+        }
+    }
+
+    private fun clearActiveLessonReference() {
+        updateState { copy(activeLessonReference = null) }
+    }
+
+    private fun ScreenPayload.referenceIdOrNull(): String? {
+        return when (this) {
+            is ScreenPayload.Simulation -> contextRef
+            is ScreenPayload.CheatSheet -> referenceId
+            else -> null
         }
     }
 }

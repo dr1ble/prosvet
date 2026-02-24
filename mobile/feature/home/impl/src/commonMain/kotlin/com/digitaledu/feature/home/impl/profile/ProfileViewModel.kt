@@ -16,25 +16,41 @@ class ProfileViewModel(
     }
 
     private suspend fun logout() {
+        val success = runSubmittingAction {
+            authRepository.logout()
+        }
+        if (!success) return
+
+        updateState { copy(isLoggingOut = false) }
+        emitEffect(ProfileEffect.LoggedOut)
+    }
+
+    private suspend fun runSubmittingAction(block: suspend () -> Unit): Boolean {
+        setSubmitting()
+        return try {
+            block()
+            true
+        } catch (throwable: Throwable) {
+            setError(throwable)
+            false
+        }
+    }
+
+    private fun setSubmitting() {
         updateState {
             copy(
                 isLoggingOut = true,
                 errorMessage = null,
             )
         }
+    }
 
-        runCatching {
-            authRepository.logout()
-        }.onSuccess {
-            updateState { copy(isLoggingOut = false) }
-            emitEffect(ProfileEffect.LoggedOut)
-        }.onFailure { throwable ->
-            updateState {
-                copy(
-                    isLoggingOut = false,
-                    errorMessage = throwable.toUserMessage(),
-                )
-            }
+    private fun setError(throwable: Throwable) {
+        updateState {
+            copy(
+                isLoggingOut = false,
+                errorMessage = throwable.toUserMessage(),
+            )
         }
     }
 

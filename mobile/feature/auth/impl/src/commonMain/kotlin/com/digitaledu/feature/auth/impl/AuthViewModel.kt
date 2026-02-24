@@ -1,7 +1,6 @@
 package com.digitaledu.feature.auth.impl
 
 import com.digitaledu.core.common.BaseViewModel
-import com.digitaledu.core.common.PhoneNumberFormatter
 import com.digitaledu.core.common.toUserMessage
 import com.digitaledu.core.data.auth.AuthRepository
 

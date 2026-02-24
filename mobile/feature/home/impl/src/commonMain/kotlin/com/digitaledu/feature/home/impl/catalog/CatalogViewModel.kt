@@ -21,58 +21,58 @@ class CatalogViewModel(
     }
 
     private suspend fun loadCourses() {
+        val courses = runLoadingAction {
+            catalogRepository.listCourses()
+        } ?: return
+
         updateState {
             copy(
-                isLoading = true,
+                isLoading = false,
+                courses = courses,
                 errorMessage = null,
             )
-        }
-
-        runCatching {
-            catalogRepository.listCourses()
-        }.onSuccess { courses ->
-            updateState {
-                copy(
-                    isLoading = false,
-                    courses = courses,
-                    errorMessage = null,
-                )
-            }
-        }.onFailure { throwable ->
-            updateState {
-                copy(
-                    isLoading = false,
-                    errorMessage = throwable.toUserMessage(),
-                )
-            }
         }
     }
 
     private suspend fun openCourse(courseSlug: String) {
+        val bundle = runLoadingAction {
+            catalogRepository.getLatestCourseBundle(courseSlug = courseSlug)
+        } ?: return
+
+        updateState {
+            copy(
+                isLoading = false,
+                errorMessage = null,
+            )
+        }
+        emitEffect(CatalogEffect.CourseOpened(bundle))
+    }
+
+    private suspend fun <T> runLoadingAction(block: suspend () -> T): T? {
+        setLoading()
+        return try {
+            block()
+        } catch (throwable: Throwable) {
+            setError(throwable)
+            null
+        }
+    }
+
+    private fun setLoading() {
         updateState {
             copy(
                 isLoading = true,
                 errorMessage = null,
             )
         }
+    }
 
-        runCatching {
-            catalogRepository.getLatestCourseBundle(courseSlug = courseSlug)
-        }.onSuccess { bundle ->
-            updateState {
-                copy(
-                    isLoading = false,
-                    errorMessage = null,
-                )
-            }
-            emitEffect(CatalogEffect.CourseOpened(bundle))
-        }.onFailure { throwable ->
-            updateState {
-                copy(
-                    isLoading = false,
-                    errorMessage = throwable.toUserMessage(),
-                )
-            }
+    private fun setError(throwable: Throwable) {
+        updateState {
+            copy(
+                isLoading = false,
+                errorMessage = throwable.toUserMessage(),
+            )
         }
     }
 
