@@ -7,10 +7,12 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
+from app.main import app
 from app.modules.auth.infra.models import Base as AuthBase
 from app.modules.catalog.infra.models import Base as CatalogBase
 from app.modules.catalog.infra.models import Course, CourseRelease
@@ -137,3 +139,9 @@ def published_course():
     release.changelog = "Initial release"
     
     return course
+
+
+@pytest.fixture
+def api_client() -> TestClient:
+    """Shared API client for integration tests."""
+    return TestClient(app)
