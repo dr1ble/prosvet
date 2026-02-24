@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
 
 from app.modules.auth.api.schemas import (
     AuthMeOut,
@@ -14,10 +13,9 @@ from app.modules.auth.api.schemas import (
 )
 from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.domain.permissions import permissions_for_role
-from app.modules.auth.domain.services import AuthService
 from app.modules.users.models import User
 from app.shared.auth.deps import get_current_user
-from app.shared.db.deps import get_db
+from app.shared.di.services import AuthServiceDep
 from app.shared.security.audit import log_login_attempt
 
 router = APIRouter()
@@ -32,8 +30,7 @@ def get_client_ip(request: Request) -> str | None:
 
 
 @router.post("/otp/request", response_model=OtpRequestOut)
-def request_otp(payload: OtpRequestIn, db: Session = Depends(get_db)) -> OtpRequestOut:
-    service = AuthService(db)
+def request_otp(payload: OtpRequestIn, service: AuthServiceDep) -> OtpRequestOut:
     try:
         challenge_id, dev_code = service.request_otp(payload.phone)
     except AuthError as exc:
@@ -42,8 +39,7 @@ def request_otp(payload: OtpRequestIn, db: Session = Depends(get_db)) -> OtpRequ
 
 
 @router.post("/otp/verify", response_model=AuthResponse)
-def verify_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> AuthResponse:
-    service = AuthService(db)
+def verify_otp(payload: OtpVerifyIn, service: AuthServiceDep) -> AuthResponse:
     try:
         return service.verify_otp(payload.phone, payload.code)
     except AuthError as exc:
@@ -51,8 +47,7 @@ def verify_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> AuthRespo
 
 
 @router.post("/login", response_model=AuthResponse)
-def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)) -> AuthResponse:
-    service = AuthService(db)
+def login(payload: LoginIn, request: Request, service: AuthServiceDep) -> AuthResponse:
     ip = get_client_ip(request)
     try:
         response = service.login(login=payload.login, password=payload.password)
@@ -63,9 +58,9 @@ def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)) -> 
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
+
 @router.post("/qr/activate", response_model=AuthResponse)
-def activate_qr(payload: QrActivateIn, db: Session = Depends(get_db)) -> AuthResponse:
-    service = AuthService(db)
+def activate_qr(payload: QrActivateIn, service: AuthServiceDep) -> AuthResponse:
     try:
         return service.activate_qr(payload.token)
     except AuthError as exc:
@@ -73,8 +68,7 @@ def activate_qr(payload: QrActivateIn, db: Session = Depends(get_db)) -> AuthRes
 
 
 @router.post("/refresh", response_model=AuthResponse)
-def refresh_session(payload: RefreshTokenIn, db: Session = Depends(get_db)) -> AuthResponse:
-    service = AuthService(db)
+def refresh_session(payload: RefreshTokenIn, service: AuthServiceDep) -> AuthResponse:
     try:
         return service.refresh_session(payload.refresh_token)
     except AuthError as exc:
@@ -93,8 +87,7 @@ def auth_me(current_user: User = Depends(get_current_user)) -> AuthMeOut:
 
 
 @router.post("/logout", response_model=LogoutOut)
-def logout(payload: RefreshTokenIn, db: Session = Depends(get_db)) -> LogoutOut:
-    service = AuthService(db)
+def logout(payload: RefreshTokenIn, service: AuthServiceDep) -> LogoutOut:
     try:
         service.logout(payload.refresh_token)
     except AuthError as exc:
