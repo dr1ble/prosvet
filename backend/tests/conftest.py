@@ -29,7 +29,7 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def test_engine():
     """Create test database engine for# entire test session."""
     engine = create_engine(TEST_DATABASE_URL, echo=False)

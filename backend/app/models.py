@@ -4,6 +4,7 @@ from app.modules.auth.infra.models import OtpChallenge, QrLoginToken, UserSessio
 from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen
 from app.modules.simulation.infra.models import SimulationDraft, SimulationMediaAsset
 from app.modules.users.models import User
+from app.shared.auth.policy_models import RbacPolicyRule
 
 __all__ = [
     "User",
@@ -15,4 +16,5 @@ __all__ = [
     "CourseReleaseScreen",
     "SimulationDraft",
     "SimulationMediaAsset",
+    "RbacPolicyRule",
 ]

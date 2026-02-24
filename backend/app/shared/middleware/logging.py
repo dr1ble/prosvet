@@ -6,6 +6,8 @@ from uuid import uuid4
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.shared.metrics.store import metrics_store
+
 logger = logging.getLogger("access")
 
 
@@ -43,6 +45,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 },
             )
 
+            metrics_store.record(duration_ms=process_time * 1000, is_error=False)
             response.headers["X-Process-Time"] = str(round(process_time * 1000, 2))
             response.headers["X-Request-ID"] = request_id
             return response
@@ -61,4 +64,5 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 },
                 exc_info=True,
             )
+            metrics_store.record(duration_ms=process_time * 1000, is_error=True)
             raise

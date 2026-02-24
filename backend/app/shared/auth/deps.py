@@ -3,11 +3,13 @@ from collections.abc import Callable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.modules.users.models import User, UserRole, UserStatus
 from app.shared.auth.policies import POLICY_ROLE_MAP
+from app.shared.auth.policy_models import RbacPolicyRule
 from app.shared.auth.schemas import CurrentActor
 from app.shared.db.deps import get_db
 from app.shared.security.tokens import TokenError, parse_access_token
@@ -58,7 +60,7 @@ def get_current_actor(
     return CurrentActor(user_id=user.id, role=user.role)
 
 
-def require_roles(*allowed_roles: UserRole) -> Callable[[CurrentActor], CurrentActor]:
+def require_roles(*allowed_roles: UserRole) -> Callable[..., CurrentActor]:
     allowed = {role.value for role in allowed_roles}
 
     def _dependency(actor: CurrentActor = Depends(get_current_actor)) -> CurrentActor:
@@ -72,8 +74,40 @@ def require_roles(*allowed_roles: UserRole) -> Callable[[CurrentActor], CurrentA
     return _dependency
 
 
-def require_policy(policy_key: str) -> Callable[[CurrentActor], CurrentActor]:
-    allowed_roles = POLICY_ROLE_MAP.get(policy_key)
-    if not allowed_roles:
-        raise ValueError(f"Unknown policy: {policy_key}")
-    return require_roles(*allowed_roles)
+def require_policy(policy_key: str) -> Callable[..., CurrentActor]:
+    def _dependency(
+        actor: CurrentActor = Depends(get_current_actor),
+        db: Session = Depends(get_db),
+    ) -> CurrentActor:
+        db_roles: set[UserRole] = set()
+        try:
+            rows = db.scalars(
+                select(RbacPolicyRule.role).where(
+                    RbacPolicyRule.policy_key == policy_key,
+                    RbacPolicyRule.enabled.is_(True),
+                )
+            ).all()
+            for role in rows:
+                try:
+                    db_roles.add(UserRole(role))
+                except ValueError:
+                    continue
+        except SQLAlchemyError:
+            db_roles = set()
+
+        allowed_roles = db_roles or POLICY_ROLE_MAP.get(policy_key, set())
+        if not allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Policy '{policy_key}' is not configured.",
+            )
+
+        if actor.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions for this operation.",
+            )
+
+        return actor
+
+    return _dependency
