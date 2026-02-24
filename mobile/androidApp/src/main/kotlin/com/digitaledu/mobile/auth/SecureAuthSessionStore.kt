@@ -12,6 +12,8 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONObject
 
 class SecureAuthSessionStore(
@@ -20,11 +22,11 @@ class SecureAuthSessionStore(
     private val appContext = context.applicationContext
     private val sharedPreferences = appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    private val state = kotlinx.coroutines.flow.MutableStateFlow(readFromStorage())
+    private val state = MutableStateFlow(readFromStorage())
 
     override fun current(): AuthTokens? = state.value
 
-    override fun observe(): kotlinx.coroutines.flow.Flow<AuthTokens?> = state
+    override fun observe(): Flow<AuthTokens?> = state
 
     override fun update(tokens: AuthTokens) {
         val payload = JSONObject()

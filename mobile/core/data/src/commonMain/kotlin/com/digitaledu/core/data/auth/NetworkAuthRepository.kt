@@ -4,6 +4,8 @@ import com.digitaledu.core.model.AuthTokens
 import com.digitaledu.core.model.OtpChallenge
 import com.digitaledu.core.network.AuthNetworkDataSource
 import com.digitaledu.core.network.NetworkException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class NetworkAuthRepository(
     private val networkDataSource: AuthNetworkDataSource,
@@ -88,7 +90,7 @@ class NetworkAuthRepository(
         return authSessionStore.current()
     }
 
-    override fun observeTokens(): kotlinx.coroutines.flow.Flow<AuthTokens?> {
+    override fun observeTokens(): Flow<AuthTokens?> {
         return authSessionStore.observe()
     }
 
@@ -109,17 +111,17 @@ class NetworkAuthRepository(
 
 interface AuthSessionStore {
     fun current(): AuthTokens?
-    fun observe(): kotlinx.coroutines.flow.Flow<AuthTokens?>
+    fun observe(): Flow<AuthTokens?>
     fun update(tokens: AuthTokens)
     fun clear()
 }
 
 class InMemoryAuthSessionStore : AuthSessionStore {
-    private val state = kotlinx.coroutines.flow.MutableStateFlow<AuthTokens?>(null)
+    private val state = MutableStateFlow<AuthTokens?>(null)
 
     override fun current(): AuthTokens? = state.value
 
-    override fun observe(): kotlinx.coroutines.flow.Flow<AuthTokens?> = state
+    override fun observe(): Flow<AuthTokens?> = state
 
     override fun update(tokens: AuthTokens) {
         state.value = tokens
