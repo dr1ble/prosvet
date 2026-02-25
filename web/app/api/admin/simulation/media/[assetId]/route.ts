@@ -11,11 +11,7 @@ type RouteParams = {
 };
 
 function resolveAdminAccessToken(request: Request): string | null {
-  return (
-    getRequestCookie(request, ADMIN_ACCESS_COOKIE) ??
-    process.env.WEB_ADMIN_ACCESS_TOKEN ??
-    null
-  );
+  return getRequestCookie(request, ADMIN_ACCESS_COOKIE) ?? null;
 }
 
 function sanitizeFilename(value: string): string {

@@ -150,24 +150,70 @@ export type SimulationLibraryFilter = Partial<{
   releasedAt: string;
 }>;
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path, {
-    method: "GET",
-    cache: "no-store",
-  });
+const inflightGetRequests = new Map<string, Promise<unknown>>();
+const recentGetResponses = new Map<
+  string,
+  {
+    expiresAt: number;
+    value: unknown;
+  }
+>();
 
-  const raw = await response.text();
-  if (!response.ok) {
-    throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
-    );
+async function getJson<T>(
+  path: string,
+  options?: {
+    dedupeMs?: number;
+  },
+): Promise<T> {
+  const dedupeMs = options?.dedupeMs ?? 0;
+  const now = Date.now();
+
+  if (dedupeMs > 0) {
+    const cached = recentGetResponses.get(path);
+    if (cached && cached.expiresAt > now) {
+      return cached.value as T;
+    }
   }
 
-  if (!raw) {
-    return null as T;
+  const inflight = inflightGetRequests.get(path);
+  if (inflight) {
+    return (await inflight) as T;
   }
 
-  return JSON.parse(raw) as T;
+  const request = (async () => {
+    const response = await fetch(path, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const raw = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        `Request failed (${response.status}): ${raw || response.statusText}`,
+      );
+    }
+
+    if (!raw) {
+      return null as T;
+    }
+
+    return JSON.parse(raw) as T;
+  })();
+
+  inflightGetRequests.set(path, request as Promise<unknown>);
+
+  try {
+    const result = await request;
+    if (dedupeMs > 0) {
+      recentGetResponses.set(path, {
+        value: result,
+        expiresAt: Date.now() + dedupeMs,
+      });
+    }
+    return result;
+  } finally {
+    inflightGetRequests.delete(path);
+  }
 }
 
 async function postJson<T>(path: string, payload: unknown): Promise<T> {
@@ -343,6 +389,7 @@ export async function fetchCurrentSimulationDraftRemote(
 ): Promise<SimulationDraft | null> {
   const data = await getJson<DraftApiOut | null>(
     withScope("/api/admin/simulation/drafts/current", scopeKey),
+    { dedupeMs: 800 },
   );
 
   if (!data) {
@@ -390,6 +437,7 @@ export async function fetchSimulationMediaAppBindingsRemote(
   });
   const data = await getJson<MediaAppBindingListApiOut>(
     `/api/admin/simulation/media/apps?${query.toString()}`,
+    { dedupeMs: 800 },
   );
   return (data.items ?? []).map(mapMediaAppBinding);
 }

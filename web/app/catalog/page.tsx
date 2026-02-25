@@ -116,10 +116,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const workspaceTab = parseCatalogTab(params.tab);
 
   const cookieStore = await cookies();
-  const adminAccessToken =
-    cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ??
-    process.env.WEB_ADMIN_ACCESS_TOKEN ??
-    "";
+  const adminAccessToken = cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ?? "";
   if (!adminAccessToken) {
     redirect(refreshRedirectHref);
   }

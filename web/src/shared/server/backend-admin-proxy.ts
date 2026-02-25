@@ -29,9 +29,7 @@ type AuthTokensPayload = {
 type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
 function resolveAdminAccessToken(request: Request): string | null {
-  const accessToken =
-    getRequestCookie(request, ADMIN_ACCESS_COOKIE) ??
-    process.env.WEB_ADMIN_ACCESS_TOKEN;
+  const accessToken = getRequestCookie(request, ADMIN_ACCESS_COOKIE);
   if (!accessToken) {
     return null;
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import type { AppScreen } from "../types";
 import styles from "./AppScreensTab.module.css";
 
@@ -56,10 +57,13 @@ export function AppScreensTab({
             <li key={screen.id} className={styles.item}>
               <div className={styles.thumbnail}>
                 {screen.imageUrl ? (
-                  <img
+                  <Image
                     src={screen.imageUrl}
                     alt={screen.title || screen.key}
                     className={styles.image}
+                    width={50}
+                    height={89}
+                    unoptimized
                   />
                 ) : (
                   <div className={styles.placeholder}>?</div>

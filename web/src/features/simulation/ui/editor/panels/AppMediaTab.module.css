@@ -113,7 +113,7 @@
   flex-shrink: 0;
 }
 
-.appIcon img {
+.appIconImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -253,7 +253,7 @@
   cursor: zoom-in;
 }
 
-.screenThumb img {
+.screenThumbImage {
   width: 100%;
   height: 100%;
   object-fit: cover;

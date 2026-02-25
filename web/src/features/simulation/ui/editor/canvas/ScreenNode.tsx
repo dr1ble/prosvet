@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState, useCallback, useRef, useMemo } from "react";
+import Image from "next/image";
 import { type Node, type NodeProps } from "@xyflow/react";
 import styles from "./ScreenNode.module.css";
 
@@ -802,10 +803,13 @@ function ScreenNodeComponent({ data, selected, id }: ScreenNodeProps) {
         onPointerCancel={handleThumbnailPointerCancel}
       >
         {data.imageUrl && !imageUnavailable ? (
-          <img
+          <Image
             src={data.imageUrl}
             alt={data.title || "Screen"}
             className={styles.image}
+            fill
+            sizes="220px"
+            unoptimized
             onError={() => {
               setFailedImageUrl(data.imageUrl);
               setLoadedImageUrl(null);

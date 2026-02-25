@@ -17,6 +17,10 @@ type AuthTokensPayload = {
   token_type: string;
 };
 
+type AuthSessionResponse = {
+  status: "ok";
+};
+
 function isAuthTokensPayload(value: unknown): value is AuthTokensPayload {
   if (!value || typeof value !== "object") {
     return false;
@@ -134,7 +138,11 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const response = NextResponse.json(refreshed.body, {
+  const responseBody: unknown =
+    refreshed.status >= 200 && refreshed.status < 300
+      ? ({ status: "ok" } satisfies AuthSessionResponse)
+      : refreshed.body;
+  const response = NextResponse.json(responseBody, {
     status: refreshed.status,
   });
   if (refreshed.tokens) {

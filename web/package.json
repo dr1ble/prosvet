@@ -9,6 +9,8 @@
     "verify:styles": "node scripts/verify-style-contract.mjs",
     "lint": "npm run verify:styles && eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc --noEmit",
+    "test:simulation-runtime": "node scripts/test-simulation-runtime.cjs",
+    "test:auth-hardening": "node scripts/test-auth-hardening.cjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:staged": "lint-staged"

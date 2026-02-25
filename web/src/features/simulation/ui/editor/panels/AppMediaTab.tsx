@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import type {
   SimulationDraft,
   SimulationStoreType,
@@ -300,7 +301,14 @@ export function AppMediaTab({
                     <div className={styles.appIdentity}>
                       <span className={styles.appIcon} aria-hidden="true">
                         {app.iconUrl ? (
-                          <img src={app.iconUrl} alt="" />
+                          <Image
+                            src={app.iconUrl}
+                            alt=""
+                            className={styles.appIconImage}
+                            width={26}
+                            height={26}
+                            unoptimized
+                          />
                         ) : (
                           <span className={styles.storeBadge}>
                             {storeGlyph}
@@ -385,9 +393,13 @@ export function AppMediaTab({
                                         aria-label={labels.previewScreen}
                                         draggable={false}
                                       >
-                                        <img
+                                        <Image
                                           src={screen.url}
                                           alt={screen.filename}
+                                          className={styles.screenThumbImage}
+                                          width={52}
+                                          height={92}
+                                          unoptimized
                                         />
                                       </button>
                                       <div className={styles.screenMeta}>
@@ -606,7 +618,14 @@ export function AppMediaTab({
                       aria-label={labels.previewScreen}
                       draggable={false}
                     >
-                      <img src={screen.url} alt={screen.filename} />
+                      <Image
+                        src={screen.url}
+                        alt={screen.filename}
+                        className={styles.screenThumbImage}
+                        width={52}
+                        height={92}
+                        unoptimized
+                      />
                     </button>
                     <div className={styles.screenMeta}>
                       <label className={styles.inlineField}>

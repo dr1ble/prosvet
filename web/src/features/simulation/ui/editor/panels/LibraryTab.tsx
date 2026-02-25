@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 
 import {
   deleteSimulationLibraryItemRemote,
@@ -243,7 +244,14 @@ function ScenarioCard({
         <div className={styles.cardIdentity}>
           <span className={styles.cardAppIcon} aria-hidden="true">
             {item.binding?.iconUrl ? (
-              <img src={item.binding.iconUrl} alt="" />
+              <Image
+                src={item.binding.iconUrl}
+                alt=""
+                className={styles.cardAppIconImage}
+                width={28}
+                height={28}
+                unoptimized
+              />
             ) : (
               <span className={styles.cardStoreBadge}>{storeGlyph}</span>
             )}

@@ -87,10 +87,7 @@ export default async function SimulationV2Page({
   );
 
   const cookieStore = await cookies();
-  const accessToken =
-    cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ??
-    process.env.WEB_ADMIN_ACCESS_TOKEN ??
-    "";
+  const accessToken = cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ?? "";
 
   if (!accessToken) {
     redirect(refreshRedirectHref);

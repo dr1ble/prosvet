@@ -8,6 +8,7 @@ import {
   useRef,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import Image from "next/image";
 import {
   ReactFlow,
   Background,
@@ -3227,28 +3228,26 @@ function SimulationEditorInner({
                   <label className={styles.label}>{labels.screenImage}</label>
                   {selectedNodeForProperties.data.imageUrl ? (
                     <div className={styles.imagePreview}>
-                      <img
-                        src={selectedNodeForProperties.data.imageUrl}
-                        alt=""
-                        className={styles.previewImg}
-                        role="button"
-                        tabIndex={0}
+                      <button
+                        type="button"
+                        className={styles.previewImageButton}
                         onClick={() =>
                           openImagePreview(
                             selectedNodeForProperties.data.imageUrl,
                             selectedNodeForProperties.data.title,
                           )
                         }
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            openImagePreview(
-                              selectedNodeForProperties.data.imageUrl,
-                              selectedNodeForProperties.data.title,
-                            );
-                          }
-                        }}
-                      />
+                        aria-label={labels.imagePreviewHint}
+                      >
+                        <Image
+                          src={selectedNodeForProperties.data.imageUrl}
+                          alt={selectedNodeForProperties.data.title || ""}
+                          className={styles.previewImg}
+                          width={960}
+                          height={540}
+                          unoptimized
+                        />
+                      </button>
                       <button
                         className={styles.removeImageButton}
                         onClick={() =>
@@ -3296,7 +3295,14 @@ function SimulationEditorInner({
                           }}
                           title={labels.imagePreviewHint}
                         >
-                          <img src={screen.imageUrl} alt={screen.title} />
+                          <Image
+                            src={screen.imageUrl}
+                            alt={screen.title}
+                            className={styles.imageOptionImage}
+                            fill
+                            sizes="(max-width: 1024px) 33vw, 120px"
+                            unoptimized
+                          />
                         </button>
                       ))}
                     </div>
@@ -3312,12 +3318,15 @@ function SimulationEditorInner({
                   ) : (
                     <ul className={styles.hotspotList}>
                       {selectedNodeForProperties.data.hotspots.map((h) => (
-                        <li
-                          key={h.id}
-                          className={`${styles.hotspotItem} ${selectedHotspotId === h.id ? styles.hotspotItemActive : ""}`}
-                          onClick={() => setSelectedHotspotId(h.id)}
-                        >
-                          <span>{h.label || "Untitled"}</span>
+                        <li key={h.id} className={styles.hotspotItem}>
+                          <button
+                            type="button"
+                            className={`${styles.hotspotButton} ${selectedHotspotId === h.id ? styles.hotspotButtonActive : ""}`}
+                            onClick={() => setSelectedHotspotId(h.id)}
+                            aria-pressed={selectedHotspotId === h.id}
+                          >
+                            <span>{h.label || "Untitled"}</span>
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -3420,10 +3429,13 @@ function SimulationEditorInner({
                 <path d="M15 5L5 15" />
               </svg>
             </button>
-            <img
+            <Image
               src={previewImage.url}
               alt={previewImage.title}
               className={styles.previewImage}
+              width={1200}
+              height={800}
+              unoptimized
             />
             <p className={styles.previewTitle}>{previewImage.title}</p>
           </div>

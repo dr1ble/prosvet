@@ -20,6 +20,10 @@ type AuthTokensPayload = {
   token_type: string;
 };
 
+type AuthSessionResponse = {
+  status: "ok";
+};
+
 function isAuthTokensPayload(value: unknown): value is AuthTokensPayload {
   if (!value || typeof value !== "object") {
     return false;
@@ -59,7 +63,11 @@ export async function POST(request: Request): Promise<Response> {
     },
   });
 
-  const response = NextResponse.json(backendResult.body, {
+  const responseBody: unknown =
+    backendResult.status >= 200 && backendResult.status < 300
+      ? ({ status: "ok" } satisfies AuthSessionResponse)
+      : backendResult.body;
+  const response = NextResponse.json(responseBody, {
     status: backendResult.status,
   });
 

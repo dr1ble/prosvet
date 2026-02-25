@@ -5,11 +5,7 @@ import { apiBaseUrl } from "@/shared/config";
 import { getRequestCookie } from "@/shared/server/request-cookies";
 
 function resolveAdminAccessToken(request: Request): string | null {
-  return (
-    getRequestCookie(request, ADMIN_ACCESS_COOKIE) ??
-    process.env.WEB_ADMIN_ACCESS_TOKEN ??
-    null
-  );
+  return getRequestCookie(request, ADMIN_ACCESS_COOKIE) ?? null;
 }
 
 function sanitizeScopeKey(value: string | null): string {

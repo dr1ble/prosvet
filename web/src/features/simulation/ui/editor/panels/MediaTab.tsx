@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useRef } from "react";
+import Image from "next/image";
 import styles from "./MediaTab.module.css";
 
 type MediaAsset = {
@@ -96,10 +97,13 @@ export function MediaTab({
           {assets.map((asset) => (
             <li key={asset.id} className={styles.item}>
               <div className={styles.thumbnail}>
-                <img
+                <Image
                   src={asset.url}
                   alt={asset.filename}
                   className={styles.image}
+                  width={48}
+                  height={48}
+                  unoptimized
                 />
               </div>
               <div className={styles.info}>
