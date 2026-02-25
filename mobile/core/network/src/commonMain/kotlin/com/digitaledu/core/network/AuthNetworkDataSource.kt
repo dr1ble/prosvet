@@ -1,7 +1,7 @@
 package com.digitaledu.core.network
 
-import com.digitaledu.core.model.AuthTokens
-import com.digitaledu.core.model.OtpChallenge
+import com.digitaledu.core.model.auth.AuthTokens
+import com.digitaledu.core.model.auth.OtpChallenge
 
 interface AuthNetworkDataSource {
     suspend fun requestOtp(phoneNumber: String): OtpChallenge

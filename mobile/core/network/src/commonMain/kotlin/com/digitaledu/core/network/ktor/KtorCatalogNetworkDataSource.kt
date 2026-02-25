@@ -1,19 +1,16 @@
 package com.digitaledu.core.network.ktor
 
-import com.digitaledu.core.model.CatalogBundle
-import com.digitaledu.core.model.CatalogCourse
-import com.digitaledu.core.model.CatalogRelease
-import com.digitaledu.core.model.CatalogScreen
-import com.digitaledu.core.model.LessonReference
-import com.digitaledu.core.model.ScreenPayload
+import com.digitaledu.core.model.catalog.CatalogBundle
+import com.digitaledu.core.model.catalog.CatalogCourse
+import com.digitaledu.core.model.catalog.CatalogRelease
+import com.digitaledu.core.model.catalog.CatalogScreen
+import com.digitaledu.core.model.reference.LessonReference
 import com.digitaledu.core.network.CatalogNetworkDataSource
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.url
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 class KtorCatalogNetworkDataSource(
     private val client: HttpClient,
@@ -65,42 +62,6 @@ class KtorCatalogNetworkDataSource(
     }
 
 }
-
-@Serializable
-private data class CourseResponse(
-    val id: String,
-    val slug: String,
-    val title: String,
-    val description: String? = null,
-    @SerialName("cover_url") val coverUrl: String? = null,
-    @SerialName("photo_url") val photoUrl: String? = null,
-    @SerialName("image_url") val imageUrl: String? = null,
-)
-
-@Serializable
-private data class ReleaseResponse(
-    val id: String,
-    val version: String,
-    val changelog: String? = null,
-    @SerialName("screen_count") val screenCount: Int,
-)
-
-@Serializable
-private data class ScreenResponse(
-    val id: String,
-    @SerialName("screen_key") val screenKey: String,
-    val title: String,
-    @SerialName("order_index") val orderIndex: Int,
-    val payload: ScreenPayload,
-)
-
-@Serializable
-private data class CourseBundleResponse(
-    val course: CourseResponse,
-    val release: ReleaseResponse,
-    val screens: List<ScreenResponse>,
-)
-
 private fun CourseResponse.toCatalogCourse(): CatalogCourse {
     return CatalogCourse(
         id = id,

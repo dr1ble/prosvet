@@ -20,8 +20,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.digitaledu.core.model.ScreenPayload
-import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.core.model.content.ArticlePayload
+import com.digitaledu.feature.player.api.PlayerIntent
 import kotlinx.coroutines.launch
 
 /**
@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ArticleStory(
     title: String,
-    payload: ScreenPayload.Article,
+    payload: ArticlePayload,
     onIntent: (PlayerIntent) -> Unit,
     modifier: Modifier = Modifier
 ) {

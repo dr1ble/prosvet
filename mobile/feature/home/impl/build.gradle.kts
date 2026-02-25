@@ -21,6 +21,9 @@ kotlin {
     sourceSets {
         val commonMain by getting
         commonMain.dependencies {
+            implementation(projects.feature.catalog.api)
+            implementation(projects.feature.player.api)
+            implementation(projects.feature.profile.api)
             implementation(projects.feature.home.api)
             implementation(projects.core.common)
             implementation(projects.core.data)

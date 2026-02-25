@@ -18,8 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
-import com.digitaledu.core.model.ScreenPayload
-import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.core.model.content.VideoPayload
+import com.digitaledu.feature.player.api.PlayerIntent
 
 /**
  * Stories-style Video Player.
@@ -31,7 +31,7 @@ import com.digitaledu.feature.home.impl.player.PlayerIntent
  */
 @Composable
 fun VideoStory(
-    payload: ScreenPayload.Video,
+    payload: VideoPayload,
     onIntent: (PlayerIntent) -> Unit,
     resolveUrl: (String) -> String,
     modifier: Modifier = Modifier

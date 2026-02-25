@@ -15,10 +15,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import com.digitaledu.core.ui.util.BackHandler
-import com.digitaledu.core.model.CatalogBundle
-import com.digitaledu.core.model.Hotspot
-import com.digitaledu.core.model.LessonReference
-import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.core.model.catalog.CatalogBundle
+import com.digitaledu.core.model.content.Hotspot
+import com.digitaledu.core.model.reference.LessonReference
+import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.home.impl.ui.player.components.LessonCheatSheetView
 import com.digitaledu.feature.home.impl.ui.player.components.LessonStoriesPager
 

@@ -30,11 +30,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import com.digitaledu.core.model.CatalogBundle
-import com.digitaledu.core.model.Hotspot
-import com.digitaledu.core.model.LessonReference
-import com.digitaledu.core.model.ScreenPayload
-import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.core.model.catalog.CatalogBundle
+import com.digitaledu.core.model.content.ArticlePayload
+import com.digitaledu.core.model.content.Hotspot
+import com.digitaledu.core.model.content.QuizPayload
+import com.digitaledu.core.model.content.SimulationPayload
+import com.digitaledu.core.model.reference.LessonReference
+import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.home.impl.ui.player.PlayerContent
 import kotlinx.coroutines.launch
 
@@ -84,7 +86,7 @@ fun LessonStoriesPager(
     }
 
     val currentScreen = bundle.screens.getOrNull(currentScreenIndex)
-    val isSimulation = currentScreen?.payload is ScreenPayload.Simulation
+    val isSimulation = currentScreen?.payload is SimulationPayload
 
     Box(
         modifier = modifier
@@ -100,7 +102,7 @@ fun LessonStoriesPager(
             val screen = bundle.screens.getOrNull(pageIndex)
             if (screen != null) {
                 // Apply system bars padding only if NOT simulation
-                val contentModifier = if (screen.payload is ScreenPayload.Simulation) {
+                val contentModifier = if (screen.payload is SimulationPayload) {
                     Modifier.fillMaxSize()
                 } else {
                     Modifier
@@ -123,8 +125,8 @@ fun LessonStoriesPager(
 
         // Overlay Navigation Controls (Tap Zones)
         // We only add this if it's NOT a simulation AND NOT an article AND NOT a quiz
-        val isArticle = currentScreen?.payload is ScreenPayload.Article
-        val isQuiz = currentScreen?.payload is ScreenPayload.Quiz
+        val isArticle = currentScreen?.payload is ArticlePayload
+        val isQuiz = currentScreen?.payload is QuizPayload
         if (!isSimulation && !isArticle && !isQuiz) {
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left Zone (Previous)

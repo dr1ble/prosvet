@@ -19,9 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-
-import com.digitaledu.feature.home.impl.profile.ProfileIntent
-import com.digitaledu.feature.home.impl.profile.ProfileUiState
+import com.digitaledu.feature.profile.api.ProfileIntent
+import com.digitaledu.feature.profile.api.ProfileStatus
+import com.digitaledu.feature.profile.api.ProfileUiState
 
 @Composable
 fun ProfileContent(
@@ -29,6 +29,9 @@ fun ProfileContent(
     onIntent: (ProfileIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isLoggingOut = uiState.status is ProfileStatus.LoggingOut
+    val errorMessage = (uiState.status as? ProfileStatus.Error)?.message
+
     Column(
         modifier = modifier.padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -58,10 +61,10 @@ fun ProfileContent(
 
         Button(
             onClick = { onIntent(ProfileIntent.Logout) },
-            enabled = !uiState.isLoggingOut,
+            enabled = !isLoggingOut,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            if (uiState.isLoggingOut) {
+            if (isLoggingOut) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
@@ -69,10 +72,10 @@ fun ProfileContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Text(text = if (uiState.isLoggingOut) "Выходим..." else "Выйти из аккаунта")
+            Text(text = if (isLoggingOut) "Выходим..." else "Выйти из аккаунта")
         }
 
-        uiState.errorMessage?.let { message ->
+        errorMessage?.let { message ->
             Card(
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(

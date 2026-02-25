@@ -13,7 +13,10 @@ import com.digitaledu.core.network.provideHttpClient
 import com.digitaledu.core.network.ktor.KtorAuthNetworkDataSource
 import com.digitaledu.core.network.ktor.KtorCatalogNetworkDataSource
 import com.digitaledu.feature.auth.impl.authFeatureModule
+import com.digitaledu.feature.catalog.impl.di.catalogFeatureModule
 import com.digitaledu.feature.home.impl.homeFeatureModule
+import com.digitaledu.feature.player.impl.di.playerFeatureModule
+import com.digitaledu.feature.profile.impl.di.profileFeatureModule
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -23,7 +26,13 @@ fun createMobileAppModule(
     enableNetworkLogs: Boolean,
     authSessionStore: AuthSessionStore? = null,
 ): Module = module {
-    includes(authFeatureModule(), homeFeatureModule())
+    includes(
+        authFeatureModule(),
+        catalogFeatureModule(),
+        playerFeatureModule(),
+        profileFeatureModule(),
+        homeFeatureModule(),
+    )
 
     single(qualifier = named(BACKEND_BASE_URL_QUALIFIER)) { backendBaseUrl }
 

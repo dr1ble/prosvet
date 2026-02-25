@@ -1,8 +1,8 @@
 package com.digitaledu.core.network
 
-import com.digitaledu.core.model.CatalogBundle
-import com.digitaledu.core.model.CatalogCourse
-import com.digitaledu.core.model.LessonReference
+import com.digitaledu.core.model.catalog.CatalogBundle
+import com.digitaledu.core.model.catalog.CatalogCourse
+import com.digitaledu.core.model.reference.LessonReference
 
 interface CatalogNetworkDataSource {
     suspend fun listCourses(

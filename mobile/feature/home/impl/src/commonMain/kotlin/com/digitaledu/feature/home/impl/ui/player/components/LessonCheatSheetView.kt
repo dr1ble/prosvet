@@ -30,8 +30,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.digitaledu.core.model.CodeSnippet
-import com.digitaledu.core.model.LessonReference
+import com.digitaledu.core.model.reference.CodeSnippet
+import com.digitaledu.core.model.reference.LessonReference
 
 /**
  * Displays a structured "Cheat Sheet" or Lesson Reference.

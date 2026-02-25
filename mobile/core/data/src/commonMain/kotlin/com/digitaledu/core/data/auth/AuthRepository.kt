@@ -1,7 +1,7 @@
 package com.digitaledu.core.data.auth
 
-import com.digitaledu.core.model.AuthTokens
-import com.digitaledu.core.model.OtpChallenge
+import com.digitaledu.core.model.auth.AuthTokens
+import com.digitaledu.core.model.auth.OtpChallenge
 import kotlinx.coroutines.flow.Flow
 
 interface AuthRepository {

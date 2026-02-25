@@ -21,9 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.digitaledu.core.model.ScreenPayload
-import com.digitaledu.feature.home.impl.player.PlayerIntent
-import com.digitaledu.feature.home.impl.player.PlayerUiState
+import com.digitaledu.core.model.content.ArticlePayload
+import com.digitaledu.core.model.content.CheatSheetPayload
+import com.digitaledu.core.model.content.QuizPayload
+import com.digitaledu.core.model.content.ScreenPayload
+import com.digitaledu.core.model.content.SimulationPayload
+import com.digitaledu.core.model.content.UnknownPayload
+import com.digitaledu.core.model.content.VideoPayload
+import com.digitaledu.feature.player.api.PlayerIntent
+import com.digitaledu.feature.player.api.PlayerUiState
 
 /**
  * Displays the current learning progress and allows continuing the lesson in fullscreen.
@@ -161,7 +167,7 @@ fun LessonContent(
 
 private fun ScreenPayload.getPayloadPreview(): String {
     return when (this) {
-        is ScreenPayload.Simulation -> {
+        is SimulationPayload -> {
             buildString {
                 append("Интерактивная симуляция")
                 if (hotspots.isNotEmpty()) {
@@ -176,25 +182,25 @@ private fun ScreenPayload.getPayloadPreview(): String {
                 if (isCompletion) append(" • Завершение")
             }
         }
-        is ScreenPayload.Video -> {
+        is VideoPayload -> {
             val minutes = durationSec / 60
             val seconds = durationSec % 60
             "Видеоурок • ${minutes}:${seconds.toString().padStart(2, '0')}"
         }
-        is ScreenPayload.Article -> {
+        is ArticlePayload -> {
             "Статья • ${markdownContent.length}" // Simplified preview
         }
-        is ScreenPayload.Quiz -> {
+        is QuizPayload -> {
             "Тест • ${questions.size} " + when (questions.size) {
                 1 -> "вопрос"
                 in 2..4 -> "вопроса"
                 else -> "вопросов"
             }
         }
-        is ScreenPayload.CheatSheet -> {
+        is CheatSheetPayload -> {
             "Шпаргалка • Итоги урока"
         }
-        is ScreenPayload.Unknown -> {
+        is UnknownPayload -> {
             if (raw.length <= 100) raw else "${raw.take(100)}..."
         }
     }

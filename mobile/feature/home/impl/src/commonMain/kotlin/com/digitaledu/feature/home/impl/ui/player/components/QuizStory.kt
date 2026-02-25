@@ -28,9 +28,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.digitaledu.core.model.QuizQuestion
-import com.digitaledu.core.model.ScreenPayload
-import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.core.model.content.QuizPayload
+import com.digitaledu.core.model.quiz.MatchingQuestion
+import com.digitaledu.core.model.quiz.MultipleChoiceQuestion
+import com.digitaledu.core.model.quiz.SingleChoiceQuestion
+import com.digitaledu.feature.player.api.PlayerIntent
 
 /**
  * Quiz component for Stories flow.
@@ -39,7 +41,7 @@ import com.digitaledu.feature.home.impl.player.PlayerIntent
  */
 @Composable
 fun QuizStory(
-    payload: ScreenPayload.Quiz,
+    payload: QuizPayload,
     onIntent: (PlayerIntent) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -82,7 +84,7 @@ fun QuizStory(
                 
                 // Options (Placeholder logic for now)
                 when (currentQuestion) {
-                    is QuizQuestion.SingleChoice -> {
+                    is SingleChoiceQuestion -> {
                         currentQuestion.options.forEach { option ->
                             QuizOptionItem(
                                 text = option.text,
@@ -92,11 +94,11 @@ fun QuizStory(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
-                    is QuizQuestion.MultipleChoice -> {
+                    is MultipleChoiceQuestion -> {
                         // Handle logic
                          Text("Multiple Choice implementation pending")
                     }
-                    is QuizQuestion.Matching -> {
+                    is MatchingQuestion -> {
                         // Handle logic
                          Text("Matching implementation pending")
                     }

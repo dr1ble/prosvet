@@ -1,7 +1,7 @@
 package com.digitaledu.core.network.ktor
 
-import com.digitaledu.core.model.AuthTokens
-import com.digitaledu.core.model.OtpChallenge
+import com.digitaledu.core.model.auth.AuthTokens
+import com.digitaledu.core.model.auth.OtpChallenge
 import com.digitaledu.core.network.AuthNetworkDataSource
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -10,8 +10,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 class KtorAuthNetworkDataSource(
     private val client: HttpClient,
@@ -76,40 +74,6 @@ class KtorAuthNetworkDataSource(
         }.body()
     }
 }
-
-@Serializable
-private data class OtpRequestPayload(
-    val phone: String,
-)
-
-@Serializable
-private data class OtpVerifyPayload(
-    val phone: String,
-    val code: String,
-)
-
-@Serializable
-private data class LoginPayload(
-    val login: String,
-    val password: String,
-)
-
-@Serializable
-private data class RefreshTokenPayload(
-    @SerialName("refresh_token") val refreshToken: String,
-)
-
-@Serializable
-private data class OtpRequestResponse(
-    @SerialName("challenge_id") val challengeId: String,
-    @SerialName("dev_code") val devCode: String? = null,
-)
-
-@Serializable
-private data class AuthResponse(
-    @SerialName("access_token") val accessToken: String,
-    @SerialName("refresh_token") val refreshToken: String,
-)
 
 private fun AuthResponse.toAuthTokens(): AuthTokens {
     return AuthTokens(

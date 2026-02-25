@@ -17,15 +17,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.digitaledu.core.model.CatalogScreen
-import com.digitaledu.core.model.Hotspot
-import com.digitaledu.core.model.ScreenPayload
-import com.digitaledu.feature.home.impl.player.PlayerIntent
+import com.digitaledu.core.model.catalog.CatalogScreen
+import com.digitaledu.core.model.content.ArticlePayload
+import com.digitaledu.core.model.content.CheatSheetPayload
+import com.digitaledu.core.model.content.Hotspot
+import com.digitaledu.core.model.content.QuizPayload
+import com.digitaledu.core.model.content.ScreenPayload
+import com.digitaledu.core.model.content.SimulationPayload
+import com.digitaledu.core.model.content.UnknownPayload
+import com.digitaledu.core.model.content.VideoPayload
+import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.home.impl.ui.player.components.ArticleStory
+import com.digitaledu.feature.home.impl.ui.player.components.LessonCheatSheetView
 import com.digitaledu.feature.home.impl.ui.player.components.QuizStory
 import com.digitaledu.feature.home.impl.ui.player.components.VideoStory
-import com.digitaledu.feature.home.impl.ui.player.components.LessonCheatSheetView
-import com.digitaledu.core.model.LessonReference
+import com.digitaledu.core.model.reference.LessonReference
 
 /**
  * Renders the lesson content for the current screen based on payload type.
@@ -51,7 +57,7 @@ fun PlayerContent(
     modifier: Modifier = Modifier,
 ) {
     when (val payload = screen.payload) {
-        is ScreenPayload.Simulation -> {
+        is SimulationPayload -> {
             // Render interactive simulation
             SimulationScreen(
                 payload = payload,
@@ -63,7 +69,7 @@ fun PlayerContent(
                 modifier = modifier,
             )
         }
-        is ScreenPayload.Video -> {
+        is VideoPayload -> {
             VideoStory(
                 payload = payload,
                 onIntent = onIntent,
@@ -71,7 +77,7 @@ fun PlayerContent(
                 modifier = modifier,
             )
         }
-        is ScreenPayload.Article -> {
+        is ArticlePayload -> {
             ArticleStory(
                 title = screen.title,
                 payload = payload,
@@ -79,14 +85,14 @@ fun PlayerContent(
                 modifier = modifier,
             )
         }
-        is ScreenPayload.Quiz -> {
+        is QuizPayload -> {
             QuizStory(
                 payload = payload,
                 onIntent = onIntent,
                 modifier = modifier,
             )
         }
-        is ScreenPayload.CheatSheet -> {
+        is CheatSheetPayload -> {
              if (activeLessonReference != null) {
                  LessonCheatSheetView(
                      reference = activeLessonReference,
@@ -102,7 +108,7 @@ fun PlayerContent(
                  }
              }
         }
-        is ScreenPayload.Unknown -> {
+        is UnknownPayload -> {
             // Fallback: show title + raw content
             Column(
                 modifier = modifier

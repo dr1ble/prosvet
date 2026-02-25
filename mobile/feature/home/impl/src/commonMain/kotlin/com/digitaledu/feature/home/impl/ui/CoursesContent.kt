@@ -28,10 +28,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.digitaledu.core.model.CatalogCourse
+import com.digitaledu.core.model.catalog.CatalogCourse
 import com.digitaledu.core.ui.CenteredLoadingIndicator
-import com.digitaledu.feature.home.impl.catalog.CatalogIntent
-import com.digitaledu.feature.home.impl.catalog.CatalogUiState
+import com.digitaledu.feature.catalog.api.CatalogIntent
+import com.digitaledu.feature.catalog.api.CatalogUiState
 
 @Composable
 fun CoursesContent(

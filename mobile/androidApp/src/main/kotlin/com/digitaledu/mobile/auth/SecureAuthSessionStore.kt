@@ -5,7 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.digitaledu.core.data.auth.AuthSessionStore
-import com.digitaledu.core.model.AuthTokens
+import com.digitaledu.core.model.auth.AuthTokens
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import javax.crypto.Cipher

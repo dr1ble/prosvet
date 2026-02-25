@@ -11,14 +11,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.ui.ObserveEffects
-import com.digitaledu.feature.home.impl.catalog.CatalogEffect
-import com.digitaledu.feature.home.impl.catalog.CatalogIntent
-import com.digitaledu.feature.home.impl.catalog.CatalogViewModel
-import com.digitaledu.feature.home.impl.player.PlayerEffect
-import com.digitaledu.feature.home.impl.player.PlayerViewModel
-import com.digitaledu.feature.home.impl.profile.ProfileEffect
-import com.digitaledu.feature.home.impl.profile.ProfileIntent
-import com.digitaledu.feature.home.impl.profile.ProfileViewModel
+import com.digitaledu.feature.catalog.api.CatalogEffect
+import com.digitaledu.feature.catalog.api.CatalogFeatureHost
+import com.digitaledu.feature.catalog.api.CatalogIntent
+import com.digitaledu.feature.player.api.PlayerEffect
+import com.digitaledu.feature.player.api.PlayerFeatureHost
+import com.digitaledu.feature.profile.api.ProfileEffect
+import com.digitaledu.feature.profile.api.ProfileFeatureHost
+import com.digitaledu.feature.profile.api.ProfileIntent
+import com.digitaledu.feature.profile.api.ProfileStatus
 import org.koin.mp.KoinPlatform
 
 @Composable
@@ -27,43 +28,44 @@ fun HomeRoute(
     modifier: Modifier = Modifier,
 ) {
     val koin = remember { KoinPlatform.getKoin() }
-    val catalogViewModel = remember { koin.get<CatalogViewModel>() }
-    val playerViewModel = remember { koin.get<PlayerViewModel>() }
-    val profileViewModel = remember { koin.get<ProfileViewModel>() }
+    val catalogFeatureHost = remember { koin.get<CatalogFeatureHost>() }
+    val playerFeatureHost = remember { koin.get<PlayerFeatureHost>() }
+    val profileFeatureHost = remember { koin.get<ProfileFeatureHost>() }
     val authRepository = remember { koin.get<AuthRepository>() }
 
-    val catalogUiState by catalogViewModel.uiState.collectAsState()
-    val playerUiState by playerViewModel.uiState.collectAsState()
-    val profileUiState by profileViewModel.uiState.collectAsState()
+    val catalogUiState by catalogFeatureHost.uiState.collectAsState()
+    val playerUiState by playerFeatureHost.uiState.collectAsState()
+    val profileUiState by profileFeatureHost.uiState.collectAsState()
 
     var selectedTab by remember { mutableStateOf(HomeTab.Courses) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val profileErrorMessage = (profileUiState.status as? ProfileStatus.Error)?.message
 
-    LaunchedEffect(catalogUiState.errorMessage, profileUiState.errorMessage) {
+    LaunchedEffect(catalogUiState.errorMessage, profileErrorMessage) {
         snackbarHostState.showAndDismissIfNeeded(
             message = catalogUiState.errorMessage,
-            dismiss = { catalogViewModel.processIntent(CatalogIntent.DismissError) },
+            dismiss = { catalogFeatureHost.processIntent(CatalogIntent.DismissError) },
         )
         snackbarHostState.showAndDismissIfNeeded(
-            message = profileUiState.errorMessage,
-            dismiss = { profileViewModel.processIntent(ProfileIntent.DismissError) },
+            message = profileErrorMessage,
+            dismiss = { profileFeatureHost.processIntent(ProfileIntent.DismissError) },
         )
     }
 
-    ObserveEffects(catalogViewModel.effects) { effect ->
+    ObserveEffects(catalogFeatureHost.effects) { effect ->
         if (effect is CatalogEffect.CourseOpened) {
-            playerViewModel.openBundle(effect.bundle)
+            playerFeatureHost.openBundle(effect.bundle)
             selectedTab = HomeTab.Lesson
         }
     }
 
-    ObserveEffects(playerViewModel.effects) { effect ->
+    ObserveEffects(playerFeatureHost.effects) { effect ->
         if (effect is PlayerEffect.Closed) {
             selectedTab = HomeTab.Courses
         }
     }
 
-    ObserveEffects(profileViewModel.effects) { effect ->
+    ObserveEffects(profileFeatureHost.effects) { effect ->
         if (effect is ProfileEffect.LoggedOut) {
             onLoggedOut()
         }
@@ -81,11 +83,11 @@ fun HomeRoute(
         playerUiState = playerUiState,
         profileUiState = profileUiState,
         mediaAccessToken = mediaAccessToken,
-        resolveUrl = playerViewModel::resolveImageUrl,
+        resolveUrl = playerFeatureHost::resolveImageUrl,
         snackbarHostState = snackbarHostState,
-        onCatalogIntent = catalogViewModel::processIntent,
-        onPlayerIntent = playerViewModel::processIntent,
-        onProfileIntent = profileViewModel::processIntent,
+        onCatalogIntent = catalogFeatureHost::processIntent,
+        onPlayerIntent = playerFeatureHost::processIntent,
+        onProfileIntent = profileFeatureHost::processIntent,
         modifier = modifier,
     )
 }

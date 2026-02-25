@@ -35,8 +35,8 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
-import com.digitaledu.core.model.Hotspot
-import com.digitaledu.core.model.ScreenPayload
+import com.digitaledu.core.model.content.Hotspot
+import com.digitaledu.core.model.content.SimulationPayload
 import kotlin.math.roundToInt
 
 /**
@@ -51,7 +51,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun SimulationScreen(
-    payload: ScreenPayload.Simulation,
+    payload: SimulationPayload,
     accessToken: String?,
     activeHotspotHint: Hotspot?,
     onResolveImageUrl: (String) -> String,
@@ -206,5 +206,3 @@ private fun HotspotOverlay(
         }
     }
 }
-
-
