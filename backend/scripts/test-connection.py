@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Debug script to test PostgreSQL connection."""
 
-import os
 import sys
 
 sys.path.insert(0, '.')
 
 from sqlalchemy import create_engine, text
+
 from app.core.config import settings
 
 print(f"Settings DB URL: {settings.database_url}")

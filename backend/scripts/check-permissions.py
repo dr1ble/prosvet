@@ -2,6 +2,7 @@
 """Check database permissions."""
 
 import sys
+
 sys.path.insert(0, '.')
 
 from sqlalchemy import create_engine, text
