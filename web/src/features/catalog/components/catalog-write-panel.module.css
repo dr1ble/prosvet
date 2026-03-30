@@ -229,6 +229,75 @@
   color: #8a2d2d;
 }
 
+.inlineForm {
+  display: grid;
+  gap: 8px;
+}
+
+.lessonList,
+.taskSection,
+.taskList {
+  display: grid;
+  gap: 8px;
+}
+
+.subTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #22384b;
+}
+
+.emptyText {
+  margin: 0;
+  color: #5a6974;
+  font-size: 12px;
+}
+
+.simpleList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.listItem {
+  border: 1px solid rgba(36, 63, 89, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 8px 10px;
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.listItemActive {
+  border-color: rgba(31, 116, 226, 0.5);
+  box-shadow: 0 0 0 1px rgba(31, 116, 226, 0.18);
+}
+
+.listMeta {
+  color: #5a6974;
+  font-size: 12px;
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.taskTypeBadge {
+  border: 1px solid rgba(34, 59, 85, 0.24);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #36526a;
+  background: rgba(245, 250, 255, 0.8);
+}
+
 @media (max-width: 760px) {
   .row {
     grid-template-columns: 1fr;

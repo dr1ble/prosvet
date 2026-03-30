@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
+import {
+  createCourseLesson,
+  createLessonTask,
+  listCourseLessons,
+  listLessonTasks,
+} from "@/features/catalog/builder-api";
 import type {
   CourseCreateInput,
+  CourseLessonDto,
   CourseReleaseCreateInput,
   CourseStatus,
+  LessonTaskDto,
   ReleaseScreenInput,
   ReleaseStatus,
+  TaskType,
 } from "@/features/catalog/types";
 import {
   createCourse,
@@ -220,6 +229,16 @@ export function CatalogWritePanel({
   const [releaseScreens, setReleaseScreens] = useState(DEFAULT_RELEASE_SCREENS);
   const [releaseState, setReleaseState] = useState<RequestState>(initialState);
 
+  const [lessonTitle, setLessonTitle] = useState("");
+  const [lessonDescription, setLessonDescription] = useState("");
+  const [lessons, setLessons] = useState<CourseLessonDto[]>([]);
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<LessonTaskDto[]>([]);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskType, setTaskType] = useState<TaskType>("theory_text");
+  const [lessonState, setLessonState] = useState<RequestState>(initialState);
+  const [taskState, setTaskState] = useState<RequestState>(initialState);
+
   const updateScreenDraft = (localId: string, patch: Partial<ScreenDraft>) => {
     setScreenDrafts((previous) =>
       previous.map((screen) =>
@@ -261,6 +280,170 @@ export function CatalogWritePanel({
       // Keep current JSON if constructor data is incomplete.
     }
     setScreenEditorMode("json");
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!selectedCourseId) {
+      return;
+    }
+
+    const load = async () => {
+      try {
+        const loadedLessons = await listCourseLessons(selectedCourseId);
+        if (!isMounted) return;
+        setLessons(loadedLessons);
+        setSelectedLessonId((previous) => {
+          if (
+            previous &&
+            loadedLessons.some((lesson) => lesson.id === previous)
+          ) {
+            return previous;
+          }
+          return loadedLessons[0]?.id ?? null;
+        });
+      } catch (error) {
+        if (!isMounted) return;
+        setLessonState({
+          pending: false,
+          message:
+            error instanceof Error ? error.message : "Failed to load lessons.",
+          isError: true,
+        });
+      }
+    };
+
+    void load();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCourseId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!selectedLessonId) {
+      return;
+    }
+
+    const load = async () => {
+      try {
+        const loadedTasks = await listLessonTasks(selectedLessonId);
+        if (!isMounted) return;
+        setTasks(loadedTasks);
+      } catch (error) {
+        if (!isMounted) return;
+        setTaskState({
+          pending: false,
+          message:
+            error instanceof Error ? error.message : "Failed to load tasks.",
+          isError: true,
+        });
+      }
+    };
+
+    void load();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedLessonId]);
+
+  const refreshLessons = async () => {
+    if (!selectedCourseId) {
+      setLessons([]);
+      setSelectedLessonId(null);
+      return;
+    }
+
+    const loadedLessons = await listCourseLessons(selectedCourseId);
+    setLessons(loadedLessons);
+    setSelectedLessonId((previous) => {
+      if (previous && loadedLessons.some((lesson) => lesson.id === previous)) {
+        return previous;
+      }
+      return loadedLessons[0]?.id ?? null;
+    });
+  };
+
+  const refreshTasks = async (lessonId: string | null) => {
+    if (!lessonId) {
+      setTasks([]);
+      return;
+    }
+    const loadedTasks = await listLessonTasks(lessonId);
+    setTasks(loadedTasks);
+  };
+
+  const handleLessonSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedCourseId) {
+      setLessonState({
+        pending: false,
+        message: messages.writePanel.selectCourseBeforeRelease,
+        isError: true,
+      });
+      return;
+    }
+
+    setLessonState({ pending: true, message: null, isError: false });
+    try {
+      await createCourseLesson(selectedCourseId, {
+        title: lessonTitle,
+        description: normalizeOptionalText(lessonDescription),
+      });
+      setLessonTitle("");
+      setLessonDescription("");
+      setLessonState({
+        pending: false,
+        message: language === "ru" ? "Урок создан." : "Lesson created.",
+        isError: false,
+      });
+      await refreshLessons();
+    } catch (error) {
+      setLessonState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to create lesson.",
+        isError: true,
+      });
+    }
+  };
+
+  const handleTaskSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedLessonId) {
+      setTaskState({
+        pending: false,
+        message: language === "ru" ? "Выберите урок." : "Select lesson first.",
+        isError: true,
+      });
+      return;
+    }
+
+    setTaskState({ pending: true, message: null, isError: false });
+    try {
+      await createLessonTask(selectedLessonId, {
+        task_type: taskType,
+        title: taskTitle,
+        required: true,
+        payload: { type: taskType, content: "" },
+      });
+      setTaskTitle("");
+      setTaskState({
+        pending: false,
+        message: language === "ru" ? "Задание добавлено." : "Task added.",
+        isError: false,
+      });
+      await refreshTasks(selectedLessonId);
+    } catch (error) {
+      setTaskState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to create task.",
+        isError: true,
+      });
+    }
   };
 
   const handleCourseSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -374,6 +557,201 @@ export function CatalogWritePanel({
     <section className={styles.panel}>
       <h2 className={styles.title}>{messages.writePanel.title}</h2>
       <p className={styles.hint}>{messages.writePanel.hint}</p>
+
+      <section className={styles.form}>
+        <h3 className={styles.formTitle}>
+          {language === "ru" ? "Конструктор уроков" : "Lesson Builder"}
+        </h3>
+
+        <form className={styles.inlineForm} onSubmit={handleLessonSubmit}>
+          <div className={styles.row}>
+            <label className={styles.field}>
+              <span className={styles.label}>
+                {language === "ru" ? "Название урока" : "Lesson title"}
+              </span>
+              <input
+                className={styles.input}
+                value={lessonTitle}
+                onChange={(event) => setLessonTitle(event.target.value)}
+                placeholder={
+                  language === "ru" ? "Введите название" : "Enter title"
+                }
+                required
+              />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>
+                {language === "ru" ? "Описание" : "Description"}
+              </span>
+              <textarea
+                className={`${styles.input} ${styles.textarea}`}
+                value={lessonDescription}
+                onChange={(event) => setLessonDescription(event.target.value)}
+                placeholder={
+                  language === "ru" ? "Введите описание" : "Enter description"
+                }
+              />
+            </label>
+          </div>
+
+          <div className={styles.actions}>
+            <button
+              className={styles.button}
+              disabled={lessonState.pending || !selectedCourseId}
+              type="submit"
+            >
+              {lessonState.pending
+                ? language === "ru"
+                  ? "Создание..."
+                  : "Creating..."
+                : language === "ru"
+                  ? "Добавить урок"
+                  : "Add lesson"}
+            </button>
+          </div>
+          {lessonState.message && (
+            <p
+              className={`${styles.message} ${lessonState.isError ? styles.error : styles.ok}`}
+            >
+              {lessonState.message}
+            </p>
+          )}
+        </form>
+
+        <div className={styles.lessonList}>
+          <h4 className={styles.subTitle}>
+            {language === "ru" ? "Уроки курса" : "Course lessons"}
+          </h4>
+          {lessons.length === 0 ? (
+            <p className={styles.emptyText}>
+              {language === "ru" ? "Нет уроков" : "No lessons yet"}
+            </p>
+          ) : (
+            <ul className={styles.simpleList}>
+              {lessons.map((lesson) => (
+                <li
+                  key={lesson.id}
+                  className={`${styles.listItem} ${selectedLessonId === lesson.id ? styles.listItemActive : ""}`}
+                  onClick={() => setSelectedLessonId(lesson.id)}
+                >
+                  <strong>{lesson.title}</strong>
+                  <span className={styles.listMeta}>
+                    {lesson.description ?? ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {selectedLessonId && (
+          <div className={styles.taskSection}>
+            <h4 className={styles.subTitle}>
+              {language === "ru" ? "Задания урока" : "Lesson tasks"}
+            </h4>
+
+            <form className={styles.inlineForm} onSubmit={handleTaskSubmit}>
+              <div className={styles.row}>
+                <label className={styles.field}>
+                  <span className={styles.label}>
+                    {language === "ru" ? "Тип задания" : "Task type"}
+                  </span>
+                  <select
+                    className={styles.input}
+                    value={taskType}
+                    onChange={(event) =>
+                      setTaskType(event.target.value as TaskType)
+                    }
+                  >
+                    <option value="theory_text">
+                      {language === "ru" ? "Теория (текст)" : "Theory (text)"}
+                    </option>
+                    <option value="theory_video">
+                      {language === "ru" ? "Теория (видео)" : "Theory (video)"}
+                    </option>
+                    <option value="quiz">
+                      {language === "ru" ? "Тест" : "Quiz"}
+                    </option>
+                    <option value="simulation">
+                      {language === "ru" ? "Симуляция" : "Simulation"}
+                    </option>
+                    <option value="cheat_sheet">
+                      {language === "ru" ? "Памятка" : "Cheat sheet"}
+                    </option>
+                  </select>
+                </label>
+                <label className={styles.field}>
+                  <span className={styles.label}>
+                    {language === "ru" ? "Название" : "Title"}
+                  </span>
+                  <input
+                    className={styles.input}
+                    value={taskTitle}
+                    onChange={(event) => setTaskTitle(event.target.value)}
+                    placeholder={
+                      language === "ru" ? "Введите название" : "Enter title"
+                    }
+                    required
+                  />
+                </label>
+              </div>
+
+              <div className={styles.actions}>
+                <button
+                  className={styles.button}
+                  disabled={taskState.pending}
+                  type="submit"
+                >
+                  {taskState.pending
+                    ? language === "ru"
+                      ? "Добавление..."
+                      : "Adding..."
+                    : language === "ru"
+                      ? "Добавить задание"
+                      : "Add task"}
+                </button>
+              </div>
+              {taskState.message && (
+                <p
+                  className={`${styles.message} ${taskState.isError ? styles.error : styles.ok}`}
+                >
+                  {taskState.message}
+                </p>
+              )}
+            </form>
+
+            <div className={styles.taskList}>
+              {tasks.length === 0 ? (
+                <p className={styles.emptyText}>
+                  {language === "ru" ? "Нет заданий" : "No tasks yet"}
+                </p>
+              ) : (
+                <ul className={styles.simpleList}>
+                  {tasks.map((task) => (
+                    <li key={task.id} className={styles.listItem}>
+                      <div className={styles.taskHeader}>
+                        <strong>{task.title}</strong>
+                        <span className={styles.taskTypeBadge}>
+                          {task.task_type}
+                        </span>
+                      </div>
+                      <span className={styles.listMeta}>
+                        {task.required
+                          ? language === "ru"
+                            ? "обязательно"
+                            : "required"
+                          : language === "ru"
+                            ? "необязательно"
+                            : "optional"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className={styles.forms}>
         <form className={styles.form} onSubmit={handleCourseSubmit}>
