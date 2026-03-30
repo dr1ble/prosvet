@@ -4,10 +4,15 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 
 import {
+  archiveCourseLesson,
+  archiveLessonTask,
   createCourseLesson,
   createLessonTask,
+  duplicateLessonTask,
   listCourseLessons,
   listLessonTasks,
+  reorderCourseLesson,
+  reorderLessonTask,
 } from "@/features/catalog/builder-api";
 import type {
   CourseCreateInput,
@@ -375,6 +380,118 @@ export function CatalogWritePanel({
     setTasks(loadedTasks);
   };
 
+  const handleArchiveLesson = async (lessonId: string) => {
+    setLessonState({ pending: true, message: null, isError: false });
+    try {
+      await archiveCourseLesson(lessonId);
+      setLessonState({
+        pending: false,
+        message: language === "ru" ? "Урок архивирован." : "Lesson archived.",
+        isError: false,
+      });
+      await refreshLessons();
+    } catch (error) {
+      setLessonState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to archive lesson.",
+        isError: true,
+      });
+    }
+  };
+
+  const handleMoveLesson = async (
+    lessonId: string,
+    direction: "up" | "down",
+  ) => {
+    if (!selectedCourseId) return;
+    const currentLesson = lessons.find((l) => l.id === lessonId);
+    if (!currentLesson) return;
+    const currentIndex = lessons.indexOf(currentLesson);
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= lessons.length) return;
+    setLessonState({ pending: true, message: null, isError: false });
+    try {
+      await reorderCourseLesson(selectedCourseId, lessonId, {
+        order_index: newIndex + 1,
+      });
+      await refreshLessons();
+    } catch (error) {
+      setLessonState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to reorder lesson.",
+        isError: true,
+      });
+    }
+  };
+
+  const handleArchiveTask = async (taskId: string) => {
+    if (!selectedLessonId) return;
+    setTaskState({ pending: true, message: null, isError: false });
+    try {
+      await archiveLessonTask(taskId);
+      setTaskState({
+        pending: false,
+        message: language === "ru" ? "Задание удалено." : "Task removed.",
+        isError: false,
+      });
+      await refreshTasks(selectedLessonId);
+    } catch (error) {
+      setTaskState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to remove task.",
+        isError: true,
+      });
+    }
+  };
+
+  const handleDuplicateTask = async (taskId: string) => {
+    if (!selectedLessonId) return;
+    setTaskState({ pending: true, message: null, isError: false });
+    try {
+      await duplicateLessonTask(taskId);
+      setTaskState({
+        pending: false,
+        message:
+          language === "ru" ? "Задание скопировано." : "Task duplicated.",
+        isError: false,
+      });
+      await refreshTasks(selectedLessonId);
+    } catch (error) {
+      setTaskState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to duplicate task.",
+        isError: true,
+      });
+    }
+  };
+
+  const handleMoveTask = async (taskId: string, direction: "up" | "down") => {
+    if (!selectedLessonId) return;
+    const currentTask = tasks.find((t) => t.id === taskId);
+    if (!currentTask) return;
+    const currentIndex = tasks.indexOf(currentTask);
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= tasks.length) return;
+    setTaskState({ pending: true, message: null, isError: false });
+    try {
+      await reorderLessonTask(selectedLessonId, taskId, {
+        order_index: newIndex + 1,
+      });
+      await refreshTasks(selectedLessonId);
+    } catch (error) {
+      setTaskState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to reorder task.",
+        isError: true,
+      });
+    }
+  };
+
   const handleLessonSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedCourseId) {
@@ -628,13 +745,52 @@ export function CatalogWritePanel({
             </p>
           ) : (
             <ul className={styles.simpleList}>
-              {lessons.map((lesson) => (
+              {lessons.map((lesson, index) => (
                 <li
                   key={lesson.id}
                   className={`${styles.listItem} ${selectedLessonId === lesson.id ? styles.listItemActive : ""}`}
                   onClick={() => setSelectedLessonId(lesson.id)}
                 >
-                  <strong>{lesson.title}</strong>
+                  <div className={styles.itemHeader}>
+                    <strong>{lesson.title}</strong>
+                    <div className={styles.itemActions}>
+                      <button
+                        type="button"
+                        className={styles.smallButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveLesson(lesson.id, "up");
+                        }}
+                        disabled={index === 0}
+                        title={language === "ru" ? "Вверх" : "Move up"}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.smallButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveLesson(lesson.id, "down");
+                        }}
+                        disabled={index === lessons.length - 1}
+                        title={language === "ru" ? "Вниз" : "Move down"}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.smallButtonDanger}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArchiveLesson(lesson.id);
+                        }}
+                        title={language === "ru" ? "Удалить" : "Delete"}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
                   <span className={styles.listMeta}>
                     {lesson.description ?? ""}
                   </span>
@@ -727,23 +883,63 @@ export function CatalogWritePanel({
                 </p>
               ) : (
                 <ul className={styles.simpleList}>
-                  {tasks.map((task) => (
+                  {tasks.map((task, index) => (
                     <li key={task.id} className={styles.listItem}>
                       <div className={styles.taskHeader}>
                         <strong>{task.title}</strong>
+                        <div className={styles.itemActions}>
+                          <button
+                            type="button"
+                            className={styles.smallButton}
+                            onClick={() => handleMoveTask(task.id, "up")}
+                            disabled={index === 0}
+                            title={language === "ru" ? "Вверх" : "Move up"}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.smallButton}
+                            onClick={() => handleMoveTask(task.id, "down")}
+                            disabled={index === tasks.length - 1}
+                            title={language === "ru" ? "Вниз" : "Move down"}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.smallButton}
+                            onClick={() => handleDuplicateTask(task.id)}
+                            title={
+                              language === "ru" ? "Копировать" : "Duplicate"
+                            }
+                          >
+                            ⧉
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.smallButtonDanger}
+                            onClick={() => handleArchiveTask(task.id)}
+                            title={language === "ru" ? "Удалить" : "Delete"}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                      <div className={styles.taskMetaRow}>
                         <span className={styles.taskTypeBadge}>
                           {task.task_type}
                         </span>
+                        <span className={styles.listMeta}>
+                          {task.required
+                            ? language === "ru"
+                              ? "обязательно"
+                              : "required"
+                            : language === "ru"
+                              ? "необязательно"
+                              : "optional"}
+                        </span>
                       </div>
-                      <span className={styles.listMeta}>
-                        {task.required
-                          ? language === "ru"
-                            ? "обязательно"
-                            : "required"
-                          : language === "ru"
-                            ? "необязательно"
-                            : "optional"}
-                      </span>
                     </li>
                   ))}
                 </ul>
