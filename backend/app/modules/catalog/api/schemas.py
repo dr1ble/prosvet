@@ -100,3 +100,68 @@ class CourseBundleOut(_BaseSchema):
     course: CourseOut
     release: CourseReleaseOut
     screens: list[ReleaseScreenOut]
+
+
+class CourseLessonCreateIn(_BaseSchema):
+    title: str = Field(min_length=2, max_length=255)
+    description: str | None = Field(default=None, max_length=5_000)
+
+
+class CourseLessonUpdateIn(_BaseSchema):
+    title: str = Field(min_length=2, max_length=255)
+    description: str | None = Field(default=None, max_length=5_000)
+    status: Literal["draft", "active", "archived"]
+
+
+class CourseLessonOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    course_id: UUID
+    title: str
+    description: str | None
+    order_index: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class CourseLessonReorderIn(_BaseSchema):
+    order_index: int = Field(ge=1, le=10_000)
+
+
+class LessonTaskCreateIn(_BaseSchema):
+    task_type: Literal[
+        "theory_text",
+        "theory_video",
+        "quiz",
+        "simulation",
+        "cheat_sheet",
+    ]
+    title: str = Field(min_length=2, max_length=255)
+    required: bool = True
+    payload: dict[str, Any]
+
+
+class LessonTaskUpdateIn(_BaseSchema):
+    title: str = Field(min_length=2, max_length=255)
+    required: bool = True
+    payload: dict[str, Any]
+
+
+class LessonTaskOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    lesson_id: UUID
+    task_type: str
+    title: str
+    order_index: int
+    required: bool
+    payload: dict[str, Any]
+    checksum: str
+    created_at: datetime
+
+
+class LessonTaskReorderIn(_BaseSchema):
+    order_index: int = Field(ge=1, le=10_000)

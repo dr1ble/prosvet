@@ -48,3 +48,63 @@ export interface CourseReleaseCreateInput {
   status: ReleaseStatus;
   screens: ReleaseScreenInput[];
 }
+
+export interface CourseLessonCreateInput {
+  title: string;
+  description?: string | null;
+}
+
+export interface CourseLessonUpdateInput {
+  title: string;
+  description?: string | null;
+  status: CourseLessonStatus;
+}
+
+export interface CourseLessonDto {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string | null;
+  order_index: number;
+  status: CourseLessonStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CourseLessonStatus = "draft" | "active" | "archived";
+
+export type TaskType =
+  | "theory_text"
+  | "theory_video"
+  | "quiz"
+  | "simulation"
+  | "cheat_sheet";
+
+export interface LessonTaskCreateInput {
+  task_type: TaskType;
+  title: string;
+  required?: boolean;
+  payload: Record<string, unknown>;
+}
+
+export interface LessonTaskUpdateInput {
+  title: string;
+  required?: boolean;
+  payload: Record<string, unknown>;
+}
+
+export interface LessonTaskDto {
+  id: string;
+  lesson_id: string;
+  task_type: TaskType;
+  title: string;
+  order_index: number;
+  required: boolean;
+  payload: Record<string, unknown>;
+  checksum: string;
+  created_at: string;
+}
+
+export interface ReorderInput {
+  order_index: number;
+}

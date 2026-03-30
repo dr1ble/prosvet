@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,6 +25,20 @@ class ReleaseStatus(str, enum.Enum):
     PUBLISHED = "published"
 
 
+class LessonStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class TaskType(str, enum.Enum):
+    THEORY_TEXT = "theory_text"
+    THEORY_VIDEO = "theory_video"
+    QUIZ = "quiz"
+    SIMULATION = "simulation"
+    CHEAT_SHEET = "cheat_sheet"
+
+
 class Course(Base):
     __tablename__ = "courses"
 
@@ -40,6 +54,52 @@ class Course(Base):
         onupdate=_utcnow,
         nullable=False,
     )
+
+
+class CourseLesson(Base):
+    __tablename__ = "course_lessons"
+    __table_args__ = (UniqueConstraint("course_id", "order_index", name="uq_lesson_order_per_course"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    course_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default=LessonStatus.DRAFT.value, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        onupdate=_utcnow,
+        nullable=False,
+    )
+
+
+class LessonTask(Base):
+    __tablename__ = "lesson_tasks"
+    __table_args__ = (
+        UniqueConstraint("lesson_id", "order_index", name="uq_task_order_per_lesson"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    lesson_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("course_lessons.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    task_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
 class CourseRelease(Base):

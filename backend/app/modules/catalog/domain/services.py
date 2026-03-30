@@ -17,9 +17,12 @@ from app.modules.catalog.api.schemas import (
 from app.modules.catalog.domain.errors import CatalogError
 from app.modules.catalog.infra.models import (
     Course,
+    CourseLesson,
     CourseRelease,
     CourseReleaseScreen,
     CourseStatus,
+    LessonStatus,
+    LessonTask,
     ReleaseStatus,
 )
 from app.modules.catalog.infra.repository import CatalogRepository
@@ -305,3 +308,154 @@ class CatalogService:
             )
 
         return target_screen_key
+
+    def list_course_lessons(self, course_id: UUID, include_archived: bool = False) -> list[CourseLesson]:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        return self.repo.list_lessons_by_course(course_id, include_archived)
+
+    def create_course_lesson(
+        self,
+        course_id: UUID,
+        title: str,
+        description: str | None,
+        status: str = LessonStatus.DRAFT.value,
+    ) -> CourseLesson:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        order_index = self.repo.get_next_lesson_order_index(course_id)
+        return self.repo.create_lesson(
+            course_id=course_id,
+            title=title.strip(),
+            description=description,
+            order_index=order_index,
+            status=status,
+        )
+
+    def update_course_lesson(
+        self,
+        lesson_id: UUID,
+        title: str | None = None,
+        description: str | None = None,
+        status: str | None = None,
+    ) -> CourseLesson:
+        lesson = self.repo.get_lesson_by_id(lesson_id)
+        if lesson is None:
+            raise CatalogError("Lesson not found.", status_code=404)
+        update_fields: dict[str, Any] = {}
+        if title is not None:
+            update_fields["title"] = title.strip()
+        if description is not None:
+            update_fields["description"] = description
+        if status is not None:
+            update_fields["status"] = status
+        updated = self.repo.update_lesson(lesson_id, **update_fields)
+        if updated is None:
+            raise CatalogError("Failed to update lesson.", status_code=500)
+        return updated
+
+    def archive_course_lesson(self, lesson_id: UUID) -> CourseLesson:
+        lesson = self.repo.get_lesson_by_id(lesson_id)
+        if lesson is None:
+            raise CatalogError("Lesson not found.", status_code=404)
+        archived = self.repo.archive_lesson(lesson_id)
+        if archived is None:
+            raise CatalogError("Failed to archive lesson.", status_code=500)
+        return archived
+
+    def restore_course_lesson(self, lesson_id: UUID) -> CourseLesson:
+        lesson = self.repo.get_lesson_by_id(lesson_id)
+        if lesson is None:
+            raise CatalogError("Lesson not found.", status_code=404)
+        restored = self.repo.restore_lesson(lesson_id)
+        if restored is None:
+            raise CatalogError("Failed to restore lesson.", status_code=500)
+        return restored
+
+    def reorder_course_lesson(self, course_id: UUID, lesson_id: UUID, new_index: int) -> None:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        lesson = self.repo.get_lesson_by_id(lesson_id)
+        if lesson is None:
+            raise CatalogError("Lesson not found.", status_code=404)
+        self.repo.reorder_lesson(course_id, lesson_id, new_index)
+
+    def create_lesson_task(
+        self,
+        lesson_id: UUID,
+        task_type: str,
+        title: str,
+        required: bool,
+        payload: dict[str, Any],
+    ) -> LessonTask:
+        lesson = self.repo.get_lesson_by_id(lesson_id)
+        if lesson is None:
+            raise CatalogError("Lesson not found.", status_code=404)
+        order_index = self.repo.get_next_task_order_index(lesson_id)
+        checksum = _checksum_payload(payload)
+        return self.repo.create_task(
+            lesson_id=lesson_id,
+            task_type=task_type,
+            title=title.strip(),
+            order_index=order_index,
+            required=required,
+            payload=payload,
+            checksum=checksum,
+        )
+
+    def update_lesson_task(
+        self,
+        task_id: UUID,
+        title: str | None = None,
+        required: bool | None = None,
+        payload: dict[str, Any] | None = None,
+    ) -> LessonTask:
+        task = self.repo.get_task_by_id(task_id)
+        if task is None:
+            raise CatalogError("Task not found.", status_code=404)
+        update_fields: dict[str, Any] = {}
+        if title is not None:
+            update_fields["title"] = title.strip()
+        if required is not None:
+            update_fields["required"] = required
+        if payload is not None:
+            update_fields["payload_json"] = payload
+            update_fields["checksum"] = _checksum_payload(payload)
+        updated = self.repo.update_task(task_id, **update_fields)
+        if updated is None:
+            raise CatalogError("Failed to update task.", status_code=500)
+        return updated
+
+    def archive_lesson_task(self, task_id: UUID) -> None:
+        task = self.repo.get_task_by_id(task_id)
+        if task is None:
+            raise CatalogError("Task not found.", status_code=404)
+        self.repo.archive_task(task_id)
+
+    def reorder_lesson_task(self, lesson_id: UUID, task_id: UUID, new_index: int) -> None:
+        lesson = self.repo.get_lesson_by_id(lesson_id)
+        if lesson is None:
+            raise CatalogError("Lesson not found.", status_code=404)
+        task = self.repo.get_task_by_id(task_id)
+        if task is None:
+            raise CatalogError("Task not found.", status_code=404)
+        self.repo.reorder_task(lesson_id, task_id, new_index)
+
+    def duplicate_lesson_task(self, task_id: UUID) -> LessonTask:
+        task = self.repo.get_task_by_id(task_id)
+        if task is None:
+            raise CatalogError("Task not found.", status_code=404)
+        new_order = self.repo.get_next_task_order_index(task.lesson_id)
+        duplicated = self.repo.duplicate_task(task_id, new_order)
+        if duplicated is None:
+            raise CatalogError("Failed to duplicate task.", status_code=500)
+        return duplicated
+
+    def list_lesson_tasks(self, lesson_id: UUID) -> list[LessonTask]:
+        lesson = self.repo.get_lesson_by_id(lesson_id)
+        if lesson is None:
+            raise CatalogError("Lesson not found.", status_code=404)
+        return self.repo.list_tasks_by_lesson(lesson_id)

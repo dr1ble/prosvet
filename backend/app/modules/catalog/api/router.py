@@ -9,15 +9,29 @@ from app.core.config import settings
 from app.modules.catalog.api.schemas import (
     CourseBundleOut,
     CourseCreateIn,
+    CourseLessonCreateIn,
+    CourseLessonOut,
+    CourseLessonReorderIn,
+    CourseLessonUpdateIn,
     CourseListQuery,
     CourseOut,
     CourseReleaseCreateIn,
     CourseReleaseOut,
+    LessonTaskCreateIn,
+    LessonTaskOut,
+    LessonTaskReorderIn,
+    LessonTaskUpdateIn,
     ReleaseListQuery,
     ReleaseScreenOut,
 )
 from app.modules.catalog.domain.errors import CatalogError
-from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen
+from app.modules.catalog.infra.models import (
+    Course,
+    CourseLesson,
+    CourseRelease,
+    CourseReleaseScreen,
+    LessonTask,
+)
 from app.shared.auth.deps import require_policy
 from app.shared.auth.schemas import CurrentActor
 from app.shared.di.services import CatalogServiceDep
@@ -88,6 +102,33 @@ def _to_screen_out(screen: CourseReleaseScreen) -> ReleaseScreenOut:
         payload=screen.payload_json,
         checksum=screen.checksum,
         created_at=screen.created_at,
+    )
+
+
+def _to_lesson_out(lesson: CourseLesson) -> CourseLessonOut:
+    return CourseLessonOut(
+        id=lesson.id,
+        course_id=lesson.course_id,
+        title=lesson.title,
+        description=lesson.description,
+        order_index=lesson.order_index,
+        status=lesson.status,
+        created_at=lesson.created_at,
+        updated_at=lesson.updated_at,
+    )
+
+
+def _to_task_out(task: LessonTask) -> LessonTaskOut:
+    return LessonTaskOut(
+        id=task.id,
+        lesson_id=task.lesson_id,
+        task_type=task.task_type,
+        title=task.title,
+        order_index=task.order_index,
+        required=task.required,
+        payload=task.payload_json,
+        checksum=task.checksum,
+        created_at=task.created_at,
     )
 
 
@@ -186,3 +227,189 @@ def get_latest_course_release(
         release=_to_release_out(release, screen_count=len(screens)),
         screens=[_to_screen_out(screen) for screen in screens],
     )
+
+
+@router.get("/courses/{course_id}/lessons", response_model=list[CourseLessonOut])
+def list_course_lessons(
+    course_id: UUID,
+    service: CatalogServiceDep,
+    include_archived: bool = Query(default=False),
+    _actor: CurrentActor = Depends(require_policy("catalog.read")),
+) -> list[CourseLessonOut]:
+    try:
+        lessons = service.list_course_lessons(course_id, include_archived=include_archived)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return [_to_lesson_out(lesson) for lesson in lessons]
+
+
+@router.post(
+    "/courses/{course_id}/lessons",
+    response_model=CourseLessonOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_course_lesson(
+    course_id: UUID,
+    payload: CourseLessonCreateIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseLessonOut:
+    try:
+        lesson = service.create_course_lesson(
+            course_id=course_id,
+            title=payload.title,
+            description=payload.description,
+        )
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_lesson_out(lesson)
+
+
+@router.patch("/lessons/{lesson_id}", response_model=CourseLessonOut)
+def update_course_lesson(
+    lesson_id: UUID,
+    payload: CourseLessonUpdateIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseLessonOut:
+    try:
+        lesson = service.update_course_lesson(
+            lesson_id=lesson_id,
+            title=payload.title,
+            description=payload.description,
+            status=payload.status,
+        )
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_lesson_out(lesson)
+
+
+@router.delete("/lessons/{lesson_id}", response_model=CourseLessonOut)
+def archive_course_lesson(
+    lesson_id: UUID,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseLessonOut:
+    try:
+        lesson = service.archive_course_lesson(lesson_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_lesson_out(lesson)
+
+
+@router.post("/lessons/{lesson_id}/restore", response_model=CourseLessonOut)
+def restore_course_lesson(
+    lesson_id: UUID,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseLessonOut:
+    try:
+        lesson = service.restore_course_lesson(lesson_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_lesson_out(lesson)
+
+
+@router.post("/courses/{course_id}/lessons/{lesson_id}/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def reorder_course_lesson(
+    course_id: UUID,
+    lesson_id: UUID,
+    payload: CourseLessonReorderIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> None:
+    try:
+        service.reorder_course_lesson(course_id, lesson_id, payload.order_index)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.get("/lessons/{lesson_id}/tasks", response_model=list[LessonTaskOut])
+def list_lesson_tasks(
+    lesson_id: UUID,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.read")),
+) -> list[LessonTaskOut]:
+    try:
+        tasks = service.list_lesson_tasks(lesson_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return [_to_task_out(task) for task in tasks]
+
+
+@router.post("/lessons/{lesson_id}/tasks", response_model=LessonTaskOut, status_code=status.HTTP_201_CREATED)
+def create_lesson_task(
+    lesson_id: UUID,
+    payload: LessonTaskCreateIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> LessonTaskOut:
+    try:
+        task = service.create_lesson_task(
+            lesson_id=lesson_id,
+            task_type=payload.task_type,
+            title=payload.title,
+            required=payload.required,
+            payload=payload.payload,
+        )
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_task_out(task)
+
+
+@router.patch("/tasks/{task_id}", response_model=LessonTaskOut)
+def update_lesson_task(
+    task_id: UUID,
+    payload: LessonTaskUpdateIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> LessonTaskOut:
+    try:
+        task = service.update_lesson_task(
+            task_id=task_id,
+            title=payload.title,
+            required=payload.required,
+            payload=payload.payload,
+        )
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_task_out(task)
+
+
+@router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def archive_lesson_task(
+    task_id: UUID,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> None:
+    try:
+        service.archive_lesson_task(task_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/lessons/{lesson_id}/tasks/{task_id}/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def reorder_lesson_task(
+    lesson_id: UUID,
+    task_id: UUID,
+    payload: LessonTaskReorderIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> None:
+    try:
+        service.reorder_lesson_task(lesson_id, task_id, payload.order_index)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/tasks/{task_id}/duplicate", response_model=LessonTaskOut, status_code=status.HTTP_201_CREATED)
+def duplicate_lesson_task(
+    task_id: UUID,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> LessonTaskOut:
+    try:
+        task = service.duplicate_lesson_task(task_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_task_out(task)
