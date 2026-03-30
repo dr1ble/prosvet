@@ -39,7 +39,6 @@ class User(Base):
         default=UserStatus.ACTIVE,
         nullable=False,
     )
-    phone_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     login: Mapped[str | None] = mapped_column(String(120), unique=True, index=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

@@ -1,0 +1,8 @@
+<resources>
+    <string name="home_title_courses">Каталог курсов</string>
+    <string name="home_title_lesson">Обучение</string>
+    <string name="home_title_profile">Профиль</string>
+    <string name="home_tab_courses">Курсы</string>
+    <string name="home_tab_lesson">Обучение</string>
+    <string name="home_tab_profile">Профиль</string>
+</resources>

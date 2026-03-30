@@ -20,6 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import digital_education_mobile.core.ui.generated.resources.Res
+import digital_education_mobile.core.ui.generated.resources.prosvet_brand
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProsvetLogo(
@@ -69,7 +72,7 @@ fun ProsvetLogo(
         if (showText) {
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Prosvet",
+                text = stringResource(Res.string.prosvet_brand),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontSize = textSize.sp,
                     fontWeight = FontWeight.Bold,

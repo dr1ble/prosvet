@@ -1,0 +1,50 @@
+<resources>
+    <string name="lesson_choose_course_title">Выберите курс</string>
+    <string name="lesson_choose_course_subtitle">Откройте курс в каталоге, и урок появится здесь.</string>
+    <string name="lesson_back_to_courses">Вернуться к курсам</string>
+    <string name="lesson_screen_progress">Экран %1$d из %2$d</string>
+    <string name="lesson_screen_unavailable_title">Содержимое временно недоступно</string>
+    <string name="lesson_screen_unavailable_subtitle">Откройте другой курс или обновите релиз.</string>
+    <string name="lesson_continue_learning">Продолжить обучение</string>
+    <string name="lesson_choose_other_course">Выбрать другой курс</string>
+
+    <string name="payload_interactive_simulation">Интерактивная симуляция</string>
+    <string name="payload_hotspot_count_one">%1$d активная зона</string>
+    <string name="payload_hotspot_count_few">%1$d активные зоны</string>
+    <string name="payload_hotspot_count_many">%1$d активных зон</string>
+    <string name="payload_start_screen">Начальный экран</string>
+    <string name="payload_completion">Завершение</string>
+    <string name="payload_video">Видеоурок • %1$s</string>
+    <string name="payload_article">Статья • %1$d символов</string>
+    <string name="payload_quiz">Тест • %1$d %2$s</string>
+    <string name="payload_question_one">вопрос</string>
+    <string name="payload_question_few">вопроса</string>
+    <string name="payload_question_many">вопросов</string>
+    <string name="payload_cheat_sheet">Шпаргалка • Итоги урока</string>
+
+    <string name="cheat_sheet_key_points">Ключевые моменты</string>
+    <string name="cheat_sheet_commands_code">Команды и код</string>
+    <string name="cheat_sheet_copy_code">Скопировать код</string>
+    <string name="list_bullet">•</string>
+
+    <string name="video_debug_text">Видео: %1$s
+Состояние: %2$s</string>
+    <string name="video_state_playing">воспроизведение</string>
+    <string name="video_state_paused">пауза</string>
+    <string name="video_play">Запустить видео</string>
+
+    <string name="quiz_progress">Вопрос %1$d из %2$d</string>
+    <string name="quiz_multiple_pending">Раздел в разработке: множественный выбор</string>
+    <string name="quiz_matching_pending">Раздел в разработке: сопоставление</string>
+    <string name="quiz_previous">Предыдущий</string>
+    <string name="quiz_back">Назад</string>
+    <string name="quiz_next">Далее</string>
+    <string name="quiz_finish">Завершить</string>
+    <string name="quiz_continue">Продолжить</string>
+
+    <string name="theory">Теория</string>
+    <string name="close">Закрыть</string>
+    <string name="simulation_screen_image">Изображение экрана симуляции</string>
+    <string name="simulation_load_error">Не удалось загрузить изображение</string>
+    <string name="simulation_hint">Подсказка</string>
+</resources>

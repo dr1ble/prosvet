@@ -86,7 +86,6 @@ def active_user():
     user = MagicMock()
     user.id = user_id
     user.login = "testuser"
-    user.phone_hash = "test_phone_hash"
     user.password_hash = "hash"
     user.role = UserRole.USER
     user.status = "active"
@@ -100,7 +99,6 @@ def admin_user():
     user = MagicMock()
     user.id = user_id
     user.login = "admin"
-    user.phone_hash = "admin_phone_hash"
     user.password_hash = "hash"
     user.role = UserRole.ADMINISTRATOR
     user.status = "active"

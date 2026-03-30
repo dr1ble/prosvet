@@ -2,6 +2,7 @@ package com.digitaledu.feature.player.impl.presentation
 
 import androidx.lifecycle.viewModelScope
 import com.digitaledu.core.common.BaseViewModel
+import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.data.catalog.CatalogRepository
 import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.content.Hotspot
@@ -20,11 +21,13 @@ import com.digitaledu.feature.player.impl.domain.RestoreCourseProgressUseCase
 import com.digitaledu.feature.player.impl.domain.SavedCourseProgress
 import com.digitaledu.feature.player.impl.domain.SimulationUrlResolver
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 internal class PlayerViewModel(
     private val urlResolver: SimulationUrlResolver,
     private val catalogRepository: CatalogRepository,
+    private val authRepository: AuthRepository,
 ) : BaseViewModel<PlayerUiState, PlayerIntent, PlayerEffect>(PlayerUiState()), PlayerFeatureHost {
 
     private var referenceFetchJob: Job? = null
@@ -34,6 +37,14 @@ internal class PlayerViewModel(
     private val resolveReferenceId = ResolveReferenceIdUseCase()
     private val resolveNavigation = ResolveNavigationUseCase(progressTransition = progressTransition)
     private val resolveHotspotAction = ResolveHotspotActionUseCase()
+
+    init {
+        viewModelScope.launch {
+            authRepository.observeTokens().collect { tokens ->
+                updateState { copy(mediaAccessToken = tokens?.accessToken) }
+            }
+        }
+    }
 
     override suspend fun handleIntent(intent: PlayerIntent) {
         when (intent) {
@@ -55,6 +66,7 @@ internal class PlayerViewModel(
                 bundle = bundle,
                 currentScreenIndex = restoredProgress.currentScreenIndex,
                 isFullscreenMode = true,
+                mediaAccessToken = mediaAccessToken,
                 completedScreens = restoredProgress.completedScreens,
                 activeHotspotHint = null,
             )
@@ -118,7 +130,7 @@ internal class PlayerViewModel(
     }
 
     private fun closeCourse() {
-        updateState { PlayerUiState() }
+        updateState { PlayerUiState(mediaAccessToken = mediaAccessToken) }
         emitEffect(PlayerEffect.Closed)
     }
 

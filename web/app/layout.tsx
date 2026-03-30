@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Outfit, Work_Sans } from "next/font/google";
+import { Russo_One, Work_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
 import "./globals.css";
 
-const displayFont = Outfit({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
+const displayFont = Russo_One({
+  subsets: ["cyrillic", "latin"],
+  weight: "400",
   variable: "--font-outfit",
 });
 

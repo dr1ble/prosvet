@@ -1,11 +1,5 @@
 "use client";
 
-type OtpRequestOut = {
-  challenge_id: string;
-  status: string;
-  dev_code?: string | null;
-};
-
 type AuthResponse = {
   status: string;
 };
@@ -60,14 +54,6 @@ async function getJson<T>(path: string): Promise<T> {
     return {} as T;
   }
   return JSON.parse(raw) as T;
-}
-
-export function requestOtp(phone: string): Promise<OtpRequestOut> {
-  return postJson<OtpRequestOut>("/api/admin/auth/otp/request", { phone });
-}
-
-export function verifyOtp(phone: string, code: string): Promise<AuthResponse> {
-  return postJson<AuthResponse>("/api/admin/auth/otp/verify", { phone, code });
 }
 
 export function loginAdmin(

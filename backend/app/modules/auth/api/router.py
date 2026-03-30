@@ -5,9 +5,6 @@ from app.modules.auth.api.schemas import (
     AuthResponse,
     LoginIn,
     LogoutOut,
-    OtpRequestIn,
-    OtpRequestOut,
-    OtpVerifyIn,
     QrActivateIn,
     RefreshTokenIn,
 )
@@ -28,25 +25,6 @@ def get_client_ip(request: Request) -> str | None:
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else None
-
-
-@router.post("/otp/request", response_model=OtpRequestOut)
-@limiter.limit("5/minute")
-def request_otp(request: Request, payload: OtpRequestIn, service: AuthServiceDep) -> OtpRequestOut:
-    try:
-        challenge_id, dev_code = service.request_otp(payload.phone)
-    except AuthError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    return OtpRequestOut(challenge_id=challenge_id, status="otp_sent", dev_code=dev_code)
-
-
-@router.post("/otp/verify", response_model=AuthResponse)
-@limiter.limit("10/minute")
-def verify_otp(request: Request, payload: OtpVerifyIn, service: AuthServiceDep) -> AuthResponse:
-    try:
-        return service.verify_otp(payload.phone, payload.code)
-    except AuthError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.post("/login", response_model=AuthResponse)

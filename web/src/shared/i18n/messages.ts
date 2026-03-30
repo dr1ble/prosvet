@@ -67,18 +67,7 @@ type AuthMessages = {
   signIn: string;
   signingIn: string;
   signInError: string;
-  phoneLabel: string;
-  otpCodeLabel: string;
-  requestOtp: string;
-  requestingOtp: string;
-  verifyAndOpenCatalog: string;
-  verifyingOtp: string;
-  challengeId: string;
-  localDevCode: string;
-  otpRequested: string;
   sessionCleared: string;
-  requestOtpError: string;
-  verifyOtpError: string;
   logoutError: string;
   logout: string;
   openCatalog: string;
@@ -167,18 +156,7 @@ const ru: UiMessages = {
     signIn: "Войти",
     signingIn: "Вход...",
     signInError: "Не удалось выполнить вход.",
-    phoneLabel: "Телефон",
-    otpCodeLabel: "OTP-код",
-    requestOtp: "Запросить OTP",
-    requestingOtp: "Запрос...",
-    verifyAndOpenCatalog: "Подтвердить и войти",
-    verifyingOtp: "Проверка...",
-    challengeId: "ID запроса",
-    localDevCode: "Локальный OTP-код",
-    otpRequested: "OTP отправлен. Введите код для входа.",
     sessionCleared: "Сессия очищена.",
-    requestOtpError: "Не удалось запросить OTP.",
-    verifyOtpError: "Не удалось проверить OTP-код.",
     logoutError: "Не удалось выполнить выход.",
     logout: "Выйти",
     openCatalog: "Открыть каталог",
@@ -305,18 +283,7 @@ const en: UiMessages = {
     signIn: "Sign in",
     signingIn: "Signing in...",
     signInError: "Unable to sign in.",
-    phoneLabel: "Phone",
-    otpCodeLabel: "OTP Code",
-    requestOtp: "Request OTP",
-    requestingOtp: "Requesting...",
-    verifyAndOpenCatalog: "Verify and sign in",
-    verifyingOtp: "Verifying...",
-    challengeId: "Challenge ID",
-    localDevCode: "Local dev OTP code",
-    otpRequested: "OTP requested. Enter the code to continue.",
     sessionCleared: "Session cleared.",
-    requestOtpError: "Unable to request OTP.",
-    verifyOtpError: "Unable to verify OTP code.",
     logoutError: "Unable to logout.",
     logout: "Logout",
     openCatalog: "Open catalog",

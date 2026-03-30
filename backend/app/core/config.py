@@ -16,22 +16,16 @@ class Settings(BaseSettings):
     access_token_secret: str = "dev-secret-do-not-use-in-prod"
     access_token_ttl_minutes: int = 30
 
-    otp_ttl_minutes: int = 5
-    otp_max_attempts: int = 5
-    otp_block_minutes: int = 15
-
     qr_ttl_hours: int = 24
 
     refresh_session_days: int = 30
 
-    admin_phone_numbers: str = ""
     admin_login: str = ""
     admin_password: str = ""
 
     simulation_media_dir: str = "storage/simulation_media"
     simulation_media_max_mb: int = 8
 
-    debug_return_otp_code: bool = False
     debug_mode: bool = False
 
     @field_validator("environment")

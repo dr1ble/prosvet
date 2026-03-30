@@ -17,8 +17,11 @@ Environment overrides:
 - BACKEND_PORT (default: 8000)
 - WEB_HOST (default: 127.0.0.1)
 - WEB_PORT (default: 3000)
+- WEB_DIR_NAME (default: web-admin if present, otherwise web)
 - CGC_WATCH (default: 1, set 0 to disable)
+- CGC_DATABASE (default: falkordb)
 - CGC_WATCH_PATH (default: project root)
+- CGC_LOG_FILE (default: .run/codegraph-watch.log)
 - KG_MEMORY_SYNC (default: 1, set 0 to disable auto sync)
 - KG_MEMORY_SYNC_MODE (default: auto, values: auto|force)
 - KG_MEMORY_FILE (default: .context/operations/kg_memory.jsonl)
@@ -29,18 +32,28 @@ fi
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
-WEB_DIR="$ROOT_DIR/web"
+WEB_DIR_NAME="${WEB_DIR_NAME:-}"
+if [[ -z "$WEB_DIR_NAME" ]]; then
+  if [[ -d "$ROOT_DIR/web-admin" ]]; then
+    WEB_DIR_NAME="web-admin"
+  else
+    WEB_DIR_NAME="web"
+  fi
+fi
+WEB_DIR="$ROOT_DIR/$WEB_DIR_NAME"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 STATE_DIR="$ROOT_DIR/.run"
 BACKEND_PID_FILE="$STATE_DIR/backend.pid"
 WEB_PID_FILE="$STATE_DIR/web.pid"
 CGC_PID_FILE="$STATE_DIR/codegraph-watch.pid"
+CGC_LOG_FILE="${CGC_LOG_FILE:-$STATE_DIR/codegraph-watch.log}"
 
 BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 WEB_HOST="${WEB_HOST:-127.0.0.1}"
 WEB_PORT="${WEB_PORT:-3000}"
 CGC_WATCH="${CGC_WATCH:-1}"
+CGC_DATABASE="${CGC_DATABASE:-falkordb}"
 CGC_WATCH_PATH="${CGC_WATCH_PATH:-$ROOT_DIR}"
 KG_MEMORY_SYNC="${KG_MEMORY_SYNC:-1}"
 KG_MEMORY_SYNC_MODE="${KG_MEMORY_SYNC_MODE:-auto}"
@@ -50,6 +63,10 @@ AUTO_INSTALL_BACKEND_DEPS="${AUTO_INSTALL_BACKEND_DEPS:-1}"
 
 if [[ "$CGC_WATCH_PATH" != /* ]]; then
   CGC_WATCH_PATH="$ROOT_DIR/$CGC_WATCH_PATH"
+fi
+
+if [[ "$CGC_LOG_FILE" != /* ]]; then
+  CGC_LOG_FILE="$ROOT_DIR/$CGC_LOG_FILE"
 fi
 
 if [[ "$KG_MEMORY_FILE" != /* ]]; then
@@ -297,6 +314,12 @@ if [[ ! -d "$WEB_DIR/node_modules" ]]; then
   (cd "$WEB_DIR" && npm install)
 fi
 
+if [[ ! -f "$WEB_DIR/package.json" ]]; then
+  echo "[run] Frontend directory is invalid: $WEB_DIR"
+  echo "[run] Set WEB_DIR_NAME=web-admin or WEB_DIR_NAME=web and retry."
+  exit 1
+fi
+
 echo "[run] Cleaning stale local dev processes..."
 cleanup_stale_processes
 
@@ -356,7 +379,7 @@ echo "[run] Starting backend on http://$BACKEND_HOST:$BACKEND_PORT"
 BACKEND_PID=$!
 echo "$BACKEND_PID" >"$BACKEND_PID_FILE"
 
-echo "[run] Starting web admin on http://$WEB_HOST:$WEB_PORT"
+echo "[run] Starting web app ($WEB_DIR_NAME) on http://$WEB_HOST:$WEB_PORT"
 (
   cd "$WEB_DIR"
   npm run dev -- --hostname "$WEB_HOST" --port "$WEB_PORT"
@@ -366,10 +389,11 @@ echo "$WEB_PID" >"$WEB_PID_FILE"
 
 if [[ "$CGC_WATCH" == "1" ]]; then
   if python3 -m codegraphcontext --version >/dev/null 2>&1; then
-    echo "[run] Starting CodeGraphContext watch on $CGC_WATCH_PATH"
+    echo "[run] Starting CodeGraphContext watch on $CGC_WATCH_PATH (database: $CGC_DATABASE)"
+    echo "[run] CGC logs: $CGC_LOG_FILE"
     (
       cd "$ROOT_DIR"
-      python3 -m codegraphcontext watch "$CGC_WATCH_PATH"
+      python3 -m codegraphcontext --database "$CGC_DATABASE" watch "$CGC_WATCH_PATH" >>"$CGC_LOG_FILE" 2>&1
     ) &
     CGC_PID=$!
     echo "$CGC_PID" >"$CGC_PID_FILE"

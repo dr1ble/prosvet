@@ -1,0 +1,21 @@
+<resources>
+    <string name="auth_brand_title">Просвет</string>
+    <string name="auth_welcome_back">С возвращением</string>
+    <string name="auth_login_subtitle">Войдите в аккаунт, чтобы продолжить обучение</string>
+    <string name="auth_label_login">Логин</string>
+    <string name="auth_label_password">Пароль</string>
+    <string name="auth_label_full_name">ФИО</string>
+    <string name="auth_label_repeat_password">Повторите пароль</string>
+    <string name="auth_show_password">Показать пароль</string>
+    <string name="auth_hide_password">Скрыть пароль</string>
+    <string name="auth_password_min_length">Минимум 6 символов</string>
+    <string name="auth_login_in_progress">Входим...</string>
+    <string name="auth_login">Войти</string>
+    <string name="auth_registration">Регистрация</string>
+    <string name="auth_registration_subtitle">Оставьте данные для создания аккаунта</string>
+    <string name="auth_forgot_password_hint">Если забыли пароль, обратитесь к администратору платформы</string>
+    <string name="auth_back_to_login">Ко входу</string>
+    <string name="auth_password_mismatch">Пароли не совпадают</string>
+    <string name="auth_registration_info">Самостоятельная регистрация скоро появится. Передайте данные администратору платформы.</string>
+    <string name="auth_create_account">Создать аккаунт</string>
+</resources>

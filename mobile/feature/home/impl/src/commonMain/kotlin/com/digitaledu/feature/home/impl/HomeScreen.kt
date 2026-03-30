@@ -17,15 +17,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.digitaledu.feature.catalog.api.CatalogIntent
+import com.digitaledu.feature.catalog.api.CatalogUiEntry
 import com.digitaledu.feature.catalog.api.CatalogUiState
 import com.digitaledu.feature.player.api.PlayerIntent
+import com.digitaledu.feature.player.api.PlayerUiEntry
 import com.digitaledu.feature.player.api.PlayerUiState
 import com.digitaledu.feature.profile.api.ProfileIntent
+import com.digitaledu.feature.profile.api.ProfileUiEntry
 import com.digitaledu.feature.profile.api.ProfileUiState
-import com.digitaledu.feature.home.impl.ui.CoursesContent
-import com.digitaledu.feature.home.impl.ui.LessonContent
-import com.digitaledu.feature.home.impl.ui.ProfileContent
-import com.digitaledu.feature.home.impl.ui.player.LessonPlayerScreen
+import digital_education_mobile.feature.home.`impl`.generated.resources.Res
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_courses
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_lesson
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_profile
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_courses
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_lesson
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_profile
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +42,9 @@ fun HomeScreen(
     catalogUiState: CatalogUiState,
     playerUiState: PlayerUiState,
     profileUiState: ProfileUiState,
-    mediaAccessToken: String?,
+    catalogUiEntry: CatalogUiEntry,
+    playerUiEntry: PlayerUiEntry,
+    profileUiEntry: ProfileUiEntry,
     resolveUrl: (String) -> String,
     snackbarHostState: SnackbarHostState,
     onCatalogIntent: (CatalogIntent) -> Unit,
@@ -43,15 +52,9 @@ fun HomeScreen(
     onProfileIntent: (ProfileIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (playerUiState.isFullscreenMode && playerUiState.hasBundle) {
-        val bundle = playerUiState.bundle ?: return
-        LessonPlayerScreen(
-            bundle = bundle,
-            currentScreenIndex = playerUiState.currentScreenIndex,
-            mediaAccessToken = mediaAccessToken,
-            activeHotspotHint = playerUiState.activeHotspotHint,
-            activeLessonReference = playerUiState.activeLessonReference,
-            completedScreens = playerUiState.completedScreens,
+    if (playerUiEntry.shouldShowFullscreen(playerUiState)) {
+        playerUiEntry.FullscreenContent(
+            uiState = playerUiState,
             onIntent = onPlayerIntent,
             resolveUrl = resolveUrl,
             modifier = modifier,
@@ -66,9 +69,9 @@ fun HomeScreen(
                 title = {
                     Text(
                         text = when (selectedTab) {
-                            HomeTab.Courses -> "Каталог курсов"
-                            HomeTab.Lesson -> "Обучение"
-                            HomeTab.Profile -> "Профиль"
+                            HomeTab.Courses -> stringResource(Res.string.home_title_courses)
+                            HomeTab.Lesson -> stringResource(Res.string.home_title_lesson)
+                            HomeTab.Profile -> stringResource(Res.string.home_title_profile)
                         },
                     )
                 },
@@ -90,11 +93,17 @@ fun HomeScreen(
         bottomBar = {
             NavigationBar {
                 HomeTab.entries.forEach { tab ->
+                    val label = when (tab) {
+                        HomeTab.Courses -> stringResource(Res.string.home_tab_courses)
+                        HomeTab.Lesson -> stringResource(Res.string.home_tab_lesson)
+                        HomeTab.Profile -> stringResource(Res.string.home_tab_profile)
+                    }
+
                     NavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = { onTabSelected(tab) },
-                        icon = { Icon(imageVector = tab.icon, contentDescription = tab.label) },
-                        label = { Text(text = tab.label) },
+                        icon = { Icon(imageVector = tab.icon, contentDescription = label) },
+                        label = { Text(text = label) },
                     )
                 }
             }
@@ -102,7 +111,7 @@ fun HomeScreen(
     ) { innerPadding ->
         when (selectedTab) {
             HomeTab.Courses -> {
-                CoursesContent(
+                catalogUiEntry.Content(
                     uiState = catalogUiState,
                     onIntent = onCatalogIntent,
                     modifier = Modifier
@@ -112,7 +121,7 @@ fun HomeScreen(
             }
 
             HomeTab.Lesson -> {
-                LessonContent(
+                playerUiEntry.TabContent(
                     uiState = playerUiState,
                     onIntent = onPlayerIntent,
                     modifier = Modifier
@@ -122,7 +131,7 @@ fun HomeScreen(
             }
 
             HomeTab.Profile -> {
-                ProfileContent(
+                profileUiEntry.Content(
                     uiState = profileUiState,
                     onIntent = onProfileIntent,
                     modifier = Modifier

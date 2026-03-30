@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.kotlin.compose)
 }
 
 kotlin {
@@ -13,6 +15,12 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.core.model)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(compose.runtime)
+            implementation(compose.ui)
+        }
+
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
 }

@@ -1,4 +1,3 @@
-import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -18,51 +17,14 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _normalize_phone(phone: str) -> str:
-    return "".join(char for char in phone if char.isdigit())
-
-
 def _normalize_login(login: str) -> str:
     return login.strip().lower()
-
-
-def _generate_otp_code() -> str:
-    return f"{secrets.randbelow(900_000) + 100_000:06d}"
-
-
-def _parse_admin_phones(raw: str) -> set[str]:
-    phones: set[str] = set()
-    for chunk in raw.split(","):
-        normalized = _normalize_phone(chunk)
-        if normalized:
-            phones.add(normalized)
-    return phones
 
 
 class AuthService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = AuthRepository(db)
-
-    def request_otp(self, phone: str) -> tuple[str, str | None]:
-        now = _utcnow()
-        normalized_phone = _normalize_phone(phone)
-        phone_hash = stable_hash(normalized_phone, settings.security_pepper)
-        latest = self.repo.get_latest_challenge(phone_hash)
-
-        if latest and latest.blocked_until and latest.blocked_until > now:
-            raise AuthError("OTP temporarily blocked. Try again later.", status_code=429)
-
-        otp_code = _generate_otp_code()
-        challenge = self.repo.create_challenge(
-            phone_hash=phone_hash,
-            code_hash=stable_hash(otp_code, settings.security_pepper),
-            expires_at=now + timedelta(minutes=settings.otp_ttl_minutes),
-        )
-
-        # SMS provider integration will deliver otp_code to user phone.
-        dev_code = otp_code if settings.debug_return_otp_code else None
-        return str(challenge.id), dev_code
 
     def login(self, login: str, password: str) -> AuthResponse:
         now = _utcnow()
@@ -86,45 +48,6 @@ class AuthService:
         auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
         return auth_response
 
-    def verify_otp(self, phone: str, code: str) -> AuthResponse:
-        now = _utcnow()
-        normalized_phone = _normalize_phone(phone)
-        phone_hash = stable_hash(normalized_phone, settings.security_pepper)
-        latest = self.repo.get_latest_challenge(phone_hash)
-
-        if latest is None:
-            raise AuthError("OTP challenge not found.", status_code=401)
-
-        if latest.blocked_until and latest.blocked_until > now:
-            raise AuthError("OTP temporarily blocked. Try again later.", status_code=429)
-
-        if latest.expires_at <= now:
-            self.repo.mark_challenge_expired(latest)
-            raise AuthError("OTP challenge expired.", status_code=401)
-
-        code_hash = stable_hash(code, settings.security_pepper)
-        if code_hash != latest.code_hash:
-            next_attempt = latest.attempts + 1
-            blocked_until = None
-            if next_attempt >= settings.otp_max_attempts:
-                blocked_until = now + timedelta(minutes=settings.otp_block_minutes)
-            self.repo.register_failed_attempt(latest, blocked_until=blocked_until)
-    
-            if blocked_until is not None:
-                raise AuthError("Too many attempts. OTP flow is temporarily blocked.", status_code=429)
-            raise AuthError("Invalid OTP code.", status_code=401)
-
-        self.repo.mark_challenge_verified(latest, now)
-        user = self.repo.get_user_by_phone_hash(phone_hash)
-        promoted_role = self._resolve_role_for_phone(normalized_phone)
-        if user is None:
-            user = self.repo.create_user(phone_hash=phone_hash, role=promoted_role)
-        elif user.role == UserRole.USER and promoted_role != UserRole.USER:
-            user.role = promoted_role
-
-        auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
-        return auth_response
-
     def activate_qr(self, token: str) -> AuthResponse:
         now = _utcnow()
         token_hash = stable_hash(token, settings.security_pepper)
@@ -137,7 +60,7 @@ class AuthService:
 
         # For now, create a user for one-time QR flow if not pre-bound.
         if qr_token.issued_by_user_id is None:
-            created_user = self.repo.create_user(phone_hash=stable_hash(f"qr:{qr_token.id}", settings.security_pepper))
+            created_user = self.repo.create_user()
             user_id = created_user.id
             role = created_user.role.value
         else:
@@ -200,13 +123,6 @@ class AuthService:
         )
         return AuthResponse(access_token=access_token, refresh_token=refresh_token, user_id=user_id)
 
-    @staticmethod
-    def _resolve_role_for_phone(normalized_phone: str) -> UserRole:
-        admin_phones = _parse_admin_phones(settings.admin_phone_numbers)
-        if normalized_phone in admin_phones:
-            return UserRole.ADMINISTRATOR
-        return UserRole.USER
-
     def _bootstrap_admin_if_needed(self, login: str, password: str) -> User | None:
         admin_login = _normalize_login(settings.admin_login)
         if not admin_login:
@@ -216,9 +132,7 @@ class AuthService:
         if login != admin_login or not admin_password or password != admin_password:
             return None
 
-        synthetic_phone_hash = stable_hash(f"login:{admin_login}", settings.security_pepper)
         return self.repo.create_user(
-            phone_hash=synthetic_phone_hash,
             role=UserRole.ADMINISTRATOR,
             login=admin_login,
             password_hash=hash_password(admin_password),

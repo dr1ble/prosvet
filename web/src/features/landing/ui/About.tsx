@@ -4,10 +4,10 @@ import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 
 const metrics = [
-  { value: "97%", label: "доводят модуль до конца" },
-  { value: "6,2 ч", label: "среднее время до первой сертификации" },
-  { value: "35+", label: "корпоративных команд в пилоте" },
-  { value: "24/7", label: "доступ к урокам и симуляциям" },
+  { value: "100%", label: "ориентация на граждан старшего возраста" },
+  { value: "120+", label: "сценариев по жизненным ситуациям" },
+  { value: "No-Code", label: "создание курсов и сценариев без кода" },
+  { value: "24/7", label: "доступ к урокам, практике и памяткам" },
 ];
 
 export function About() {
@@ -24,17 +24,17 @@ export function About() {
           className="rounded-[2rem] border border-slate-200 bg-slate-900 p-7 text-white shadow-2xl shadow-slate-900/15 sm:p-8"
         >
           <p className="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white/90">
-            Отзывы участников
+            Отзывы площадок
           </p>
           <blockquote className="mt-6 text-lg leading-8 text-white/95 sm:text-xl">
-            &ldquo;Я прохожу материал быстрее, потому что каждый урок сразу
-            закрепляется практикой. Это первый курс, который реально переносится
-            в рабочие задачи.&rdquo;
+            &ldquo;После запуска платформы участники стали увереннее
+            пользоваться Госуслугами и онлайн-банком. Прогресс стал прозрачным,
+            и поддержка приходит вовремя.&rdquo;
           </blockquote>
           <div className="mt-7 border-t border-white/20 pt-5">
-            <p className="text-sm font-semibold">Алексей Смирнов</p>
+            <p className="text-sm font-semibold">Центр активного долголетия</p>
             <p className="text-sm text-white/70">
-              Ведущий разработчик, команда центра мониторинга
+              Муниципальная программа цифровой адаптации
             </p>
           </div>
         </motion.article>
@@ -46,15 +46,15 @@ export function About() {
           transition={{ duration: 0.55 }}
         >
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand-600">
-            Почему «Просвет»
+            Почему выбирают «Просвет»
           </p>
           <h2 className="mt-3 max-w-xl text-balance text-3xl font-extrabold text-slate-900 sm:text-4xl">
-            Среда для непрерывного роста и прозрачной оценки навыков
+            Поддержка цифровой самостоятельности граждан
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            Мы проектируем обучение как продукт: короткие шаги, измеримый
-            результат, понятная аналитика для бизнеса и качественный UX для
-            студентов.
+            Платформа сочетает обучение и безопасную практику, снижает нагрузку
+            на очные консультации и помогает расширять охват без потери качества
+            сопровождения участников.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -77,7 +77,7 @@ export function About() {
             href="/dashboard"
             className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-brand-500/50 hover:text-brand-600"
           >
-            Открыть демонстрационную панель
+            Открыть панель координатора
             <ArrowUpRight className="h-4 w-4" />
           </a>
         </motion.div>

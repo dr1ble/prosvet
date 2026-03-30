@@ -1,7 +1,29 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kotlin.compose)
+}
+
+val composeResourceModules = listOf(
+    project(":core:ui") to "digital_education_mobile.core.ui.generated.resources",
+    project(":feature:auth:impl") to "digital_education_mobile.feature.auth.impl.generated.resources",
+    project(":feature:catalog:impl") to "digital_education_mobile.feature.catalog.impl.generated.resources",
+    project(":feature:home:impl") to "digital_education_mobile.feature.home.impl.generated.resources",
+    project(":feature:player:impl") to "digital_education_mobile.feature.player.impl.generated.resources",
+    project(":feature:profile:impl") to "digital_education_mobile.feature.profile.impl.generated.resources",
+)
+
+val syncComposeResourceAssets = tasks.register<Sync>("syncComposeResourceAssets") {
+    val destination = layout.buildDirectory.dir("generated/composeResourceAssets/composeResources")
+    into(destination)
+
+    composeResourceModules.forEach { (moduleProject, packageDir) ->
+        from(moduleProject.layout.buildDirectory.dir("generated/compose/resourceGenerator/preparedResources/commonMain/composeResources")) {
+            into(packageDir)
+        }
+        dependsOn("${moduleProject.path}:prepareComposeResourcesTaskForCommonMain")
+    }
 }
 
 android {
@@ -58,6 +80,12 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    sourceSets["main"].assets.srcDir("$buildDir/generated/composeResourceAssets")
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(syncComposeResourceAssets)
 }
 
 dependencies {
@@ -78,6 +106,7 @@ dependencies {
     implementation(libs.coil3.compose)
     implementation(libs.coil3.network.okhttp)
     implementation(libs.koin.core)
+    implementation(compose.components.resources)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

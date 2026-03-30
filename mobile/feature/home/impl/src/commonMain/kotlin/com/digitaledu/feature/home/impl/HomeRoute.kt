@@ -9,30 +9,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.ui.ObserveEffects
 import com.digitaledu.feature.catalog.api.CatalogEffect
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
 import com.digitaledu.feature.catalog.api.CatalogIntent
+import com.digitaledu.feature.catalog.api.CatalogUiEntry
 import com.digitaledu.feature.player.api.PlayerEffect
 import com.digitaledu.feature.player.api.PlayerFeatureHost
+import com.digitaledu.feature.player.api.PlayerUiEntry
 import com.digitaledu.feature.profile.api.ProfileEffect
 import com.digitaledu.feature.profile.api.ProfileFeatureHost
 import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
-import org.koin.mp.KoinPlatform
+import com.digitaledu.feature.profile.api.ProfileUiEntry
 
 @Composable
 fun HomeRoute(
     onLoggedOut: () -> Unit,
+    catalogFeatureHost: CatalogFeatureHost,
+    playerFeatureHost: PlayerFeatureHost,
+    profileFeatureHost: ProfileFeatureHost,
+    catalogUiEntry: CatalogUiEntry,
+    playerUiEntry: PlayerUiEntry,
+    profileUiEntry: ProfileUiEntry,
     modifier: Modifier = Modifier,
 ) {
-    val koin = remember { KoinPlatform.getKoin() }
-    val catalogFeatureHost = remember { koin.get<CatalogFeatureHost>() }
-    val playerFeatureHost = remember { koin.get<PlayerFeatureHost>() }
-    val profileFeatureHost = remember { koin.get<ProfileFeatureHost>() }
-    val authRepository = remember { koin.get<AuthRepository>() }
-
     val catalogUiState by catalogFeatureHost.uiState.collectAsState()
     val playerUiState by playerFeatureHost.uiState.collectAsState()
     val profileUiState by profileFeatureHost.uiState.collectAsState()
@@ -71,18 +72,15 @@ fun HomeRoute(
         }
     }
 
-    val authTokens by remember { authRepository.observeTokens() }
-        .collectAsState(initial = authRepository.getCachedTokens())
-
-    val mediaAccessToken = authTokens?.accessToken
-
     HomeScreen(
         selectedTab = selectedTab,
         onTabSelected = { tab -> selectedTab = tab },
         catalogUiState = catalogUiState,
         playerUiState = playerUiState,
         profileUiState = profileUiState,
-        mediaAccessToken = mediaAccessToken,
+        catalogUiEntry = catalogUiEntry,
+        playerUiEntry = playerUiEntry,
+        profileUiEntry = profileUiEntry,
         resolveUrl = playerFeatureHost::resolveImageUrl,
         snackbarHostState = snackbarHostState,
         onCatalogIntent = catalogFeatureHost::processIntent,

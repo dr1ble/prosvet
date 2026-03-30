@@ -19,8 +19,9 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
   return (
     <main className={styles.page}>
       <div className={styles.background}>
-        <div className={`${styles.blob} ${styles.blob1}`} />
-        <div className={`${styles.blob} ${styles.blob2}`} />
+        <div className={`${styles.blob} ${styles.blobMain}`} />
+        <div className={`${styles.blob} ${styles.blobAccent}`} />
+        <div className={styles.grid} />
       </div>
       <section className={styles.topBar}>
         <LanguageSwitch

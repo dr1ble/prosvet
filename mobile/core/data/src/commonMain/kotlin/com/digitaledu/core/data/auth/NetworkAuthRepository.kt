@@ -1,7 +1,6 @@
 package com.digitaledu.core.data.auth
 
 import com.digitaledu.core.model.auth.AuthTokens
-import com.digitaledu.core.model.auth.OtpChallenge
 import com.digitaledu.core.network.AuthNetworkDataSource
 import com.digitaledu.core.network.NetworkException
 import kotlinx.coroutines.flow.Flow
@@ -11,19 +10,6 @@ class NetworkAuthRepository(
     private val networkDataSource: AuthNetworkDataSource,
     private val authSessionStore: AuthSessionStore,
 ) : AuthRepository {
-    override suspend fun requestOtp(phoneNumber: String): OtpChallenge {
-        return networkDataSource.requestOtp(phoneNumber = phoneNumber)
-    }
-
-    override suspend fun verifyOtp(phoneNumber: String, code: String): AuthTokens {
-        val tokens = networkDataSource.verifyOtp(
-            phoneNumber = phoneNumber,
-            code = code,
-        )
-        authSessionStore.update(tokens)
-        return tokens
-    }
-
     override suspend fun login(login: String, password: String): AuthTokens {
         val tokens = networkDataSource.login(
             login = login,

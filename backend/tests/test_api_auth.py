@@ -11,39 +11,6 @@ def client() -> TestClient:
     return TestClient(app)
 
 
-class TestAuthOTPEndpoints:
-    """Tests for OTP endpoints."""
-
-    def test_otp_request_valid_phone(self, client: TestClient) -> None:
-        """Test OTP request with valid phone."""
-        response = client.post(
-            "/api/v1/auth/otp/request",
-            json={"phone": "+79991234567"},
-        )
-        assert response.status_code in (200, 429)
-        if response.status_code == 200:
-            body = response.json()
-            assert body["status"] == "otp_sent"
-            assert isinstance(body["challenge_id"], str)
-            assert body["challenge_id"]
-
-    def test_otp_request_invalid_phone(self, client: TestClient) -> None:
-        """Test OTP request with invalid phone."""
-        response = client.post(
-            "/api/v1/auth/otp/request",
-            json={"phone": "invalid"},
-        )
-        assert response.status_code in (200, 422, 429)
-
-    def test_otp_request_empty_phone(self, client: TestClient) -> None:
-        """Test OTP request with empty phone."""
-        response = client.post(
-            "/api/v1/auth/otp/request",
-            json={"phone": ""},
-        )
-        assert response.status_code == 422
-
-
 class TestAuthLoginEndpoints:
     """Tests for login endpoints."""
 

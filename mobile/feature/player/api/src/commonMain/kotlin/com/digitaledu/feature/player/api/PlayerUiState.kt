@@ -8,6 +8,7 @@ data class PlayerUiState(
     val bundle: CatalogBundle? = null,
     val currentScreenIndex: Int = 0,
     val isFullscreenMode: Boolean = false,
+    val mediaAccessToken: String? = null,
     val completedScreens: Set<Int> = emptySet(),
     val activeHotspotHint: Hotspot? = null,
     val activeLessonReference: LessonReference? = null,

@@ -5,5 +5,14 @@ import org.koin.core.module.Module
 import org.koin.dsl.module
 
 fun homeFeatureModule(): Module = module {
-    single<HomeFeatureEntry> { HomeFeatureEntryImpl() }
+    single<HomeFeatureEntry> {
+        HomeFeatureEntryImpl(
+            catalogFeatureHost = get(),
+            playerFeatureHost = get(),
+            profileFeatureHost = get(),
+            catalogUiEntry = get(),
+            playerUiEntry = get(),
+            profileUiEntry = get(),
+        )
+    }
 }

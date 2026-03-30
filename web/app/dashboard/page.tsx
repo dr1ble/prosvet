@@ -24,7 +24,6 @@ type DashboardTile = {
   description: string;
   href?: string;
   requiredPermissions: string[];
-  phaseLabel?: string;
 };
 
 function hasAnyPermission(
@@ -129,7 +128,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ? "Проверка качества, комментарии и решения по публикации."
           : "Quality review, moderation comments, and publication decisions.",
       requiredPermissions: ["moderation.review", "catalog.release.approve"],
-      phaseLabel: "Phase 2",
     },
     {
       id: "groups",
@@ -140,7 +138,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ? "Управление учебными группами и назначением курсов."
           : "Manage learning groups and assign courses.",
       requiredPermissions: ["groups.manage"],
-      phaseLabel: "Phase 2",
     },
     {
       id: "users",
@@ -150,7 +147,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ? "Роли, разрешения и доступ к административным действиям."
           : "Roles, permissions, and access control for admin actions.",
       requiredPermissions: ["users.manage", "rbac.manage"],
-      phaseLabel: "Phase 2",
     },
   ];
   const visibleTiles = tiles.filter((tile) =>
@@ -161,7 +157,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     <main className={styles.page}>
       <header className={styles.topBar}>
         <div className={styles.brandBlock}>
-          <p className={styles.brandName}>Learning Console</p>
+          <p className={styles.brandName}>
+            {language === "ru" ? "Панель куратора" : "Curator Workspace"}
+          </p>
           <h1 className={styles.pageTitle}>{dashboardTitle}</h1>
           <p className={styles.brandCaption}>{dashboardSubtitle}</p>
         </div>
@@ -209,9 +207,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             >
               <div className={styles.tileHeader}>
                 <h2 className={styles.functionTitle}>{tile.title}</h2>
-                {tile.phaseLabel && (
-                  <span className={styles.phaseBadge}>{tile.phaseLabel}</span>
-                )}
               </div>
               <p className={styles.functionDescription}>{tile.description}</p>
               {tile.href ? (

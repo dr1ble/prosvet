@@ -5,20 +5,20 @@ import { motion } from "framer-motion";
 import { ArrowRight, PlayCircle, Star } from "lucide-react";
 
 const trustMetrics = [
-  { value: "4,9 из 5", label: "средний рейтинг" },
-  { value: "120+", label: "интерактивных курсов" },
-  { value: "50 тыс.", label: "активных студентов" },
+  { value: "120+", label: "сценариев по гос- и бытовым сервисам" },
+  { value: "87%", label: "завершают модуль с первого прохода" },
+  { value: "24/7", label: "доступ для граждан и кураторов" },
 ];
 
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden px-4 pb-10 pt-10 sm:px-6 sm:pb-12 sm:pt-12 lg:pb-14 lg:pt-14">
+    <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden px-4 py-10 sm:px-6 sm:py-12 lg:py-14">
       <div className="pointer-events-none absolute inset-0 -z-20 bg-grid" />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-white via-slate-50 to-slate-100/60" />
       <div className="pointer-events-none absolute -left-24 top-12 -z-10 h-72 w-72 rounded-full bg-brand-300/25 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 top-6 -z-10 h-72 w-72 rounded-full bg-cta-500/20 blur-3xl" />
 
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1.22fr_0.78fr]">
         <div>
           <motion.p
             initial={{ opacity: 0, y: 16 }}
@@ -27,18 +27,18 @@ export function Hero() {
             className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
           >
             <span className="inline-flex h-2 w-2 rounded-full bg-brand-500" />
-            Просвет для цифровой грамотности
+            Социальный цифровой проект
           </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.05 }}
-            className="text-balance text-4xl font-extrabold leading-tight text-slate-900 sm:text-5xl md:text-6xl"
+            className="text-4xl font-extrabold leading-[1.05] text-slate-900 sm:text-5xl md:text-6xl"
           >
-            Обучение в формате
-            <span className="block bg-gradient-to-r from-brand-500 to-cta-500 bg-clip-text text-transparent">
-              пошаговой траектории
+            <span className="block">Просвет</span>
+            <span className="mt-2 block bg-gradient-to-r from-brand-500 to-cta-500 bg-clip-text text-transparent">
+              платформа цифровой адаптации
             </span>
           </motion.h1>
 
@@ -48,8 +48,9 @@ export function Hero() {
             transition={{ duration: 0.6, delay: 0.12 }}
             className="mt-6 max-w-2xl text-balance text-lg leading-8 text-slate-600"
           >
-            Видео, интерактивные симуляции и проверка знаний в едином ритме.
-            Курсы для корпоративных команд и индивидуального пути развития.
+            Обучение в безопасной среде для работы с Госуслугами, банком,
+            медицинскими и городскими сервисами без риска ошибок. Граждане могут
+            проходить программу самостоятельно или с сопровождением.
           </motion.p>
 
           <motion.div
@@ -62,7 +63,7 @@ export function Hero() {
               href="/auth"
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-7 py-3 text-base font-bold text-white transition hover:-translate-y-0.5 hover:bg-brand-500"
             >
-              Открыть консоль
+              Открыть кабинет куратора
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a
@@ -106,10 +107,10 @@ export function Hero() {
           <article className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-300/30">
             <div className="mb-5 flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-500">
-                Сегодняшний путь
+                Учебный сценарий
               </p>
               <p className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                45 мин
+                25 мин
               </p>
             </div>
 
@@ -119,7 +120,7 @@ export function Hero() {
                   Шаг 1
                 </p>
                 <p className="mt-1 text-sm font-bold text-slate-900">
-                  Видеомодуль: Фишинг и социальная инженерия
+                  Видеоинструкция: запись к врачу через Госуслуги
                 </p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -127,7 +128,7 @@ export function Hero() {
                   Шаг 2
                 </p>
                 <p className="mt-1 text-sm font-bold text-slate-900">
-                  Симуляция: разбор инцидента в почте
+                  Симуляция: выбор поликлиники и времени приема
                 </p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -135,16 +136,16 @@ export function Hero() {
                   Шаг 3
                 </p>
                 <p className="mt-1 text-sm font-bold text-slate-900">
-                  Тест и персональная памятка
+                  Квиз и памятка: перенос и отмена записи
                 </p>
               </div>
             </div>
 
             <div className="mt-6 flex items-center justify-between rounded-2xl bg-slate-900 px-4 py-3 text-white">
-              <p className="text-sm font-semibold">Прогресс за неделю</p>
+              <p className="text-sm font-semibold">Эффект программы</p>
               <p className="inline-flex items-center gap-1 text-sm font-bold">
                 <Star className="h-4 w-4 text-amber-400" />
-                +28%
+                Вы освоили базовые цифровые сервисы
               </p>
             </div>
           </article>

@@ -1,5 +1,7 @@
 """Integration tests for catalog API endpoints."""
 
+from app.core.config import settings
+
 
 def test_list_courses_public(api_client) -> None:
     response = api_client.get("/api/v1/catalog/courses")
@@ -20,6 +22,35 @@ def test_list_courses_with_flags(api_client) -> None:
         params={"include_drafts": "true", "include_archived": "false"},
     )
     assert response.status_code == 200
+
+
+def test_get_course_cover_file_returns_png(api_client, tmp_path, monkeypatch) -> None:
+    storage_root = tmp_path / "storage"
+    simulation_media_dir = storage_root / "simulation_media"
+    simulation_media_dir.mkdir(parents=True)
+    covers_dir = storage_root / "catalog_covers"
+    covers_dir.mkdir(parents=True)
+    expected = b"mock-png-data"
+    (covers_dir / "gosuslugi-basic.png").write_bytes(expected)
+
+    monkeypatch.setattr(settings, "simulation_media_dir", str(simulation_media_dir))
+
+    response = api_client.get("/api/v1/catalog/courses/gosuslugi-basic/cover")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content == expected
+
+
+def test_get_course_cover_file_returns_404_when_missing(api_client, tmp_path, monkeypatch) -> None:
+    storage_root = tmp_path / "storage"
+    simulation_media_dir = storage_root / "simulation_media"
+    simulation_media_dir.mkdir(parents=True)
+
+    monkeypatch.setattr(settings, "simulation_media_dir", str(simulation_media_dir))
+
+    response = api_client.get("/api/v1/catalog/courses/missing-course/cover")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Course cover not found."
 
 
 def test_get_latest_release_not_found(api_client) -> None:

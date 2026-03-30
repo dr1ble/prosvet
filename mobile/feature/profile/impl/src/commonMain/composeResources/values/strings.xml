@@ -1,0 +1,7 @@
+<resources>
+    <string name="profile_title">Профиль пользователя</string>
+    <string name="profile_subtitle">Управление сессией и выходом из приложения.</string>
+    <string name="profile_logout_loading">Выходим...</string>
+    <string name="profile_logout">Выйти из аккаунта</string>
+    <string name="profile_error_dismiss">Понятно</string>
+</resources>

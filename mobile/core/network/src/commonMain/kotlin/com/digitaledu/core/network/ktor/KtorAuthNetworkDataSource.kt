@@ -1,7 +1,6 @@
 package com.digitaledu.core.network.ktor
 
 import com.digitaledu.core.model.auth.AuthTokens
-import com.digitaledu.core.model.auth.OtpChallenge
 import com.digitaledu.core.network.AuthNetworkDataSource
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -14,29 +13,6 @@ import io.ktor.http.contentType
 class KtorAuthNetworkDataSource(
     private val client: HttpClient,
 ) : AuthNetworkDataSource {
-
-    override suspend fun requestOtp(phoneNumber: String): OtpChallenge {
-        return executeCall {
-            val response = postJson<OtpRequestResponse>(
-                path = "api/v1/auth/otp/request",
-                payload = OtpRequestPayload(phone = phoneNumber),
-            )
-
-            OtpChallenge(
-                challengeId = response.challengeId,
-                devCode = response.devCode,
-            )
-        }
-    }
-
-    override suspend fun verifyOtp(phoneNumber: String, code: String): AuthTokens {
-        return executeCall {
-            postJson<AuthResponse>(
-                path = "api/v1/auth/otp/verify",
-                payload = OtpVerifyPayload(phone = phoneNumber, code = code),
-            ).toAuthTokens()
-        }
-    }
 
     override suspend fun login(login: String, password: String): AuthTokens {
         return executeCall {

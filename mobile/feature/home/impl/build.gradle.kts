@@ -45,11 +45,6 @@ kotlin {
             implementation(libs.koin.core)
         }
         
-        // Create jvmAndroid source set for shared JVM/Android dependencies
-        val jvmAndroid by creating {
-            dependsOn(commonMain)
-        }
-        
         val iosX64Main by getting
         iosX64Main.dependencies {
             implementation(libs.coil3.network.ktor)
@@ -67,7 +62,6 @@ kotlin {
         
         val androidMain by getting
         androidMain.apply {
-            dependsOn(jvmAndroid)
             dependencies {
                 implementation(compose.preview)
                 implementation(libs.androidx.activity.compose)
@@ -81,7 +75,6 @@ kotlin {
         
         val jvmMain by getting
         jvmMain.apply {
-            dependsOn(jvmAndroid)
             dependencies {
                 implementation(libs.coil3.network.okhttp)
                 // Lifecycle dependencies (Android/JVM only)

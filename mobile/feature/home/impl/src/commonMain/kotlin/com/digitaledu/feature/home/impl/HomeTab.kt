@@ -7,19 +7,15 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class HomeTab(
-    val label: String,
     val icon: ImageVector,
 ) {
     Courses(
-        label = "Курсы",
         icon = Icons.Rounded.Home,
     ),
     Lesson(
-        label = "Обучение",
         icon = Icons.AutoMirrored.Rounded.MenuBook,
     ),
     Profile(
-        label = "Профиль",
         icon = Icons.Rounded.Person,
     ),
 }
