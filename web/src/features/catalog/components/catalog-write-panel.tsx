@@ -13,6 +13,7 @@ import {
   listLessonTasks,
   reorderCourseLesson,
   reorderLessonTask,
+  updateLessonTask,
 } from "@/features/catalog/builder-api";
 import type {
   CourseCreateInput,
@@ -243,6 +244,8 @@ export function CatalogWritePanel({
   const [taskType, setTaskType] = useState<TaskType>("theory_text");
   const [lessonState, setLessonState] = useState<RequestState>(initialState);
   const [taskState, setTaskState] = useState<RequestState>(initialState);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [taskPayload, setTaskPayload] = useState<Record<string, unknown>>({});
 
   const updateScreenDraft = (localId: string, patch: Partial<ScreenDraft>) => {
     setScreenDrafts((previous) =>
@@ -487,6 +490,51 @@ export function CatalogWritePanel({
         pending: false,
         message:
           error instanceof Error ? error.message : "Failed to reorder task.",
+        isError: true,
+      });
+    }
+  };
+
+  const handleEditTask = (task: LessonTaskDto) => {
+    setEditingTaskId(task.id);
+    setTaskPayload(task.payload);
+    setTaskTitle(task.title);
+    setTaskType(task.task_type as TaskType);
+  };
+
+  const handleCancelEditTask = () => {
+    setEditingTaskId(null);
+    setTaskPayload({});
+    setTaskTitle("");
+    setTaskType("theory_text");
+  };
+
+  const handleSaveTask = async () => {
+    if (!editingTaskId) return;
+    setTaskState({ pending: true, message: null, isError: false });
+    try {
+      await updateLessonTask(editingTaskId, {
+        title: taskTitle,
+        required: true,
+        payload: taskPayload,
+      });
+      setTaskState({
+        pending: false,
+        message: language === "ru" ? "Задание сохранено." : "Task saved.",
+        isError: false,
+      });
+      setEditingTaskId(null);
+      setTaskPayload({});
+      setTaskTitle("");
+      setTaskType("theory_text");
+      if (selectedLessonId) {
+        await refreshTasks(selectedLessonId);
+      }
+    } catch (error) {
+      setTaskState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to save task.",
         isError: true,
       });
     }
@@ -918,6 +966,14 @@ export function CatalogWritePanel({
                           </button>
                           <button
                             type="button"
+                            className={styles.smallButton}
+                            onClick={() => handleEditTask(task)}
+                            title={language === "ru" ? "Редактировать" : "Edit"}
+                          >
+                            ✎
+                          </button>
+                          <button
+                            type="button"
                             className={styles.smallButtonDanger}
                             onClick={() => handleArchiveTask(task.id)}
                             title={language === "ru" ? "Удалить" : "Delete"}
@@ -945,6 +1001,238 @@ export function CatalogWritePanel({
                 </ul>
               )}
             </div>
+
+            {editingTaskId && (
+              <div className={styles.taskEditPanel}>
+                <h4 className={styles.subTitle}>
+                  {language === "ru" ? "Редактирование задания" : "Edit task"}
+                </h4>
+
+                <div className={styles.row}>
+                  <label className={styles.field}>
+                    <span className={styles.label}>
+                      {language === "ru" ? "Название" : "Title"}
+                    </span>
+                    <input
+                      className={styles.input}
+                      value={taskTitle}
+                      onChange={(e) => setTaskTitle(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.label}>
+                      {language === "ru" ? "Тип" : "Type"}
+                    </span>
+                    <select
+                      className={styles.input}
+                      value={taskType}
+                      onChange={(e) => setTaskType(e.target.value as TaskType)}
+                      disabled
+                    >
+                      <option value="theory_text">
+                        {language === "ru" ? "Теория (текст)" : "Theory (text)"}
+                      </option>
+                      <option value="theory_video">
+                        {language === "ru"
+                          ? "Теория (видео)"
+                          : "Theory (video)"}
+                      </option>
+                      <option value="quiz">
+                        {language === "ru" ? "Тест" : "Quiz"}
+                      </option>
+                      <option value="simulation">
+                        {language === "ru" ? "Симуляция" : "Simulation"}
+                      </option>
+                      <option value="cheat_sheet">
+                        {language === "ru" ? "Памятка" : "Cheat sheet"}
+                      </option>
+                    </select>
+                  </label>
+                </div>
+
+                {taskType === "theory_text" && (
+                  <label className={styles.field}>
+                    <span className={styles.label}>
+                      {language === "ru"
+                        ? "Содержание (Markdown)"
+                        : "Content (Markdown)"}
+                    </span>
+                    <textarea
+                      className={`${styles.input} ${styles.textarea}`}
+                      value={(taskPayload.content as string) ?? ""}
+                      onChange={(e) =>
+                        setTaskPayload({
+                          ...taskPayload,
+                          content: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        language === "ru" ? "Введите текст..." : "Enter text..."
+                      }
+                    />
+                  </label>
+                )}
+
+                {taskType === "theory_video" && (
+                  <>
+                    <div className={styles.row}>
+                      <label className={styles.field}>
+                        <span className={styles.label}>
+                          {language === "ru" ? "URL видео" : "Video URL"}
+                        </span>
+                        <input
+                          className={styles.input}
+                          value={(taskPayload.video_url as string) ?? ""}
+                          onChange={(e) =>
+                            setTaskPayload({
+                              ...taskPayload,
+                              video_url: e.target.value,
+                            })
+                          }
+                          placeholder="https://..."
+                        />
+                      </label>
+                      <label className={styles.field}>
+                        <span className={styles.label}>
+                          {language === "ru"
+                            ? "Длительность (сек)"
+                            : "Duration (sec)"}
+                        </span>
+                        <input
+                          className={styles.input}
+                          type="number"
+                          value={(taskPayload.duration as number) ?? 0}
+                          onChange={(e) =>
+                            setTaskPayload({
+                              ...taskPayload,
+                              duration: parseInt(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <label className={styles.field}>
+                      <span className={styles.label}>
+                        {language === "ru" ? "Транскрипт" : "Transcript"}
+                      </span>
+                      <textarea
+                        className={`${styles.input} ${styles.textarea}`}
+                        value={(taskPayload.transcript as string) ?? ""}
+                        onChange={(e) =>
+                          setTaskPayload({
+                            ...taskPayload,
+                            transcript: e.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                  </>
+                )}
+
+                {taskType === "quiz" && (
+                  <label className={styles.field}>
+                    <span className={styles.label}>
+                      {language === "ru"
+                        ? "Вопросы (JSON)"
+                        : "Questions (JSON)"}
+                    </span>
+                    <textarea
+                      className={`${styles.input} ${styles.codearea}`}
+                      value={JSON.stringify(
+                        taskPayload.questions ?? [],
+                        null,
+                        2,
+                      )}
+                      onChange={(e) => {
+                        try {
+                          const parsed = JSON.parse(e.target.value);
+                          setTaskPayload({ ...taskPayload, questions: parsed });
+                        } catch {
+                          // ignore invalid JSON while typing
+                        }
+                      }}
+                      placeholder='[{"question": "...", "options": [...], "correct": 0}]'
+                    />
+                  </label>
+                )}
+
+                {taskType === "simulation" && (
+                  <label className={styles.field}>
+                    <span className={styles.label}>
+                      {language === "ru"
+                        ? "Конфигурация симуляции (JSON)"
+                        : "Simulation config (JSON)"}
+                    </span>
+                    <textarea
+                      className={`${styles.input} ${styles.codearea}`}
+                      value={JSON.stringify(taskPayload.config ?? {}, null, 2)}
+                      onChange={(e) => {
+                        try {
+                          const parsed = JSON.parse(e.target.value);
+                          setTaskPayload({ ...taskPayload, config: parsed });
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                      placeholder='{"image": "...", "hotspots": [...]}'
+                    />
+                  </label>
+                )}
+
+                {taskType === "cheat_sheet" && (
+                  <label className={styles.field}>
+                    <span className={styles.label}>
+                      {language === "ru" ? "Содержание" : "Content"}
+                    </span>
+                    <textarea
+                      className={`${styles.input} ${styles.textarea}`}
+                      value={(taskPayload.content as string) ?? ""}
+                      onChange={(e) =>
+                        setTaskPayload({
+                          ...taskPayload,
+                          content: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        language === "ru" ? "Памятка..." : "Cheat sheet..."
+                      }
+                    />
+                  </label>
+                )}
+
+                <div className={styles.actions}>
+                  <button
+                    className={styles.button}
+                    disabled={taskState.pending}
+                    type="button"
+                    onClick={handleSaveTask}
+                  >
+                    {taskState.pending
+                      ? language === "ru"
+                        ? "Сохранение..."
+                        : "Saving..."
+                      : language === "ru"
+                        ? "Сохранить"
+                        : "Save"}
+                  </button>
+                  <button
+                    className={styles.ghostButton}
+                    type="button"
+                    onClick={handleCancelEditTask}
+                  >
+                    {language === "ru" ? "Отмена" : "Cancel"}
+                  </button>
+                </div>
+                {taskState.message && (
+                  <p
+                    className={`${styles.message} ${taskState.isError ? styles.error : styles.ok}`}
+                  >
+                    {taskState.message}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </section>

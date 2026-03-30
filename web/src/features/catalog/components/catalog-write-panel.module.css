@@ -349,6 +349,16 @@
   gap: 8px;
 }
 
+.taskEditPanel {
+  border: 1px solid rgba(31, 116, 226, 0.3);
+  border-radius: 12px;
+  background: rgba(245, 250, 255, 0.96);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 @media (max-width: 760px) {
   .row {
     grid-template-columns: 1fr;
