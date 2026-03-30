@@ -1,6 +1,6 @@
 """add_course_lessons_and_lesson_tasks
 
-Revision ID: 0012_add_course_lessons_and_lesson_tasks
+Revision ID: 0012_add_lesson_tasks
 Revises: 0011_remove_otp_and_phone_hash
 Create Date: 2026-03-30 12:00:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0012_add_course_lessons_and_lesson_tasks"
+revision: str = "0012_add_lesson_tasks"
 down_revision: Union[str, None] = "0011_remove_otp_and_phone_hash"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
