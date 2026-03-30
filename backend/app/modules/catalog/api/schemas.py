@@ -165,3 +165,32 @@ class LessonTaskOut(BaseModel):
 
 class LessonTaskReorderIn(_BaseSchema):
     order_index: int = Field(ge=1, le=10_000)
+
+
+class CourseVersionCreateIn(_BaseSchema):
+    version: str = Field(min_length=5, max_length=32, pattern=r"^\d+\.\d+\.\d+$")
+    changelog: str | None = Field(default=None, max_length=10_000)
+
+
+class CourseVersionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    course_id: UUID
+    version: str
+    changelog: str | None
+    status: str
+    snapshot_json: dict[str, Any]
+    published_at: datetime | None
+    created_at: datetime
+
+
+class CourseVersionDiffOut(BaseModel):
+    version_a_id: UUID
+    version_b_id: UUID
+    added_lessons: list[dict[str, Any]]
+    removed_lessons: list[dict[str, Any]]
+    modified_lessons: list[dict[str, Any]]
+    added_tasks: list[dict[str, Any]]
+    removed_tasks: list[dict[str, Any]]
+    modified_tasks: list[dict[str, Any]]

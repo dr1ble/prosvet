@@ -4,10 +4,12 @@ import type {
   CourseLessonCreateInput,
   CourseLessonDto,
   CourseLessonUpdateInput,
+  CourseStructure,
   LessonTaskCreateInput,
   LessonTaskDto,
   LessonTaskUpdateInput,
   ReorderInput,
+  ValidationResult,
 } from "./types";
 
 async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
@@ -157,5 +159,19 @@ export function duplicateLessonTask(taskId: string): Promise<LessonTaskDto> {
       method: "POST",
       body: JSON.stringify({}),
     },
+  );
+}
+
+export function getCourseStructure(courseId: string): Promise<CourseStructure> {
+  return requestJson<CourseStructure>(
+    `/api/admin/catalog/courses/${courseId}/structure`,
+    { method: "GET" },
+  );
+}
+
+export function validateCourse(courseId: string): Promise<ValidationResult> {
+  return requestJson<ValidationResult>(
+    `/api/admin/catalog/courses/${courseId}/validate`,
+    { method: "POST" },
   );
 }

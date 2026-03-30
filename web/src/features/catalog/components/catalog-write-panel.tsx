@@ -9,11 +9,13 @@ import {
   createCourseLesson,
   createLessonTask,
   duplicateLessonTask,
+  getCourseStructure,
   listCourseLessons,
   listLessonTasks,
   reorderCourseLesson,
   reorderLessonTask,
   updateLessonTask,
+  validateCourse,
 } from "@/features/catalog/builder-api";
 import type {
   CourseCreateInput,
@@ -246,6 +248,24 @@ export function CatalogWritePanel({
   const [taskState, setTaskState] = useState<RequestState>(initialState);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [taskPayload, setTaskPayload] = useState<Record<string, unknown>>({});
+
+  // Builder actions state
+  const [validationResult, setValidationResult] = useState<{
+    valid: boolean;
+    errors: Array<{ type: string; message: string }>;
+    warnings: Array<{ type: string; message: string }>;
+  } | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [courseStructure, setCourseStructure] = useState<{
+    course_id: string;
+    course_title: string;
+    lessons: Array<{
+      id: string;
+      title: string;
+      tasks: Array<{ id: string; task_type: string; title: string }>;
+    }>;
+  } | null>(null);
+  const [builderPending, setBuilderPending] = useState(false);
 
   const updateScreenDraft = (localId: string, patch: Partial<ScreenDraft>) => {
     setScreenDrafts((previous) =>
@@ -608,6 +628,44 @@ export function CatalogWritePanel({
           error instanceof Error ? error.message : "Failed to create task.",
         isError: true,
       });
+    }
+  };
+
+  const handleValidateCourse = async () => {
+    if (!selectedCourseId) return;
+    setBuilderPending(true);
+    setValidationResult(null);
+    try {
+      const result = await validateCourse(selectedCourseId);
+      setValidationResult(result);
+    } catch (error) {
+      setValidationResult({
+        valid: false,
+        errors: [
+          {
+            type: "error",
+            message:
+              error instanceof Error ? error.message : "Validation failed",
+          },
+        ],
+        warnings: [],
+      });
+    } finally {
+      setBuilderPending(false);
+    }
+  };
+
+  const handleShowPreview = async () => {
+    if (!selectedCourseId) return;
+    setBuilderPending(true);
+    try {
+      const structure = await getCourseStructure(selectedCourseId);
+      setCourseStructure(structure);
+      setShowPreview(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to load preview");
+    } finally {
+      setBuilderPending(false);
     }
   };
 
@@ -1236,6 +1294,114 @@ export function CatalogWritePanel({
           </div>
         )}
       </section>
+
+      {selectedCourseId && (
+        <div className={styles.builderActions}>
+          <h4 className={styles.subTitle}>
+            {language === "ru" ? "Действия конструктора" : "Builder Actions"}
+          </h4>
+          <div className={styles.actionButtons}>
+            <button
+              className={styles.button}
+              type="button"
+              disabled={builderPending}
+              onClick={handleValidateCourse}
+            >
+              {builderPending
+                ? language === "ru"
+                  ? "Проверка..."
+                  : "Validating..."
+                : language === "ru"
+                  ? "Проверить"
+                  : "Validate"}
+            </button>
+            <button
+              className={styles.button}
+              type="button"
+              disabled={builderPending}
+              onClick={handleShowPreview}
+            >
+              {language === "ru" ? "Предпросмотр" : "Preview"}
+            </button>
+          </div>
+
+          {validationResult && (
+            <div className={styles.validationResults}>
+              {validationResult.valid ? (
+                <p className={styles.ok}>
+                  {language === "ru"
+                    ? "Курс прошёл проверку!"
+                    : "Course validation passed!"}
+                </p>
+              ) : (
+                <p className={styles.error}>
+                  {language === "ru"
+                    ? `Найдено ошибок: ${validationResult.errors.length}`
+                    : `Errors found: ${validationResult.errors.length}`}
+                </p>
+              )}
+              {validationResult.errors.length > 0 && (
+                <ul className={styles.errorList}>
+                  {validationResult.errors.map((err, i) => (
+                    <li key={i} className={styles.errorItem}>
+                      {err.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {validationResult.warnings.length > 0 && (
+                <>
+                  <p className={styles.warning}>
+                    {language === "ru"
+                      ? `Предупреждений: ${validationResult.warnings.length}`
+                      : `Warnings: ${validationResult.warnings.length}`}
+                  </p>
+                  <ul className={styles.warningList}>
+                    {validationResult.warnings.map((warn, i) => (
+                      <li key={i} className={styles.warningItem}>
+                        {warn.message}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showPreview && courseStructure && (
+        <div className={styles.previewModal}>
+          <div className={styles.previewContent}>
+            <div className={styles.previewHeader}>
+              <h3>{courseStructure.course_title}</h3>
+              <button
+                className={styles.ghostButton}
+                type="button"
+                onClick={() => setShowPreview(false)}
+              >
+                {language === "ru" ? "Закрыть" : "Close"}
+              </button>
+            </div>
+            <div className={styles.previewBody}>
+              {courseStructure.lessons.map((lesson, idx) => (
+                <div key={lesson.id} className={styles.previewLesson}>
+                  <h4>
+                    {idx + 1}. {lesson.title}
+                  </h4>
+                  <ul className={styles.previewTasks}>
+                    {lesson.tasks.map((task) => (
+                      <li key={task.id}>
+                        [{task.task_type}] {task.title}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.forms}>
         <form className={styles.form} onSubmit={handleCourseSubmit}>

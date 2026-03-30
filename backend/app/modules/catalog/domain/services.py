@@ -459,3 +459,80 @@ class CatalogService:
         if lesson is None:
             raise CatalogError("Lesson not found.", status_code=404)
         return self.repo.list_tasks_by_lesson(lesson_id)
+
+    def get_course_structure(self, course_id: UUID) -> dict[str, Any]:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        lessons = self.repo.list_lessons_by_course(course_id, include_archived=False)
+        lessons_list: list[dict[str, Any]] = []
+        for lesson in lessons:
+            tasks = self.repo.list_tasks_by_lesson(lesson.id)
+            lessons_list.append({
+                "id": str(lesson.id),
+                "title": lesson.title,
+                "description": lesson.description,
+                "order_index": lesson.order_index,
+                "tasks": [
+                    {
+                        "id": str(task.id),
+                        "task_type": task.task_type,
+                        "title": task.title,
+                        "order_index": task.order_index,
+                        "required": task.required,
+                    }
+                    for task in tasks
+                ],
+            })
+        structure: dict[str, Any] = {
+            "course_id": str(course.id),
+            "course_title": course.title,
+            "lessons": lessons_list,
+        }
+        return structure
+
+    def validate_course(self, course_id: UUID) -> dict[str, Any]:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        lessons = self.repo.list_lessons_by_course(course_id, include_archived=False)
+        errors: list[dict[str, Any]] = []
+        warnings: list[dict[str, Any]] = []
+
+        if not lessons:
+            errors.append({
+                "type": "empty_course",
+                "message": "Course has no lessons",
+            })
+
+        for lesson in lessons:
+            tasks = self.repo.list_tasks_by_lesson(lesson.id)
+            if not tasks:
+                errors.append({
+                    "type": "empty_lesson",
+                    "lesson_id": str(lesson.id),
+                    "lesson_title": lesson.title,
+                    "message": f"Lesson '{lesson.title}' has no tasks",
+                })
+            has_required = any(task.required for task in tasks)
+            if not has_required:
+                warnings.append({
+                    "type": "no_required_tasks",
+                    "lesson_id": str(lesson.id),
+                    "lesson_title": lesson.title,
+                    "message": f"Lesson '{lesson.title}' has no required tasks",
+                })
+            for task in tasks:
+                if task.task_type == "quiz" and not task.payload_json.get("questions"):
+                    errors.append({
+                        "type": "invalid_quiz",
+                        "task_id": str(task.id),
+                        "task_title": task.title,
+                        "message": f"Quiz '{task.title}' has no questions",
+                    })
+
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings,
+        }

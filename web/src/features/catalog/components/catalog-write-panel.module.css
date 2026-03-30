@@ -359,6 +359,101 @@
   margin-top: 10px;
 }
 
+.builderActions {
+  border: 1px solid rgba(36, 63, 89, 0.15);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+  background: rgba(250, 250, 250, 0.5);
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.validationResults {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.errorList,
+.warningList {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.errorItem {
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.warningItem {
+  color: #d97706;
+  font-size: 12px;
+}
+
+.previewModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.previewContent {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: grid;
+}
+
+.previewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(36, 63, 89, 0.15);
+}
+
+.previewHeader h3 {
+  margin: 0;
+}
+
+.previewBody {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.previewLesson {
+  border: 1px solid rgba(36, 63, 89, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.previewLesson h4 {
+  margin: 0 0 8px 0;
+  color: #1f74e2;
+}
+
+.previewTasks {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #5a6974;
+}
+
 @media (max-width: 760px) {
   .row {
     grid-template-columns: 1fr;

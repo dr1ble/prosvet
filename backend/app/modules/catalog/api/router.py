@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -413,3 +413,27 @@ def duplicate_lesson_task(
     except CatalogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return _to_task_out(task)
+
+
+@router.get("/courses/{course_id}/structure")
+def get_course_structure(
+    course_id: UUID,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.read")),
+) -> dict[str, Any]:
+    try:
+        return service.get_course_structure(course_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/courses/{course_id}/validate")
+def validate_course(
+    course_id: UUID,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> dict[str, Any]:
+    try:
+        return service.validate_course(course_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc

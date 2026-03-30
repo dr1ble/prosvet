@@ -108,3 +108,47 @@ export interface LessonTaskDto {
 export interface ReorderInput {
   order_index: number;
 }
+
+export interface CourseStructureTask {
+  id: string;
+  task_type: TaskType;
+  title: string;
+  order_index: number;
+  required: boolean;
+}
+
+export interface CourseStructureLesson {
+  id: string;
+  title: string;
+  description: string | null;
+  order_index: number;
+  tasks: CourseStructureTask[];
+}
+
+export interface CourseStructure {
+  course_id: string;
+  course_title: string;
+  lessons: CourseStructureLesson[];
+}
+
+export interface ValidationError {
+  type: string;
+  message: string;
+  lesson_id?: string;
+  lesson_title?: string;
+  task_id?: string;
+  task_title?: string;
+}
+
+export interface ValidationWarning {
+  type: string;
+  message: string;
+  lesson_id?: string;
+  lesson_title?: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+}
