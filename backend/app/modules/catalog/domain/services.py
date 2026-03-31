@@ -536,3 +536,61 @@ class CatalogService:
             "errors": errors,
             "warnings": warnings,
         }
+
+    def publish_course(
+        self,
+        course_id: UUID,
+        version: str,
+        changelog: str | None = None,
+    ) -> CourseRelease:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+
+        if course.status == CourseStatus.ARCHIVED.value:
+            raise CatalogError("Cannot publish archived course.", status_code=400)
+
+        validation = self.validate_course(course_id)
+        if not validation["valid"]:
+            raise CatalogError(
+                f"Course validation failed: {len(validation['errors'])} errors.",
+                status_code=422,
+            )
+
+        existing = self.repo.get_release_by_version(course_id=course.id, version=version)
+        if existing is not None:
+            raise CatalogError("Release version already exists.", status_code=409)
+
+        now = _utcnow()
+        release = self.repo.create_release(
+            course_id=course.id,
+            version=version,
+            changelog=changelog,
+            status=ReleaseStatus.PUBLISHED.value,
+            published_at=now,
+        )
+
+        lessons = self.repo.list_lessons_by_course(course_id, include_archived=False)
+        order = 1
+        for lesson in lessons:
+            tasks = self.repo.list_tasks_by_lesson(lesson.id)
+            for task in tasks:
+                screen_key = f"lesson_{lesson.order_index}_task_{task.order_index}"
+                self.repo.add_release_screen(
+                    release_id=release.id,
+                    screen_key=screen_key,
+                    title=task.title,
+                    order_index=order,
+                    payload={
+                        "lesson_id": str(lesson.id),
+                        "lesson_title": lesson.title,
+                        "task_id": str(task.id),
+                        "task_type": task.task_type,
+                        "content": task.payload_json,
+                    },
+                    checksum=_checksum_payload(task.payload_json),
+                )
+                order += 1
+
+        course.status = CourseStatus.ACTIVE.value
+        return release

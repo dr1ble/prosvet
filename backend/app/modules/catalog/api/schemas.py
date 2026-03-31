@@ -167,6 +167,11 @@ class LessonTaskReorderIn(_BaseSchema):
     order_index: int = Field(ge=1, le=10_000)
 
 
+class CoursePublishIn(_BaseSchema):
+    version: str = Field(min_length=5, max_length=32, pattern=r"^\d+\.\d+\.\d+$")
+    changelog: str | None = Field(default=None, max_length=10_000)
+
+
 class CourseVersionCreateIn(_BaseSchema):
     version: str = Field(min_length=5, max_length=32, pattern=r"^\d+\.\d+\.\d+$")
     changelog: str | None = Field(default=None, max_length=10_000)

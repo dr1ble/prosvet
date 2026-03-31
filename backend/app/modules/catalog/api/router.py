@@ -15,6 +15,7 @@ from app.modules.catalog.api.schemas import (
     CourseLessonUpdateIn,
     CourseListQuery,
     CourseOut,
+    CoursePublishIn,
     CourseReleaseCreateIn,
     CourseReleaseOut,
     LessonTaskCreateIn,
@@ -437,3 +438,21 @@ def validate_course(
         return service.validate_course(course_id)
     except CatalogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/courses/{course_id}/publish", response_model=CourseReleaseOut, status_code=status.HTTP_201_CREATED)
+def publish_course(
+    course_id: UUID,
+    payload: CoursePublishIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseReleaseOut:
+    try:
+        release = service.publish_course(
+            course_id=course_id,
+            version=payload.version,
+            changelog=payload.changelog,
+        )
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_release_out(release, screen_count=0)
