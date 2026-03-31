@@ -8,9 +8,11 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.api.schemas import (
+    BulkCourseStructureIn,
     CourseCreateIn,
     CourseListQuery,
     CourseReleaseCreateIn,
+    CourseUpdateIn,
     ReleaseListQuery,
     ReleaseScreenIn,
 )
@@ -76,6 +78,17 @@ class CatalogService:
         )
         return course
 
+    def update_course(self, course_id: UUID, payload: CourseUpdateIn) -> Course:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+
+        return self.repo.update_course(
+            course=course,
+            title=payload.title,
+            description=payload.description,
+        )
+
     def create_release(
         self,
         course_id: UUID,
@@ -85,7 +98,9 @@ class CatalogService:
         if course is None:
             raise CatalogError("Course not found.", status_code=404)
 
-        existing_release = self.repo.get_release_by_version(course_id=course.id, version=payload.version)
+        existing_release = self.repo.get_release_by_version(
+            course_id=course.id, version=payload.version
+        )
         if existing_release is not None:
             raise CatalogError("Release with this version already exists.", status_code=409)
 
@@ -114,12 +129,17 @@ class CatalogService:
             )
             screens.append(db_screen)
 
-        if release_status == ReleaseStatus.PUBLISHED.value and course.status != CourseStatus.ARCHIVED.value:
+        if (
+            release_status == ReleaseStatus.PUBLISHED.value
+            and course.status != CourseStatus.ARCHIVED.value
+        ):
             course.status = CourseStatus.ACTIVE.value
 
         return release, screens, course
 
-    def get_latest_course_bundle(self, course_slug: str) -> tuple[Course, CourseRelease, list[CourseReleaseScreen]]:
+    def get_latest_course_bundle(
+        self, course_slug: str
+    ) -> tuple[Course, CourseRelease, list[CourseReleaseScreen]]:
         slug = _normalize_slug(course_slug)
         course = self.repo.get_course_by_slug(slug)
         if course is None:
@@ -157,7 +177,9 @@ class CatalogService:
             raise CatalogError("order_index values must be unique per release.", status_code=422)
 
         known_screen_keys = set(keys)
-        simulation_screens = [screen for screen in screens if screen.payload.get("type") == "simulation"]
+        simulation_screens = [
+            screen for screen in screens if screen.payload.get("type") == "simulation"
+        ]
         if not simulation_screens:
             return
 
@@ -309,7 +331,9 @@ class CatalogService:
 
         return target_screen_key
 
-    def list_course_lessons(self, course_id: UUID, include_archived: bool = False) -> list[CourseLesson]:
+    def list_course_lessons(
+        self, course_id: UUID, include_archived: bool = False
+    ) -> list[CourseLesson]:
         course = self.repo.get_course_by_id(course_id)
         if course is None:
             raise CatalogError("Course not found.", status_code=404)
@@ -468,22 +492,24 @@ class CatalogService:
         lessons_list: list[dict[str, Any]] = []
         for lesson in lessons:
             tasks = self.repo.list_tasks_by_lesson(lesson.id)
-            lessons_list.append({
-                "id": str(lesson.id),
-                "title": lesson.title,
-                "description": lesson.description,
-                "order_index": lesson.order_index,
-                "tasks": [
-                    {
-                        "id": str(task.id),
-                        "task_type": task.task_type,
-                        "title": task.title,
-                        "order_index": task.order_index,
-                        "required": task.required,
-                    }
-                    for task in tasks
-                ],
-            })
+            lessons_list.append(
+                {
+                    "id": str(lesson.id),
+                    "title": lesson.title,
+                    "description": lesson.description,
+                    "order_index": lesson.order_index,
+                    "tasks": [
+                        {
+                            "id": str(task.id),
+                            "task_type": task.task_type,
+                            "title": task.title,
+                            "order_index": task.order_index,
+                            "required": task.required,
+                        }
+                        for task in tasks
+                    ],
+                }
+            )
         structure: dict[str, Any] = {
             "course_id": str(course.id),
             "course_title": course.title,
@@ -500,42 +526,110 @@ class CatalogService:
         warnings: list[dict[str, Any]] = []
 
         if not lessons:
-            errors.append({
-                "type": "empty_course",
-                "message": "Course has no lessons",
-            })
+            errors.append(
+                {
+                    "type": "empty_course",
+                    "message": "Course has no lessons",
+                }
+            )
 
         for lesson in lessons:
             tasks = self.repo.list_tasks_by_lesson(lesson.id)
             if not tasks:
-                errors.append({
-                    "type": "empty_lesson",
-                    "lesson_id": str(lesson.id),
-                    "lesson_title": lesson.title,
-                    "message": f"Lesson '{lesson.title}' has no tasks",
-                })
+                errors.append(
+                    {
+                        "type": "empty_lesson",
+                        "lesson_id": str(lesson.id),
+                        "lesson_title": lesson.title,
+                        "message": f"Lesson '{lesson.title}' has no tasks",
+                    }
+                )
             has_required = any(task.required for task in tasks)
             if not has_required:
-                warnings.append({
-                    "type": "no_required_tasks",
-                    "lesson_id": str(lesson.id),
-                    "lesson_title": lesson.title,
-                    "message": f"Lesson '{lesson.title}' has no required tasks",
-                })
+                warnings.append(
+                    {
+                        "type": "no_required_tasks",
+                        "lesson_id": str(lesson.id),
+                        "lesson_title": lesson.title,
+                        "message": f"Lesson '{lesson.title}' has no required tasks",
+                    }
+                )
             for task in tasks:
-                if task.task_type == "quiz" and not task.payload_json.get("questions"):
-                    errors.append({
-                        "type": "invalid_quiz",
-                        "task_id": str(task.id),
-                        "task_title": task.title,
-                        "message": f"Quiz '{task.title}' has no questions",
-                    })
+                errors.extend(self._validate_task_payload(task))
 
         return {
             "valid": len(errors) == 0,
             "errors": errors,
             "warnings": warnings,
         }
+
+    @staticmethod
+    def _validate_task_payload(task: LessonTask) -> list[dict[str, Any]]:
+        errors: list[dict[str, Any]] = []
+        payload = task.payload_json
+        task_type = task.task_type
+
+        if task_type == "quiz":
+            questions = payload.get("questions")
+            if not questions or not isinstance(questions, list) or len(questions) == 0:
+                errors.append(
+                    {
+                        "type": "invalid_quiz",
+                        "task_id": str(task.id),
+                        "task_title": task.title,
+                        "message": f"Quiz '{task.title}' has no questions",
+                    }
+                )
+
+        elif task_type == "theory_video":
+            video_url = payload.get("video_url")
+            if not video_url or not isinstance(video_url, str):
+                errors.append(
+                    {
+                        "type": "invalid_video",
+                        "task_id": str(task.id),
+                        "task_title": task.title,
+                        "message": f"Video task '{task.title}' missing video_url",
+                    }
+                )
+
+        elif task_type == "theory_text":
+            content = payload.get("content")
+            if not content or not isinstance(content, str) or len(content.strip()) < 10:
+                errors.append(
+                    {
+                        "type": "invalid_theory",
+                        "task_id": str(task.id),
+                        "task_title": task.title,
+                        "message": f"Theory task '{task.title}' has insufficient content",
+                    }
+                )
+
+        elif task_type == "simulation":
+            config = payload.get("config")
+            if not config or not isinstance(config, dict):
+                errors.append(
+                    {
+                        "type": "invalid_simulation",
+                        "task_id": str(task.id),
+                        "task_title": task.title,
+                        "message": f"Simulation task '{task.title}' missing config",
+                    }
+                )
+
+        elif task_type == "cheat_sheet":
+            content = payload.get("content")
+            if not content or not isinstance(content, str) or len(content.strip()) < 10:
+                errors.append(
+                    {
+                        "type": "invalid_cheatsheet",
+                        "task_id": str(task.id),
+                        "task_title": task.title,
+                        "message": f"Cheat sheet task '{task.title}' has insufficient content",
+                    }
+                )
+
+        return errors
 
     def publish_course(
         self,
@@ -594,3 +688,121 @@ class CatalogService:
 
         course.status = CourseStatus.ACTIVE.value
         return release
+
+    def update_course_structure_bulk(
+        self,
+        course_id: UUID,
+        payload: BulkCourseStructureIn,
+    ) -> dict[str, Any]:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+
+        existing_lessons = self.repo.list_lessons_by_course(course_id, include_archived=False)
+        existing_lesson_map: dict[str, CourseLesson] = {
+            str(lesson.id): lesson for lesson in existing_lessons
+        }
+
+        processed_lesson_ids: set[str] = set()
+
+        for lesson_payload in payload.lessons:
+            lesson_id = str(lesson_payload.id) if lesson_payload.id else None
+
+            if lesson_id and lesson_id in existing_lesson_map:
+                lesson = existing_lesson_map[lesson_id]
+                processed_lesson_ids.add(lesson_id)
+                self.repo.update_lesson(
+                    lesson_id=lesson.id,
+                    title=lesson_payload.title.strip(),
+                    description=lesson_payload.description,
+                )
+                self.repo.reorder_lesson(course_id, lesson.id, lesson_payload.order_index)
+            else:
+                order = lesson_payload.order_index or self.repo.get_next_lesson_order_index(
+                    course_id
+                )
+                lesson = self.repo.create_lesson(
+                    course_id=course_id,
+                    title=lesson_payload.title.strip(),
+                    description=lesson_payload.description,
+                    order_index=order,
+                    status=LessonStatus.DRAFT.value,
+                )
+                lesson_id = str(lesson.id)
+                processed_lesson_ids.add(lesson_id)
+
+            existing_tasks = self.repo.list_tasks_by_lesson(lesson.id)
+            existing_task_map: dict[str, LessonTask] = {
+                str(task.id): task for task in existing_tasks
+            }
+
+            processed_task_ids: set[str] = set()
+
+            for task_payload in lesson_payload.tasks:
+                task_id = str(task_payload.id) if task_payload.id else None
+
+                if task_id and task_id in existing_task_map:
+                    task = existing_task_map[task_id]
+                    processed_task_ids.add(task_id)
+                    checksum = _checksum_payload(task_payload.payload)
+                    self.repo.update_task(
+                        task_id=task.id,
+                        title=task_payload.title.strip(),
+                        required=task_payload.required,
+                        payload_json=task_payload.payload,
+                        checksum=checksum,
+                    )
+                    self.repo.reorder_task(lesson.id, task.id, task_payload.order_index)
+                else:
+                    order = task_payload.order_index or self.repo.get_next_task_order_index(
+                        lesson.id
+                    )
+                    checksum = _checksum_payload(task_payload.payload)
+                    self.repo.create_task(
+                        lesson_id=lesson.id,
+                        task_type=task_payload.task_type,
+                        title=task_payload.title.strip(),
+                        order_index=order,
+                        required=task_payload.required,
+                        payload=task_payload.payload,
+                        checksum=checksum,
+                    )
+
+            for task_id, task in existing_task_map.items():
+                if task_id not in processed_task_ids:
+                    self.repo.archive_task(task.id)
+
+        for lesson_id, lesson in existing_lesson_map.items():
+            if lesson_id not in processed_lesson_ids:
+                self.repo.archive_lesson(lesson.id)
+
+        lessons = self.repo.list_lessons_by_course(course_id, include_archived=False)
+        lessons_data: list[dict[str, Any]] = []
+        for lesson in lessons:
+            tasks = self.repo.list_tasks_by_lesson(lesson.id)
+            lessons_data.append(
+                {
+                    "id": str(lesson.id),
+                    "title": lesson.title,
+                    "description": lesson.description,
+                    "order_index": lesson.order_index,
+                    "tasks": [
+                        {
+                            "id": str(task.id),
+                            "task_type": task.task_type,
+                            "title": task.title,
+                            "order_index": task.order_index,
+                            "required": task.required,
+                            "payload": task.payload_json,
+                        }
+                        for task in tasks
+                    ],
+                }
+            )
+
+        return {
+            "course_id": str(course.id),
+            "course_title": course.title,
+            "status": course.status,
+            "lessons": lessons_data,
+        }

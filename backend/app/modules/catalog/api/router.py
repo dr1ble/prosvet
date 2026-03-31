@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.modules.catalog.api.schemas import (
+    BulkCourseStructureIn,
+    BulkCourseStructureOut,
     CourseBundleOut,
     CourseCreateIn,
     CourseLessonCreateIn,
@@ -18,6 +20,7 @@ from app.modules.catalog.api.schemas import (
     CoursePublishIn,
     CourseReleaseCreateIn,
     CourseReleaseOut,
+    CourseUpdateIn,
     LessonTaskCreateIn,
     LessonTaskOut,
     LessonTaskReorderIn,
@@ -160,12 +163,25 @@ def create_course(
     request: Request,
     payload: CourseCreateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(
-        require_policy("catalog.write")
-    ),
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseOut:
     try:
         course = service.create_course(payload)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return _to_course_out(course, request)
+
+
+@router.patch("/courses/{course_id}", response_model=CourseOut)
+def update_course(
+    course_id: UUID,
+    request: Request,
+    payload: CourseUpdateIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseOut:
+    try:
+        course = service.update_course(course_id=course_id, payload=payload)
     except CatalogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return _to_course_out(course, request)
@@ -180,9 +196,7 @@ def create_course_release(
     course_id: UUID,
     payload: CourseReleaseCreateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(
-        require_policy("catalog.write")
-    ),
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseReleaseOut:
     try:
         release, screens, _ = service.create_release(course_id=course_id, payload=payload)
@@ -209,7 +223,9 @@ def list_course_releases(
         releases = service.list_course_releases(course_id=course_id, query=query)
     except CatalogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    return [_to_release_out(release, screen_count=screen_count) for release, screen_count in releases]
+    return [
+        _to_release_out(release, screen_count=screen_count) for release, screen_count in releases
+    ]
 
 
 @router.get("/courses/{course_slug}/releases/latest", response_model=CourseBundleOut)
@@ -311,7 +327,9 @@ def restore_course_lesson(
     return _to_lesson_out(lesson)
 
 
-@router.post("/courses/{course_id}/lessons/{lesson_id}/reorder", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/courses/{course_id}/lessons/{lesson_id}/reorder", status_code=status.HTTP_204_NO_CONTENT
+)
 def reorder_course_lesson(
     course_id: UUID,
     lesson_id: UUID,
@@ -338,7 +356,9 @@ def list_lesson_tasks(
     return [_to_task_out(task) for task in tasks]
 
 
-@router.post("/lessons/{lesson_id}/tasks", response_model=LessonTaskOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/lessons/{lesson_id}/tasks", response_model=LessonTaskOut, status_code=status.HTTP_201_CREATED
+)
 def create_lesson_task(
     lesson_id: UUID,
     payload: LessonTaskCreateIn,
@@ -403,7 +423,9 @@ def reorder_lesson_task(
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
-@router.post("/tasks/{task_id}/duplicate", response_model=LessonTaskOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/tasks/{task_id}/duplicate", response_model=LessonTaskOut, status_code=status.HTTP_201_CREATED
+)
 def duplicate_lesson_task(
     task_id: UUID,
     service: CatalogServiceDep,
@@ -428,6 +450,20 @@ def get_course_structure(
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
+@router.post("/courses/{course_id}/structure/bulk", response_model=BulkCourseStructureOut)
+def update_course_structure_bulk(
+    course_id: UUID,
+    payload: BulkCourseStructureIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> BulkCourseStructureOut:
+    try:
+        result = service.update_course_structure_bulk(course_id, payload)
+        return BulkCourseStructureOut(**result)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
 @router.post("/courses/{course_id}/validate")
 def validate_course(
     course_id: UUID,
@@ -440,7 +476,11 @@ def validate_course(
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
-@router.post("/courses/{course_id}/publish", response_model=CourseReleaseOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/courses/{course_id}/publish",
+    response_model=CourseReleaseOut,
+    status_code=status.HTTP_201_CREATED,
+)
 def publish_course(
     course_id: UUID,
     payload: CoursePublishIn,

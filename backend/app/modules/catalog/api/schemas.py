@@ -24,6 +24,11 @@ class CourseCreateIn(_BaseSchema):
         return normalized
 
 
+class CourseUpdateIn(_BaseSchema):
+    title: str | None = Field(default=None, min_length=3, max_length=255)
+    description: str | None = Field(default=None, max_length=5_000)
+
+
 class CourseListQuery(_BaseSchema):
     include_drafts: bool = False
     include_archived: bool = False
@@ -165,6 +170,34 @@ class LessonTaskOut(BaseModel):
 
 class LessonTaskReorderIn(_BaseSchema):
     order_index: int = Field(ge=1, le=10_000)
+
+
+class BulkTaskUpdateIn(_BaseSchema):
+    id: UUID | None = None
+    task_type: Literal["theory_text", "theory_video", "quiz", "simulation", "cheat_sheet"]
+    title: str = Field(min_length=2, max_length=255)
+    order_index: int = Field(ge=0, le=10_000)
+    required: bool = True
+    payload: dict[str, Any]
+
+
+class BulkLessonUpdateIn(_BaseSchema):
+    id: UUID | None = None
+    title: str = Field(min_length=2, max_length=255)
+    description: str | None = Field(default=None, max_length=5_000)
+    order_index: int = Field(ge=0, le=10_000)
+    tasks: list[BulkTaskUpdateIn] = Field(default_factory=list)
+
+
+class BulkCourseStructureIn(_BaseSchema):
+    lessons: list[BulkLessonUpdateIn] = Field(min_length=0, max_length=500)
+
+
+class BulkCourseStructureOut(_BaseSchema):
+    course_id: UUID
+    course_title: str
+    status: str
+    lessons: list[dict[str, Any]]
 
 
 class CoursePublishIn(_BaseSchema):

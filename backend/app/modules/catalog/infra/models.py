@@ -46,8 +46,12 @@ class Course(Base):
     slug: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(32), default=CourseStatus.DRAFT.value, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), default=CourseStatus.DRAFT.value, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=_utcnow,
@@ -58,7 +62,9 @@ class Course(Base):
 
 class CourseLesson(Base):
     __tablename__ = "course_lessons"
-    __table_args__ = (UniqueConstraint("course_id", "order_index", name="uq_lesson_order_per_course"),)
+    __table_args__ = (
+        UniqueConstraint("course_id", "order_index", name="uq_lesson_order_per_course"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     course_id: Mapped[uuid.UUID] = mapped_column(
@@ -70,8 +76,12 @@ class CourseLesson(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(32), default=LessonStatus.DRAFT.value, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), default=LessonStatus.DRAFT.value, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=_utcnow,
@@ -99,7 +109,9 @@ class LessonTask(Base):
     required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     checksum: Mapped[str] = mapped_column(String(64), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
 
 
 class CourseRelease(Base):
@@ -115,9 +127,13 @@ class CourseRelease(Base):
     )
     version: Mapped[str] = mapped_column(String(32), nullable=False)
     changelog: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(32), default=ReleaseStatus.DRAFT.value, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), default=ReleaseStatus.DRAFT.value, nullable=False
+    )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
 
 
 class CourseReleaseScreen(Base):
@@ -139,4 +155,6 @@ class CourseReleaseScreen(Base):
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     checksum: Mapped[str] = mapped_column(String(64), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )

@@ -60,6 +60,8 @@ KG_MEMORY_SYNC_MODE="${KG_MEMORY_SYNC_MODE:-auto}"
 KG_MEMORY_FILE="${KG_MEMORY_FILE:-$ROOT_DIR/.context/operations/kg_memory.jsonl}"
 KG_SEED_SCRIPT="$ROOT_DIR/scripts/seed_kg_memory.py"
 AUTO_INSTALL_BACKEND_DEPS="${AUTO_INSTALL_BACKEND_DEPS:-1}"
+AUTO_FIX_BROKEN_DB_SCHEMA="${AUTO_FIX_BROKEN_DB_SCHEMA:-1}"
+HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-60}"
 
 if [[ "$CGC_WATCH_PATH" != /* ]]; then
   CGC_WATCH_PATH="$ROOT_DIR/$CGC_WATCH_PATH"
@@ -283,6 +285,100 @@ sync_knowledge_memory_if_needed() {
   fi
 }
 
+db_has_required_tables() {
+  (
+    cd "$BACKEND_DIR"
+    PYTHONPATH=. python3 - <<'PY'
+from sqlalchemy import inspect
+
+from app.shared.db.session import engine
+
+required_tables = {
+    "users",
+    "courses",
+    "course_lessons",
+    "lesson_tasks",
+}
+
+inspector = inspect(engine)
+existing_tables = set(inspector.get_table_names(schema="public"))
+missing = sorted(required_tables - existing_tables)
+if missing:
+    print("MISSING_TABLES=" + ",".join(missing))
+    raise SystemExit(1)
+
+print("DB_SCHEMA_OK")
+PY
+  )
+}
+
+reset_db_public_schema() {
+  (
+    cd "$BACKEND_DIR"
+    PYTHONPATH=. python3 - <<'PY'
+from sqlalchemy import text
+
+from app.shared.db.session import engine
+
+with engine.begin() as conn:
+    conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+    conn.execute(text("CREATE SCHEMA public"))
+print("DB_SCHEMA_RESET")
+PY
+  )
+}
+
+ensure_backend_schema() {
+  echo "[run] Applying backend migrations..."
+  (cd "$BACKEND_DIR" && python3 -m alembic upgrade head)
+
+  if db_has_required_tables >/dev/null 2>&1; then
+    echo "[run] Database schema check passed."
+    return
+  fi
+
+  echo "[run] Database schema is inconsistent (missing required tables)."
+  if [[ "$AUTO_FIX_BROKEN_DB_SCHEMA" != "1" ]]; then
+    echo "[run] Auto-fix is disabled (AUTO_FIX_BROKEN_DB_SCHEMA=0)."
+    echo "[run] Run manually:"
+    echo "[run]   cd backend && PYTHONPATH=. python3 -m alembic upgrade head"
+    exit 1
+  fi
+
+  echo "[run] Auto-fix enabled: recreating public schema and re-running migrations..."
+  reset_db_public_schema
+  (cd "$BACKEND_DIR" && python3 -m alembic upgrade head)
+
+  if db_has_required_tables >/dev/null 2>&1; then
+    echo "[run] Database schema repaired successfully."
+  else
+    echo "[run] Failed to repair database schema automatically."
+    exit 1
+  fi
+}
+
+wait_for_http_ready() {
+  local label="$1"
+  local url="$2"
+  local timeout_seconds="$3"
+  local elapsed=0
+
+  echo -n "[run] Waiting for $label"
+  while [[ "$elapsed" -lt "$timeout_seconds" ]]; do
+    if curl -fsS "$url" >/dev/null 2>&1; then
+      echo " ready"
+      return 0
+    fi
+    echo -n "."
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+
+  echo ""
+  echo "[run] $label did not become ready within ${timeout_seconds}s: $url"
+  return 1
+}
+
 if ! docker info >/dev/null 2>&1; then
   echo "[run] Docker daemon is not running. Start Docker Desktop and retry."
   exit 1
@@ -342,8 +438,7 @@ if [[ -n "$CONTAINER_ID" ]]; then
   done
 fi
 
-echo "[run] Applying backend migrations..."
-(cd "$BACKEND_DIR" && python3 -m alembic upgrade head)
+ensure_backend_schema
 
 cleanup() {
   local code=$?
@@ -401,6 +496,14 @@ if [[ "$CGC_WATCH" == "1" ]]; then
     echo "[run] CodeGraphContext is not installed. Skipping watcher."
     echo "[run] Install with: python3 -m pip install codegraphcontext"
   fi
+fi
+
+if ! wait_for_http_ready "backend" "http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health" "$HEALTH_WAIT_SECONDS"; then
+  exit 1
+fi
+
+if ! wait_for_http_ready "web" "http://$WEB_HOST:$WEB_PORT" "$HEALTH_WAIT_SECONDS"; then
+  exit 1
 fi
 
 echo "[run] Ready"

@@ -1,0 +1,147 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--surface-card-muted, #f5f5f5);
+  border-bottom: 1px solid var(--border-default, #e0e0e0);
+}
+
+.toolBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary, #1a1a1a);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.toolBtn:hover {
+  background: #fff;
+  border-color: var(--border-default, #e0e0e0);
+}
+
+.toolBtn.active {
+  background: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 12%,
+    transparent
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 30%,
+    transparent
+  );
+  color: var(--interactive-primary, #1d73e2);
+}
+
+.separator {
+  width: 1px;
+  height: 20px;
+  margin: 4px 4px;
+  background: var(--border-default, #e0e0e0);
+  align-self: center;
+}
+
+.editorWrapper {
+  min-height: 200px;
+}
+
+.editorWrapper .ProseMirror {
+  padding: 12px 16px;
+  min-height: 200px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.editorWrapper .ProseMirror:focus {
+  outline: none;
+}
+
+.editorWrapper .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-secondary, #999);
+  pointer-events: none;
+  height: 0;
+}
+
+.editorWrapper .ProseMirror h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+
+.editorWrapper .ProseMirror h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 14px 0 6px;
+}
+
+.editorWrapper .ProseMirror h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 12px 0 4px;
+}
+
+.editorWrapper .ProseMirror ul,
+.editorWrapper .ProseMirror ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.editorWrapper .ProseMirror li {
+  margin: 4px 0;
+}
+
+.editorWrapper .ProseMirror code {
+  background: var(--surface-card-muted, #f5f5f5);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 13px;
+  font-family: "SF Mono", "Fira Code", monospace;
+}
+
+.editorWrapper .ProseMirror pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.editorWrapper .ProseMirror pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: 13px;
+}
+
+.editorWrapper .ProseMirror a {
+  color: var(--interactive-primary, #1d73e2);
+  text-decoration: underline;
+}
+
+.loading {
+  padding: 12px;
+  color: var(--text-secondary, #666);
+  font-size: 13px;
+}

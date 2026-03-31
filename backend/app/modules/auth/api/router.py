@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import ProgrammingError
 
 from app.modules.auth.api.schemas import (
     AuthMeOut,
@@ -38,6 +39,15 @@ def login(payload: LoginIn, request: Request, service: AuthServiceDep) -> AuthRe
     except AuthError as exc:
         log_login_attempt(login=payload.login, success=False, ip_address=ip)
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except ProgrammingError as exc:
+        log_login_attempt(login=payload.login, success=False, ip_address=ip)
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Database schema is not initialized. "
+                "Run ./run (or cd backend && python3 -m alembic upgrade head)."
+            ),
+        ) from exc
 
 
 

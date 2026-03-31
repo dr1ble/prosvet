@@ -20,6 +20,11 @@ type ProxyPostRequest = ProxyRequestBase & {
   payload: unknown;
 };
 
+type ProxyJsonRequest = ProxyRequestBase & {
+  method: HttpMethod;
+  payload: unknown;
+};
+
 type AuthTokensPayload = {
   access_token: string;
   refresh_token: string;
@@ -281,3 +286,19 @@ export async function proxyBackendAdminPatch({
     payload,
   });
 }
+
+export async function proxyBackendAdminJson({
+  request,
+  method,
+  path,
+  payload,
+}: ProxyJsonRequest): Promise<Response> {
+  return proxyBackendAdminRequest({
+    request,
+    path,
+    method,
+    payload,
+  });
+}
+
+export { resolveAdminAccessToken as getAdminAccessToken };

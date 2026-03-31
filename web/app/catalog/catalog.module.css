@@ -215,6 +215,15 @@
   color: #f2f8ff;
 }
 
+.workspaceTabPrimary {
+  background: #0f766e;
+  color: #ecfeff;
+}
+
+.workspaceTabPrimary:hover {
+  background: #0d6f68;
+}
+
 .releaseHeader {
   border: 1px solid rgba(44, 72, 98, 0.14);
   border-radius: 14px;

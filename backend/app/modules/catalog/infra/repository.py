@@ -44,6 +44,14 @@ class CatalogRepository:
         self.db.flush()
         return course
 
+    def update_course(self, course: Course, title: str | None, description: str | None) -> Course:
+        if title is not None:
+            course.title = title
+        if description is not None:
+            course.description = description
+        self.db.flush()
+        return course
+
     def get_release_by_version(self, course_id: UUID, version: str) -> CourseRelease | None:
         stmt = select(CourseRelease).where(
             CourseRelease.course_id == course_id,

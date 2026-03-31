@@ -1,4 +1,4 @@
-.PHONY: up down logs run backend-test backend-lint install-hooks deps-check kg-sync kg-sync-force init-test-db
+.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check kg-sync kg-sync-force init-test-db
 PROJECT_ROOT := $(CURDIR)
 
 up:
@@ -12,6 +12,29 @@ logs:
 
 run:
 	./run
+
+run-bg:
+	@./scripts/dev-stack.sh start
+
+stop:
+	@./scripts/dev-stack.sh stop
+
+restart:
+	@./scripts/dev-stack.sh restart
+
+status:
+	@./scripts/dev-stack.sh status
+
+dev-logs:
+	@./scripts/dev-stack.sh logs
+
+doctor:
+	@echo "== local stack doctor =="
+	@echo "[1/5] postgres container"
+	@docker compose ps postgres || true
+	@echo ""
+	@PYTHONPATH=backend python3 scripts/doctor.py
+	@echo "doctor: OK"
 
 backend-test:
 	cd backend && PYTHONPATH=. pytest

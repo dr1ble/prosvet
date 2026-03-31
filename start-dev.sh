@@ -1,41 +1,14 @@
-#!/bin/bash
-# Quick start: backend + web without docker
+#!/usr/bin/env bash
 
-cd "$(dirname "$0")"
+set -euo pipefail
 
-# Kill existing
-pkill -f "uvicorn.*8000" 2>/dev/null || true
-pkill -f "next-server" 2>/dev/null || true
+# Stable quick start wrapper.
+# Delegates to ./run, which ensures:
+# - PostgreSQL container is running
+# - migrations are applied
+# - broken schema is auto-repaired when needed
+# - backend + web are started together
 
-# Start backend
-cd backend
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-BACKEND_PID=$!
-cd ..
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Wait for backend
-echo "Waiting for backend..."
-for i in {1..10}; do
-    if curl -s http://localhost:8000/api/v1/health > /dev/null 2>&1; then
-        echo "Backend ready!"
-        break
-    fi
-    sleep 1
-done
-
-# Start web
-cd web
-npm run dev &
-WEB_PID=$!
-
-echo ""
-echo "========================================"
-echo "  Backend:  http://localhost:8000"
-echo "  Web:      http://localhost:3000"
-echo "  Health:   http://localhost:8000/api/v1/health"
-echo "========================================"
-echo ""
-echo "Press Ctrl+C to stop"
-
-# Wait
-wait
+exec "$ROOT_DIR/run"

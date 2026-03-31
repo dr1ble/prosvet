@@ -278,6 +278,12 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             >
               {builderTabLabel}
             </Link>
+            <Link
+              className={`${styles.workspaceTab} ${styles.workspaceTabPrimary}`}
+              href="/course-wizard/new"
+            >
+              {language === "ru" ? "+ Создать курс" : "+ Create course"}
+            </Link>
           </nav>
 
           {workspaceTab === "builder" ? (
