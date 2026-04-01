@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Trash2, CheckCircle, Circle, GripVertical } from "lucide-react";
+import { Trash2, CheckCircle, Circle, GripVertical, Copy } from "lucide-react";
 
 import type { BuilderTask } from "../../types";
 import { TASK_TYPE_LABELS } from "../../types";
@@ -17,6 +17,7 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
   const selectedTaskId = useCourseBuilderStore((s) => s.selectedTaskId);
   const selectTask = useCourseBuilderStore((s) => s.selectTask);
   const removeTaskRequest = useCourseBuilderStore((s) => s.requestDelete);
+  const duplicateTask = useCourseBuilderStore((s) => s.duplicateTask);
   const updateTask = useCourseBuilderStore((s) => s.updateTask);
 
   const isSelected =
@@ -84,6 +85,18 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
         onClick={(e) => e.stopPropagation()}
         placeholder="Название задачи"
       />
+
+      <button
+        className={styles.duplicateBtn}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!task.id) return;
+          void duplicateTask(lessonId, task.id);
+        }}
+        title="Дублировать задачу"
+      >
+        <Copy size={12} />
+      </button>
 
       <button
         className={styles.removeBtn}

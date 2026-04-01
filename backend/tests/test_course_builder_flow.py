@@ -9,6 +9,7 @@ Covers the full lifecycle:
   6. List releases (GET /courses/{id}/releases)
 """
 
+import base64
 import uuid
 from uuid import uuid4
 
@@ -33,6 +34,7 @@ class _RealCatalogServiceStub:
         from app.modules.catalog.domain.services import CatalogService
 
         self._service = CatalogService(db_session)
+        self.repo = self._service.repo
 
     def list_courses(self, query):
         return self._service.list_courses(query)
@@ -96,6 +98,9 @@ class _RealCatalogServiceStub:
 
     def publish_course(self, course_id, version, changelog=None):
         return self._service.publish_course(course_id, version, changelog)
+
+    def rollback_course(self, course_id, release_id, version, changelog=None):
+        return self._service.rollback_course(course_id, release_id, version, changelog)
 
     def update_course_structure_bulk(self, course_id, payload):
         return self._service.update_course_structure_bulk(course_id, payload)
@@ -914,3 +919,80 @@ class TestFullCourseBuilderFlow:
         releases = resp.json()
         assert len(releases) == 1
         assert releases[0]["version"] == "1.0.0"
+
+
+class TestRollbackAndCover:
+    def test_cover_upload_and_delete(self, builder_client):
+        course = self._create(builder_client, "cover-course")
+        course_id = course["id"]
+
+        image_content = base64.b64encode(b"fakepngcontent").decode()
+        upload = builder_client.post(
+            f"/api/v1/catalog/courses/{course_id}/cover",
+            json={
+                "filename": "cover.png",
+                "content_base64": image_content,
+            },
+        )
+        assert upload.status_code == 200
+
+        delete_resp = builder_client.delete(f"/api/v1/catalog/courses/{course_id}/cover")
+        assert delete_resp.status_code == 200
+
+    def test_rollback_creates_new_release(self, builder_client):
+        course = self._create(builder_client, "rollback-course")
+        course_id = course["id"]
+
+        builder_client.post(
+            f"/api/v1/catalog/courses/{course_id}/structure/bulk",
+            json={
+                "lessons": [
+                    {
+                        "id": None,
+                        "title": "Lesson",
+                        "description": None,
+                        "order_index": 0,
+                        "tasks": [
+                            {
+                                "id": None,
+                                "task_type": "theory_text",
+                                "title": "Theory",
+                                "order_index": 0,
+                                "required": True,
+                                "payload": {"content": "<p>Rollback content text</p>"},
+                            }
+                        ],
+                    }
+                ]
+            },
+        )
+
+        pub = builder_client.post(
+            f"/api/v1/catalog/courses/{course_id}/publish",
+            json={"version": "1.0.0", "changelog": "Initial"},
+        )
+        assert pub.status_code == 201
+        source_release_id = pub.json()["id"]
+
+        rollback = builder_client.post(
+            f"/api/v1/catalog/courses/{course_id}/rollback",
+            json={
+                "release_id": source_release_id,
+                "version": "1.0.1",
+                "changelog": "Rollback",
+            },
+        )
+        assert rollback.status_code == 201
+        assert rollback.json()["version"] == "1.0.1"
+
+        releases = builder_client.get(f"/api/v1/catalog/courses/{course_id}/releases")
+        assert releases.status_code == 200
+        versions = [item["version"] for item in releases.json()]
+        assert "1.0.0" in versions
+        assert "1.0.1" in versions
+
+    @staticmethod
+    def _create(client, slug: str) -> dict:
+        resp = client.post("/api/v1/catalog/courses", json=_create_course_json(slug))
+        assert resp.status_code == 201
+        return resp.json()

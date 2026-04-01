@@ -167,3 +167,65 @@ export async function publishCourse(
     body: JSON.stringify({ version, changelog }),
   });
 }
+
+export async function listCourseReleases(
+  courseId: string,
+): Promise<
+  Array<{ id: string; version: string; created_at: string; status: string }>
+> {
+  return fetchJson(`/catalog/courses/${courseId}/releases`, {
+    method: "GET",
+  });
+}
+
+export async function rollbackCourse(
+  courseId: string,
+  releaseId: string,
+  version: string,
+  changelog?: string,
+): Promise<{ id: string; version: string }> {
+  return fetchJson(`/catalog/courses/${courseId}/rollback`, {
+    method: "POST",
+    body: JSON.stringify({
+      release_id: releaseId,
+      version,
+      changelog,
+    }),
+  });
+}
+
+export async function uploadCourseCover(
+  courseId: string,
+  filename: string,
+  contentBase64: string,
+): Promise<{ cover_url?: string | null }> {
+  return fetchJson(`/catalog/courses/${courseId}/cover`, {
+    method: "POST",
+    body: JSON.stringify({
+      filename,
+      content_base64: contentBase64,
+    }),
+  });
+}
+
+export async function removeCourseCover(
+  courseId: string,
+): Promise<{ cover_url?: string | null }> {
+  return fetchJson(`/catalog/courses/${courseId}/cover`, {
+    method: "DELETE",
+  });
+}
+
+export async function duplicateTask(taskId: string): Promise<{
+  id: string;
+  lesson_id: string;
+  task_type: string;
+  title: string;
+  order_index: number;
+  required: boolean;
+  payload: Record<string, unknown>;
+}> {
+  return fetchJson(`/catalog/tasks/${taskId}/duplicate`, {
+    method: "POST",
+  });
+}

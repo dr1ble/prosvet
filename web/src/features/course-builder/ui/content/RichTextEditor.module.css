@@ -140,6 +140,13 @@
   text-decoration: underline;
 }
 
+.editorWrapper .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 10px 0;
+}
+
 .loading {
   padding: 12px;
   color: var(--text-secondary, #666);

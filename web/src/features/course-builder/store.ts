@@ -14,6 +14,10 @@ function genLocalId(): string {
   return `local_${nextLocalId++}`;
 }
 
+function cloneCourse(course: BuilderCourse): BuilderCourse {
+  return JSON.parse(JSON.stringify(course)) as BuilderCourse;
+}
+
 export interface CourseBuilderState {
   courseId: string;
   course: BuilderCourse | null;
@@ -27,6 +31,10 @@ export interface CourseBuilderState {
     lessonId?: string;
     title: string;
   } | null;
+  historyPast: BuilderCourse[];
+  historyFuture: BuilderCourse[];
+  canUndo: boolean;
+  canRedo: boolean;
 
   isDirty: boolean;
   isSaving: boolean;
@@ -61,6 +69,7 @@ export interface CourseBuilderState {
 
   addTask: (lessonId: string, taskType: TaskType) => void;
   removeTask: (lessonId: string, taskId: string) => void;
+  duplicateTask: (lessonId: string, taskId: string) => Promise<void>;
   updateTask: (
     lessonId: string,
     taskId: string,
@@ -71,6 +80,13 @@ export interface CourseBuilderState {
   save: () => Promise<void>;
   validate: () => Promise<void>;
   publish: (version: string, changelog?: string) => Promise<void>;
+  rollback: (
+    releaseId: string,
+    version: string,
+    changelog?: string,
+  ) => Promise<void>;
+  undo: () => void;
+  redo: () => void;
 
   reset: () => void;
 }
@@ -83,6 +99,10 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
   previewOpen: false,
   publishDialogOpen: false,
   pendingDelete: null,
+  historyPast: [],
+  historyFuture: [],
+  canUndo: false,
+  canRedo: false,
   isDirty: false,
   isSaving: false,
   lastSavedAt: null,
@@ -95,7 +115,15 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
     try {
       const { fetchCourseStructure } = await import("./api");
       const course = await fetchCourseStructure(courseId);
-      set({ course, isLoading: false, isDirty: false });
+      set({
+        course,
+        isLoading: false,
+        isDirty: false,
+        historyPast: [],
+        historyFuture: [],
+        canUndo: false,
+        canRedo: false,
+      });
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : "Failed to load course",
@@ -105,10 +133,17 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
   },
 
   updateCourseMeta: (patch) =>
-    set((s) => ({
-      course: s.course ? { ...s.course, ...patch } : s.course,
-      isDirty: true,
-    })),
+    set((s) => {
+      if (!s.course) return s;
+      return {
+        course: { ...s.course, ...patch },
+        isDirty: true,
+        historyPast: [...s.historyPast, cloneCourse(s.course)],
+        historyFuture: [],
+        canUndo: true,
+        canRedo: false,
+      };
+    }),
 
   selectTask: (taskId: string | null) => set({ selectedTaskId: taskId }),
   selectLesson: (lessonId: string | null) =>
@@ -145,6 +180,12 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
         ? { ...s.course, lessons: [...s.course.lessons, newLesson] }
         : s.course,
       isDirty: true,
+      historyPast: s.course
+        ? [...s.historyPast, cloneCourse(s.course)]
+        : s.historyPast,
+      historyFuture: s.course ? [] : s.historyFuture,
+      canUndo: s.course ? true : s.canUndo,
+      canRedo: false,
     }));
   },
 
@@ -160,6 +201,12 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
         : s.course,
       isDirty: true,
       selectedTaskId: null,
+      historyPast: s.course
+        ? [...s.historyPast, cloneCourse(s.course)]
+        : s.historyPast,
+      historyFuture: s.course ? [] : s.historyFuture,
+      canUndo: s.course ? true : s.canUndo,
+      canRedo: false,
     }));
   },
 
@@ -179,6 +226,12 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
           }
         : s.course,
       isDirty: true,
+      historyPast: s.course
+        ? [...s.historyPast, cloneCourse(s.course)]
+        : s.historyPast,
+      historyFuture: s.course ? [] : s.historyFuture,
+      canUndo: s.course ? true : s.canUndo,
+      canRedo: false,
     }));
   },
 
@@ -194,6 +247,10 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
           lessons: lessons.map((l, i) => ({ ...l, orderIndex: i })),
         },
         isDirty: true,
+        historyPast: [...s.historyPast, cloneCourse(s.course)],
+        historyFuture: [],
+        canUndo: true,
+        canRedo: false,
       };
     });
   },
@@ -218,6 +275,10 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
           }),
         },
         isDirty: true,
+        historyPast: [...s.historyPast, cloneCourse(s.course)],
+        historyFuture: [],
+        canUndo: true,
+        canRedo: false,
       };
     });
   },
@@ -241,7 +302,57 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
         : s.course,
       isDirty: true,
       selectedTaskId: s.selectedTaskId === taskId ? null : s.selectedTaskId,
+      historyPast: s.course
+        ? [...s.historyPast, cloneCourse(s.course)]
+        : s.historyPast,
+      historyFuture: s.course ? [] : s.historyFuture,
+      canUndo: s.course ? true : s.canUndo,
+      canRedo: false,
     }));
+  },
+
+  duplicateTask: async (lessonId: string, taskId: string) => {
+    try {
+      const { duplicateTask: apiDuplicate } = await import("./api");
+      const result = await apiDuplicate(taskId);
+      set((s) => ({
+        course: s.course
+          ? {
+              ...s.course,
+              lessons: s.course.lessons.map((l) =>
+                l.id === lessonId || `${l.id}` === lessonId
+                  ? {
+                      ...l,
+                      tasks: [
+                        ...l.tasks,
+                        {
+                          id: result.id,
+                          taskType: result.task_type as TaskType,
+                          title: result.title,
+                          orderIndex: result.order_index,
+                          required: result.required,
+                          payload: result.payload,
+                        },
+                      ].sort((a, b) => a.orderIndex - b.orderIndex),
+                    }
+                  : l,
+              ),
+            }
+          : s.course,
+        isDirty: true,
+        selectedTaskId: result.id,
+        historyPast: s.course
+          ? [...s.historyPast, cloneCourse(s.course)]
+          : s.historyPast,
+        historyFuture: s.course ? [] : s.historyFuture,
+        canUndo: s.course ? true : s.canUndo,
+        canRedo: false,
+      }));
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : "Failed to duplicate task",
+      });
+    }
   },
 
   updateTask: (
@@ -268,6 +379,12 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
           }
         : s.course,
       isDirty: true,
+      historyPast: s.course
+        ? [...s.historyPast, cloneCourse(s.course)]
+        : s.historyPast,
+      historyFuture: s.course ? [] : s.historyFuture,
+      canUndo: s.course ? true : s.canUndo,
+      canRedo: false,
     }));
   },
 
@@ -289,6 +406,10 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
           }),
         },
         isDirty: true,
+        historyPast: [...s.historyPast, cloneCourse(s.course)],
+        historyFuture: [],
+        canUndo: true,
+        canRedo: false,
       };
     });
   },
@@ -357,6 +478,54 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
     }
   },
 
+  rollback: async (releaseId: string, version: string, changelog?: string) => {
+    const { course } = get();
+    if (!course) return;
+
+    try {
+      const { rollbackCourse } = await import("./api");
+      await rollbackCourse(course.id, releaseId, version, changelog);
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : "Rollback failed",
+      });
+    }
+  },
+
+  undo: () => {
+    set((s) => {
+      if (!s.course || s.historyPast.length === 0) return s;
+      const previous = s.historyPast[s.historyPast.length - 1];
+      const nextPast = s.historyPast.slice(0, -1);
+      const nextFuture = [cloneCourse(s.course), ...s.historyFuture];
+      return {
+        course: cloneCourse(previous),
+        historyPast: nextPast,
+        historyFuture: nextFuture,
+        canUndo: nextPast.length > 0,
+        canRedo: nextFuture.length > 0,
+        isDirty: true,
+      };
+    });
+  },
+
+  redo: () => {
+    set((s) => {
+      if (!s.course || s.historyFuture.length === 0) return s;
+      const next = s.historyFuture[0];
+      const nextFuture = s.historyFuture.slice(1);
+      const nextPast = [...s.historyPast, cloneCourse(s.course)];
+      return {
+        course: cloneCourse(next),
+        historyPast: nextPast,
+        historyFuture: nextFuture,
+        canUndo: nextPast.length > 0,
+        canRedo: nextFuture.length > 0,
+        isDirty: true,
+      };
+    });
+  },
+
   reset: () => {
     nextLocalId = 1;
     set({
@@ -370,6 +539,10 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
       isLoading: false,
       error: null,
       validationErrors: [],
+      historyPast: [],
+      historyFuture: [],
+      canUndo: false,
+      canRedo: false,
     });
   },
 }));

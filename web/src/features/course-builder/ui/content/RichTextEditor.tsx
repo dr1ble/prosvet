@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
 
 import styles from "./RichTextEditor.module.css";
 
@@ -28,6 +29,7 @@ export function RichTextEditor({
       Link.configure({
         openOnClick: false,
       }),
+      Image,
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -165,6 +167,19 @@ export function RichTextEditor({
           title="Убрать ссылку"
         >
           🔗✕
+        </button>
+        <button
+          type="button"
+          className={styles.toolBtn}
+          onClick={() => {
+            const src = prompt("Введите URL изображения:");
+            if (src) {
+              editor.chain().focus().setImage({ src }).run();
+            }
+          }}
+          title="Изображение"
+        >
+          🖼
         </button>
 
         <span className={styles.separator} />

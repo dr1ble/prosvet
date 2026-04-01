@@ -1,3 +1,4 @@
+import base64
 from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
@@ -10,6 +11,7 @@ from app.modules.catalog.api.schemas import (
     BulkCourseStructureIn,
     BulkCourseStructureOut,
     CourseBundleOut,
+    CourseCoverUploadIn,
     CourseCreateIn,
     CourseLessonCreateIn,
     CourseLessonOut,
@@ -20,6 +22,7 @@ from app.modules.catalog.api.schemas import (
     CoursePublishIn,
     CourseReleaseCreateIn,
     CourseReleaseOut,
+    CourseRollbackIn,
     CourseUpdateIn,
     LessonTaskCreateIn,
     LessonTaskOut,
@@ -64,6 +67,36 @@ def _resolve_course_cover_path(course_slug: str) -> Path | None:
         if candidate.is_file():
             return candidate
     return None
+
+
+def _save_course_cover(course_slug: str, filename: str, content_base64: str) -> Path:
+    normalized = course_slug.strip().lower()
+    suffix = Path(filename).suffix.lower()
+    if suffix not in COVER_MEDIA_TYPES:
+        raise HTTPException(status_code=422, detail="Unsupported cover format.")
+
+    covers_dir = _catalog_covers_dir()
+    covers_dir.mkdir(parents=True, exist_ok=True)
+
+    for extension in COVER_MEDIA_TYPES:
+        candidate = covers_dir / f"{normalized}{extension}"
+        if candidate.exists():
+            candidate.unlink()
+
+    destination = covers_dir / f"{normalized}{suffix}"
+    content = base64.b64decode(content_base64)
+    if not content:
+        raise HTTPException(status_code=422, detail="Cover file is empty.")
+    destination.write_bytes(content)
+    return destination
+
+
+def _delete_course_cover(course_slug: str) -> bool:
+    cover_path = _resolve_course_cover_path(course_slug)
+    if cover_path is None:
+        return False
+    cover_path.unlink(missing_ok=True)
+    return True
 
 
 def _to_course_out(course: Course, request: Request) -> CourseOut:
@@ -156,6 +189,35 @@ def get_course_cover_file(course_slug: str) -> FileResponse:
 
     media_type = COVER_MEDIA_TYPES.get(cover_path.suffix.lower(), "application/octet-stream")
     return FileResponse(path=cover_path, media_type=media_type)
+
+
+@router.post("/courses/{course_id}/cover", response_model=CourseOut)
+def upload_course_cover(
+    course_id: UUID,
+    request: Request,
+    payload: CourseCoverUploadIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseOut:
+    course = service.repo.get_course_by_id(course_id)
+    if course is None:
+        raise HTTPException(status_code=404, detail="Course not found.")
+    _save_course_cover(course.slug, payload.filename, payload.content_base64)
+    return _to_course_out(course, request)
+
+
+@router.delete("/courses/{course_id}/cover", response_model=CourseOut)
+def delete_course_cover(
+    course_id: UUID,
+    request: Request,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseOut:
+    course = service.repo.get_course_by_id(course_id)
+    if course is None:
+        raise HTTPException(status_code=404, detail="Course not found.")
+    _delete_course_cover(course.slug)
+    return _to_course_out(course, request)
 
 
 @router.post("/courses", response_model=CourseOut, status_code=status.HTTP_201_CREATED)
@@ -496,3 +558,27 @@ def publish_course(
     except CatalogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return _to_release_out(release, screen_count=0)
+
+
+@router.post(
+    "/courses/{course_id}/rollback",
+    response_model=CourseReleaseOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def rollback_course_release(
+    course_id: UUID,
+    payload: CourseRollbackIn,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CourseReleaseOut:
+    try:
+        release = service.rollback_course(
+            course_id=course_id,
+            release_id=payload.release_id,
+            version=payload.version,
+            changelog=payload.changelog,
+        )
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    screens = service.repo.list_release_screens(release.id)
+    return _to_release_out(release, screen_count=len(screens))

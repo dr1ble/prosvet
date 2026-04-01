@@ -690,6 +690,51 @@ class CatalogService:
         course.status = CourseStatus.ACTIVE.value
         return release
 
+    def rollback_course(
+        self,
+        course_id: UUID,
+        release_id: UUID,
+        version: str,
+        changelog: str | None = None,
+    ) -> CourseRelease:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+
+        source_release = self.repo.get_release_by_id(release_id)
+        if source_release is None or source_release.course_id != course_id:
+            raise CatalogError("Release not found for this course.", status_code=404)
+
+        existing = self.repo.get_release_by_version(course_id=course.id, version=version)
+        if existing is not None:
+            raise CatalogError("Release version already exists.", status_code=409)
+
+        screens = self.repo.list_release_screens(source_release.id)
+        if not screens:
+            raise CatalogError("Selected release has no screens.", status_code=422)
+
+        now = _utcnow()
+        release = self.repo.create_release(
+            course_id=course.id,
+            version=version,
+            changelog=changelog or f"Rollback to release {source_release.version}",
+            status=ReleaseStatus.PUBLISHED.value,
+            published_at=now,
+        )
+
+        for screen in screens:
+            self.repo.add_release_screen(
+                release_id=release.id,
+                screen_key=screen.screen_key,
+                title=screen.title,
+                order_index=screen.order_index,
+                payload=screen.payload_json,
+                checksum=screen.checksum,
+            )
+
+        course.status = CourseStatus.ACTIVE.value
+        return release
+
     def update_course_structure_bulk(
         self,
         course_id: UUID,

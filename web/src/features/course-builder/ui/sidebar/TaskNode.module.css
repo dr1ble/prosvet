@@ -89,8 +89,25 @@
   transition: opacity 0.15s;
 }
 
-.task:hover .removeBtn {
+.duplicateBtn {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.task:hover .removeBtn,
+.task:hover .duplicateBtn {
   opacity: 1;
+}
+
+.duplicateBtn:hover {
+  color: var(--interactive-primary, #1d73e2);
 }
 
 .removeBtn:hover {

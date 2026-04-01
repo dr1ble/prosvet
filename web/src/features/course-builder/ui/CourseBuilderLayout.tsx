@@ -16,6 +16,7 @@ export function CourseBuilderLayout() {
   const pendingDelete = useCourseBuilderStore((s) => s.pendingDelete);
   const closePublishDialog = useCourseBuilderStore((s) => s.closePublishDialog);
   const publish = useCourseBuilderStore((s) => s.publish);
+  const rollback = useCourseBuilderStore((s) => s.rollback);
   const confirmDelete = useCourseBuilderStore((s) => s.confirmDelete);
   const cancelDelete = useCourseBuilderStore((s) => s.cancelDelete);
 
@@ -44,6 +45,7 @@ export function CourseBuilderLayout() {
         <PublishDialog
           course={course}
           onPublish={publish}
+          onRollback={rollback}
           onClose={closePublishDialog}
         />
       )}

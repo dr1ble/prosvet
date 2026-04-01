@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
@@ -203,6 +204,29 @@ class BulkCourseStructureOut(_BaseSchema):
 class CoursePublishIn(_BaseSchema):
     version: str = Field(min_length=5, max_length=32, pattern=r"^\d+\.\d+\.\d+$")
     changelog: str | None = Field(default=None, max_length=10_000)
+
+
+class CourseRollbackIn(_BaseSchema):
+    release_id: UUID
+    version: str = Field(min_length=5, max_length=32, pattern=r"^\d+\.\d+\.\d+$")
+    changelog: str | None = Field(default=None, max_length=10_000)
+
+
+class CourseCoverUploadIn(_BaseSchema):
+    filename: str = Field(min_length=3, max_length=255)
+    content_base64: str = Field(min_length=8)
+
+    @field_validator("content_base64")
+    @classmethod
+    def validate_base64(cls, value: str) -> str:
+        normalized = value.strip()
+        if normalized.startswith("data:"):
+            _, _, normalized = normalized.partition(",")
+        try:
+            base64.b64decode(normalized, validate=True)
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError("content_base64 must be valid base64") from exc
+        return normalized
 
 
 class CourseVersionCreateIn(_BaseSchema):

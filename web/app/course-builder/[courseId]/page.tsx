@@ -20,10 +20,29 @@ export default function CourseBuilderPage() {
     function handleKeyDown(e: KeyboardEvent) {
       const isMac = navigator.platform.toUpperCase().includes("MAC");
       const mod = isMac ? e.metaKey : e.ctrlKey;
+      const target = e.target as HTMLElement | null;
+      const isEditable =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        Boolean(target?.isContentEditable);
 
       if (mod && e.key === "s") {
         e.preventDefault();
         useCourseBuilderStore.getState().save();
+      }
+
+      if (mod && !isEditable && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          useCourseBuilderStore.getState().redo();
+        } else {
+          useCourseBuilderStore.getState().undo();
+        }
+      }
+
+      if (mod && !isMac && !isEditable && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        useCourseBuilderStore.getState().redo();
       }
 
       if (e.key === "Escape") {

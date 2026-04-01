@@ -8,12 +8,18 @@ import styles from "./PublishDialog.module.css";
 interface PublishDialogProps {
   course: BuilderCourse;
   onPublish: (version: string, changelog: string) => Promise<void>;
+  onRollback: (
+    releaseId: string,
+    version: string,
+    changelog?: string,
+  ) => Promise<void>;
   onClose: () => void;
 }
 
 export function PublishDialog({
   course,
   onPublish,
+  onRollback,
   onClose,
 }: PublishDialogProps) {
   const [version, setVersion] = useState("1.0.0");
@@ -23,6 +29,10 @@ export function PublishDialog({
   const [warnings, setWarnings] = useState<ValidationError[]>([]);
   const [validated, setValidated] = useState(false);
   const [loadingVersion, setLoadingVersion] = useState(true);
+  const [releases, setReleases] = useState<
+    Array<{ id: string; version: string }>
+  >([]);
+  const [rollingBack, setRollingBack] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadLatestVersion() {
@@ -32,9 +42,10 @@ export function PublishDialog({
         );
         if (response.ok) {
           const data = await response.json();
-          const releases = data.items || data || [];
-          if (releases.length > 0) {
-            const latest = releases[0].version || "0.0.0";
+          const loadedReleases = data.items || data || [];
+          setReleases(loadedReleases);
+          if (loadedReleases.length > 0) {
+            const latest = loadedReleases[0].version || "0.0.0";
             const parts = latest.split(".").map(Number);
             parts[2] = (parts[2] || 0) + 1;
             setVersion(parts.join("."));
@@ -173,6 +184,26 @@ export function PublishDialog({
     }
   }
 
+  async function handleRollback(releaseId: string, sourceVersion: string) {
+    if (!version.trim()) return;
+    setRollingBack(releaseId);
+    try {
+      const rollbackChangelog =
+        changelog.trim() || `Rollback to release ${sourceVersion}`;
+      await onRollback(releaseId, version, rollbackChangelog);
+      onClose();
+    } catch (err) {
+      setErrors([
+        {
+          type: "rollback_error",
+          message: err instanceof Error ? err.message : "Ошибка отката",
+        },
+      ]);
+    } finally {
+      setRollingBack(null);
+    }
+  }
+
   const canPublish = validated && errors.length === 0;
 
   return (
@@ -280,6 +311,34 @@ export function PublishDialog({
                 {errors.length}
               </span>
             </div>
+          </div>
+
+          <div className={styles.validationSection}>
+            <div className={styles.validationHeader}>
+              <h3>История версий</h3>
+            </div>
+            {releases.length === 0 ? (
+              <p className={styles.validationHint}>
+                Пока нет опубликованных версий
+              </p>
+            ) : (
+              <div className={styles.warningList}>
+                {releases.map((release) => (
+                  <div key={release.id} className={styles.releaseRow}>
+                    <span>Версия {release.version}</span>
+                    <button
+                      className={styles.validateBtn}
+                      onClick={() =>
+                        handleRollback(release.id, release.version)
+                      }
+                      disabled={!!rollingBack || !version.trim()}
+                    >
+                      {rollingBack === release.id ? "Откат..." : "Откатить"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

@@ -59,6 +59,10 @@ class CatalogRepository:
         )
         return self.db.scalar(stmt)
 
+    def get_release_by_id(self, release_id: UUID) -> CourseRelease | None:
+        stmt = select(CourseRelease).where(CourseRelease.id == release_id)
+        return self.db.scalar(stmt)
+
     def create_release(
         self,
         course_id: UUID,
