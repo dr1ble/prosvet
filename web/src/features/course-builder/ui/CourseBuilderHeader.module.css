@@ -19,6 +19,31 @@
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary, #1a1a1a);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.editIcon {
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: var(--text-secondary, #999);
+}
+
+.title:hover .editIcon {
+  opacity: 1;
+}
+
+.titleEditInput {
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border: 1px solid var(--interactive-primary, #1d73e2);
+  border-radius: var(--radius-sm, 6px);
+  outline: none;
+  min-width: 200px;
 }
 
 .badge {

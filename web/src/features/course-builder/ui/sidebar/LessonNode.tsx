@@ -1,6 +1,20 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
   GripVertical,
   Book,
   ChevronDown,
@@ -26,8 +40,16 @@ interface LessonNodeProps {
 export function LessonNode({ lesson, isSelected, onSelect }: LessonNodeProps) {
   const [expanded, setExpanded] = useState(true);
   const addTask = useCourseBuilderStore((s) => s.addTask);
-  const removeLesson = useCourseBuilderStore((s) => s.removeLesson);
+  const removeLessonRequest = useCourseBuilderStore((s) => s.requestDelete);
   const updateLesson = useCourseBuilderStore((s) => s.updateLesson);
+  const reorderTasks = useCourseBuilderStore((s) => s.reorderTasks);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const {
     attributes,
@@ -49,6 +71,19 @@ export function LessonNode({ lesson, isSelected, onSelect }: LessonNodeProps) {
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
     updateLesson(lesson.id!, { title: e.target.value });
   }
+
+  function handleTaskDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = lesson.tasks.findIndex((t) => `${t.id}` === active.id);
+    const newIndex = lesson.tasks.findIndex((t) => `${t.id}` === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    reorderTasks(lesson.id!, oldIndex, newIndex);
+  }
+
+  const taskIds = lesson.tasks.map((t) => `${t.id}`);
 
   return (
     <div
@@ -82,7 +117,7 @@ export function LessonNode({ lesson, isSelected, onSelect }: LessonNodeProps) {
 
         <button
           className={styles.removeBtn}
-          onClick={() => removeLesson(lesson.id!)}
+          onClick={() => removeLessonRequest(lesson.id!, lesson.title)}
           title="Удалить урок"
         >
           <Trash2 size={14} />
@@ -90,37 +125,57 @@ export function LessonNode({ lesson, isSelected, onSelect }: LessonNodeProps) {
       </div>
 
       {expanded && (
-        <div className={styles.tasks}>
-          {lesson.tasks.map((task) => (
-            <TaskNode key={`${task.id}`} lessonId={lesson.id!} task={task} />
-          ))}
-
-          <div className={styles.addTaskRow}>
-            <select
-              className={styles.taskTypeSelect}
-              onChange={(e) => {
-                if (e.target.value) {
-                  addTask(
-                    lesson.id!,
-                    e.target
-                      .value as BuilderLesson["tasks"][number]["taskType"],
-                  );
-                  e.target.value = "";
-                }
-              }}
-              defaultValue=""
+        <>
+          {lesson.description && (
+            <div className={styles.description}>{lesson.description}</div>
+          )}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleTaskDragEnd}
+          >
+            <SortableContext
+              items={taskIds}
+              strategy={verticalListSortingStrategy}
             >
-              <option value="" disabled>
-                + Добавить задачу
-              </option>
-              {Object.entries(TASK_TYPE_LABELS).map(([type, label]) => (
-                <option key={type} value={type}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+              <div className={styles.tasks}>
+                {lesson.tasks.map((task) => (
+                  <TaskNode
+                    key={`${task.id}`}
+                    lessonId={lesson.id!}
+                    task={task}
+                  />
+                ))}
+
+                <div className={styles.addTaskRow}>
+                  <select
+                    className={styles.taskTypeSelect}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        addTask(
+                          lesson.id!,
+                          e.target
+                            .value as BuilderLesson["tasks"][number]["taskType"],
+                        );
+                        e.target.value = "";
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>
+                      + Добавить задачу
+                    </option>
+                    {Object.entries(TASK_TYPE_LABELS).map(([type, label]) => (
+                      <option key={type} value={type}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </SortableContext>
+          </DndContext>
+        </>
       )}
     </div>
   );

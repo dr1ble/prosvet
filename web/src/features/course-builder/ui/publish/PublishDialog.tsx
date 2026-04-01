@@ -1,5 +1,5 @@
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { BuilderCourse, ValidationError } from "../../types";
 
@@ -16,16 +16,38 @@ export function PublishDialog({
   onPublish,
   onClose,
 }: PublishDialogProps) {
-  const [version, setVersion] = useState(generateNextVersion(course));
+  const [version, setVersion] = useState("1.0.0");
   const [changelog, setChangelog] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [warnings, setWarnings] = useState<ValidationError[]>([]);
   const [validated, setValidated] = useState(false);
+  const [loadingVersion, setLoadingVersion] = useState(true);
 
-  function generateNextVersion(c: BuilderCourse): string {
-    return "1.0.0";
-  }
+  useEffect(() => {
+    async function loadLatestVersion() {
+      try {
+        const response = await fetch(
+          `/api/admin/catalog/courses/${course.id}/releases`,
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const releases = data.items || data || [];
+          if (releases.length > 0) {
+            const latest = releases[0].version || "0.0.0";
+            const parts = latest.split(".").map(Number);
+            parts[2] = (parts[2] || 0) + 1;
+            setVersion(parts.join("."));
+          }
+        }
+      } catch {
+        // fallback to 1.0.0
+      } finally {
+        setLoadingVersion(false);
+      }
+    }
+    loadLatestVersion();
+  }, [course.id]);
 
   async function handleValidate() {
     const foundErrors: ValidationError[] = [];
@@ -195,7 +217,8 @@ export function PublishDialog({
 
             {!validated && (
               <p className={styles.validationHint}>
-                Нажмите "Проверить" для поиска ошибок перед публикацией
+                Нажмите &quot;Проверить&quot; для поиска ошибок перед
+                публикацией
               </p>
             )}
 

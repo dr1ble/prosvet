@@ -31,6 +31,18 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return JSON.parse(text) as T;
 }
 
+export async function createCourse(data: {
+  title: string;
+  slug?: string;
+  description?: string;
+  status?: string;
+}): Promise<{ id: string; title: string; slug: string }> {
+  return fetchJson("/catalog/courses", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function fetchCourseStructure(
   courseId: string,
 ): Promise<BuilderCourse> {

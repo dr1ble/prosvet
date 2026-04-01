@@ -498,16 +498,17 @@ class CatalogService:
                     "title": lesson.title,
                     "description": lesson.description,
                     "order_index": lesson.order_index,
-                    "tasks": [
-                        {
-                            "id": str(task.id),
-                            "task_type": task.task_type,
-                            "title": task.title,
-                            "order_index": task.order_index,
-                            "required": task.required,
-                        }
-                        for task in tasks
-                    ],
+                        "tasks": [
+                            {
+                                "id": str(task.id),
+                                "task_type": task.task_type,
+                                "title": task.title,
+                                "order_index": task.order_index,
+                                "required": task.required,
+                                "payload": task.payload_json,
+                            }
+                            for task in tasks
+                        ],
                 }
             )
         structure: dict[str, Any] = {
@@ -718,8 +719,10 @@ class CatalogService:
                 )
                 self.repo.reorder_lesson(course_id, lesson.id, lesson_payload.order_index)
             else:
-                order = lesson_payload.order_index or self.repo.get_next_lesson_order_index(
-                    course_id
+                order = (
+                    lesson_payload.order_index
+                    if lesson_payload.order_index is not None
+                    else self.repo.get_next_lesson_order_index(course_id)
                 )
                 lesson = self.repo.create_lesson(
                     course_id=course_id,
@@ -738,12 +741,23 @@ class CatalogService:
 
             processed_task_ids: set[str] = set()
 
+            # First pass: identify which tasks to keep/update vs create
+            for task_payload in lesson_payload.tasks:
+                task_id = str(task_payload.id) if task_payload.id else None
+                if task_id and task_id in existing_task_map:
+                    processed_task_ids.add(task_id)
+
+            # Archive removed tasks BEFORE creating new ones (avoid order_index conflicts)
+            for task_id, task in existing_task_map.items():
+                if task_id not in processed_task_ids:
+                    self.repo.archive_task(task.id)
+
+            # Second pass: update existing and create new tasks
             for task_payload in lesson_payload.tasks:
                 task_id = str(task_payload.id) if task_payload.id else None
 
                 if task_id and task_id in existing_task_map:
                     task = existing_task_map[task_id]
-                    processed_task_ids.add(task_id)
                     checksum = _checksum_payload(task_payload.payload)
                     self.repo.update_task(
                         task_id=task.id,
@@ -754,8 +768,10 @@ class CatalogService:
                     )
                     self.repo.reorder_task(lesson.id, task.id, task_payload.order_index)
                 else:
-                    order = task_payload.order_index or self.repo.get_next_task_order_index(
-                        lesson.id
+                    order = (
+                        task_payload.order_index
+                        if task_payload.order_index is not None
+                        else self.repo.get_next_task_order_index(lesson.id)
                     )
                     checksum = _checksum_payload(task_payload.payload)
                     self.repo.create_task(
@@ -767,10 +783,6 @@ class CatalogService:
                         payload=task_payload.payload,
                         checksum=checksum,
                     )
-
-            for task_id, task in existing_task_map.items():
-                if task_id not in processed_task_ids:
-                    self.repo.archive_task(task.id)
 
         for lesson_id, lesson in existing_lesson_map.items():
             if lesson_id not in processed_lesson_ids:

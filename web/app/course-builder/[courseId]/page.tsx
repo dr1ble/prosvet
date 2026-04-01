@@ -17,6 +17,26 @@ export default function CourseBuilderPage() {
   useAutosave(2000);
 
   useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const isMac = navigator.platform.toUpperCase().includes("MAC");
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+
+      if (mod && e.key === "s") {
+        e.preventDefault();
+        useCourseBuilderStore.getState().save();
+      }
+
+      if (e.key === "Escape") {
+        useCourseBuilderStore.getState().cancelDelete();
+        useCourseBuilderStore.getState().closePublishDialog();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
     if (courseId) {
       loadCourse(courseId);
     }

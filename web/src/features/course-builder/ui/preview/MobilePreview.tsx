@@ -231,21 +231,28 @@ function VideoPreview({ url }: { url: string }) {
   return <div className={styles.videoPlaceholder}>Видео: {url}</div>;
 }
 
-function QuizPreview({ questions }: { questions: unknown[] }) {
+interface QuizQuestion {
+  question?: string;
+  type?: string;
+  pairs?: Array<{ left: string; right: string }>;
+  options?: Array<{ correct?: boolean; text?: string }>;
+}
+
+function QuizPreview({ questions }: { questions: QuizQuestion[] }) {
   if (!questions.length) {
     return <div className={styles.quizEmpty}>Нет вопросов</div>;
   }
 
   return (
     <div className={styles.quizContent}>
-      {questions.map((q: any, i: number) => (
+      {questions.map((q, i) => (
         <div key={i} className={styles.quizQuestion}>
           <p className={styles.questionText}>
             {q.question || `Вопрос ${i + 1}`}
           </p>
           {q.type === "matching" ? (
             <div className={styles.matchingPreview}>
-              {(q.pairs || []).map((pair: any, j: number) => (
+              {(q.pairs || []).map((pair, j) => (
                 <div key={j} className={styles.matchingPair}>
                   <span>{pair.left}</span>
                   <span>→</span>
@@ -255,7 +262,7 @@ function QuizPreview({ questions }: { questions: unknown[] }) {
             </div>
           ) : (
             <div className={styles.optionsPreview}>
-              {(q.options || []).map((opt: any, j: number) => (
+              {(q.options || []).map((opt, j) => (
                 <div
                   key={j}
                   className={`${styles.option} ${opt.correct ? styles.correctOption : ""}`}

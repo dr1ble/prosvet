@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -17,9 +17,6 @@ export function RichTextEditor({
   onChange,
   placeholder,
 }: RichTextEditorProps) {
-  const contentRef = useRef(value);
-  contentRef.current = value;
-
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -35,17 +32,13 @@ export function RichTextEditor({
     content: value,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
-      if (html !== contentRef.current) {
-        contentRef.current = html;
-        onChange(html);
-      }
+      onChange(html);
     },
     immediatelyRender: false,
   });
 
   useEffect(() => {
-    if (editor && value !== contentRef.current) {
-      contentRef.current = value;
+    if (editor && editor.getHTML() !== value) {
       editor.commands.setContent(value);
     }
   }, [editor, value]);

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { useCourseBuilderStore } from "../../store";
 import { TASK_TYPE_LABELS } from "../../types";
@@ -88,7 +88,7 @@ function TaskEditor({
     case "theory_video":
       return (
         <div className={styles.form}>
-          <VideoSourceSelector
+          <VideoUrlEditor
             task={task}
             lessonId={lessonId}
             onUpdate={updateTask}
@@ -170,7 +170,7 @@ function TaskEditor({
   }
 }
 
-function VideoSourceSelector({
+function VideoUrlEditor({
   task,
   lessonId,
   onUpdate,
@@ -183,150 +183,52 @@ function VideoSourceSelector({
     patch: Record<string, unknown>,
   ) => void;
 }) {
-  const sourceType = (task.payload.video_source as string) || "url";
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(
-    (task.payload.video_local_url as string) || null,
-  );
-
-  function handleSourceChange(type: string) {
-    onUpdate(lessonId, task.id!, {
-      payload: { ...task.payload, video_source: type },
-    });
-  }
-
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    onUpdate(lessonId, task.id!, {
-      payload: {
-        ...task.payload,
-        video_source: "local",
-        video_url: "",
-        video_local_name: file.name,
-        video_local_size: file.size,
-        video_local_type: file.type,
-        video_local_url: url,
-      },
-    });
-  }
-
-  function handleUrlChange(value: string) {
-    onUpdate(lessonId, task.id!, {
-      payload: { ...task.payload, video_url: value },
-    });
-  }
-
-  const embedUrl =
-    sourceType === "url"
-      ? getVideoEmbedUrl((task.payload.video_url as string) || "")
-      : null;
-  const localUrl = sourceType === "local" ? previewUrl : null;
-  const isDirectVideo = embedUrl?.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i);
-  const isVkVideo = embedUrl?.includes("vk.com/video_ext.php");
-  const isTelegram =
-    embedUrl?.includes("t.me/") && embedUrl?.includes("embed=1");
-  const isYandex = embedUrl?.includes("yandex.ru/video/preview/");
-  const hasPreview = embedUrl || localUrl;
+  const url = (task.payload.video_url as string) || "";
+  const embedUrl = getVideoEmbedUrl(url);
+  const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i);
+  const sourceLabel = getSourceLabel(url);
 
   return (
     <div className={styles.field}>
-      <label>Видео</label>
-
-      <div className={styles.sourceTabs}>
-        <button
-          className={`${styles.sourceTab} ${sourceType === "url" ? styles.sourceTabActive : ""}`}
-          onClick={() => handleSourceChange("url")}
-        >
-          По ссылке
-        </button>
-        <button
-          className={`${styles.sourceTab} ${sourceType === "local" ? styles.sourceTabActive : ""}`}
-          onClick={() => handleSourceChange("local")}
-        >
-          Загрузить файл
-        </button>
-      </div>
-
-      {sourceType === "url" && (
-        <div className={styles.urlInputRow}>
-          <input
-            className={styles.input}
-            value={(task.payload.video_url as string) || ""}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            placeholder="https://youtube.com/... или https://rutube.ru/video/..."
-          />
-          {(task.payload.video_url as string) && (
-            <span className={styles.sourceHint}>
-              {getSourceLabel(task.payload.video_url as string)}
-            </span>
-          )}
-        </div>
+      <label>URL видео</label>
+      <input
+        className={styles.input}
+        value={url}
+        onChange={(e) =>
+          onUpdate(lessonId, task.id!, {
+            payload: { ...task.payload, video_url: e.target.value },
+          })
+        }
+        placeholder="https://youtube.com/... или https://rutube.ru/video/..."
+      />
+      {url && (
+        <span className={styles.sourceHint}>
+          {sourceLabel || "Неизвестный источник"}
+        </span>
       )}
 
-      {sourceType === "local" && (
-        <div className={styles.localUpload}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="video/*"
-            onChange={handleFileSelect}
-            className={styles.fileInputHidden}
-          />
-          <button
-            className={styles.uploadBtn}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {task.payload.video_local_name ? (
-              <span>
-                📎 {task.payload.video_local_name as string}{" "}
-                <span className={styles.fileSize}>
-                  ({formatFileSize(task.payload.video_local_size as number)})
-                </span>
-              </span>
-            ) : (
-              <span>Выбрать видео файл</span>
-            )}
-          </button>
-          <span className={styles.sourceHint}>
-            MP4, WebM, Ogg. Файл хранится локально в браузере.
-          </span>
-        </div>
-      )}
-
-      {hasPreview && (
+      {embedUrl && !isDirectVideo && (
         <div className={styles.videoPreview}>
-          {embedUrl && isDirectVideo && (
-            <video src={embedUrl} controls className={styles.localVideo} />
-          )}
-          {embedUrl && !isDirectVideo && (
-            <div className={styles.embedWrapper}>
-              <iframe
-                src={embedUrl}
-                title="Video preview"
-                allowFullScreen
-                className={styles.embedFrame}
-                sandbox={
-                  isTelegram ? "allow-scripts allow-same-origin" : undefined
-                }
-              />
-            </div>
-          )}
-          {localUrl && (
-            <video src={localUrl} controls className={styles.localVideo} />
-          )}
-          {embedUrl &&
-            !getVideoEmbedUrl((task.payload.video_url as string) || "") && (
-              <div className={styles.noEmbed}>
-                <p>
-                  Предпросмотр недоступен для этого источника. Проверьте ссылку
-                  вручную.
-                </p>
-              </div>
-            )}
+          <div className={styles.embedWrapper}>
+            <iframe
+              src={embedUrl}
+              title="Video preview"
+              allowFullScreen
+              className={styles.embedFrame}
+            />
+          </div>
+        </div>
+      )}
+
+      {isDirectVideo && (
+        <div className={styles.videoPreview}>
+          <video src={url} controls className={styles.localVideo} />
+        </div>
+      )}
+
+      {url && !embedUrl && !isDirectVideo && (
+        <div className={styles.noEmbed}>
+          Предпросмотр недоступен для этого источника
         </div>
       )}
     </div>
@@ -343,57 +245,22 @@ function getVideoEmbedUrl(url: string): string | null {
     return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
   }
 
-  const youtubeShort = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
-  if (youtubeShort) {
-    return `https://www.youtube.com/embed/${youtubeShort[1]}`;
-  }
-
-  const rutubeMatch = url.match(/rutube\.ru\/video\/([a-f0-9]{32})/);
+  const rutubeMatch = url.match(/rutube\.ru\/video\/([a-f0-9]+)/);
   if (rutubeMatch) {
     return `https://rutube.ru/play/embed/${rutubeMatch[1]}`;
-  }
-
-  const rutubeShort = url.match(/rutube\.ru\/video\/([a-f0-9]+)/);
-  if (rutubeShort) {
-    return `https://rutube.ru/play/embed/${rutubeShort[1]}`;
   }
 
   const vkMatch =
     url.match(/vk\.com\/video(-?\d+_\d+)/) ||
     url.match(/vk\.com\/.*\?z=video(-?\d+_\d+)/);
   if (vkMatch) {
-    const videoId = vkMatch[1];
-    const [oid, id] = videoId.split("_");
-    return `https://vk.com/video_ext.php?oid=${oid}&id=${id}&hd=2`;
-  }
-
-  const vkShortMatch = url.match(/vkvideo\.ru\/video(-?\d+_\d+)/);
-  if (vkShortMatch) {
-    const videoId = vkShortMatch[1];
-    const [oid, id] = videoId.split("_");
+    const [oid, id] = vkMatch[1].split("_");
     return `https://vk.com/video_ext.php?oid=${oid}&id=${id}&hd=2`;
   }
 
   const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
   if (vimeoMatch) {
     return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-  }
-
-  const dailymotionMatch = url.match(/dailymotion\.com\/video\/([a-zA-Z0-9]+)/);
-  if (dailymotionMatch) {
-    return `https://www.dailymotion.com/embed/video/${dailymotionMatch[1]}`;
-  }
-
-  const telegramMatch = url.match(/t\.me\/(\w+)\/(\d+)/);
-  if (telegramMatch) {
-    return `https://t.me/${telegramMatch[1]}/${telegramMatch[2]}?embed=1`;
-  }
-
-  const yandexMatch =
-    url.match(/yadi\.sk\/i\/([a-zA-Z0-9_-]+)/) ||
-    url.match(/disk\.yandex\.\w+\/i\/([a-zA-Z0-9_-]+)/);
-  if (yandexMatch) {
-    return `https://yandex.ru/video/preview/${yandexMatch[1]}`;
   }
 
   if (url.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i)) {
@@ -416,10 +283,4 @@ function getSourceLabel(url: string): string {
   if (url.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i))
     return "Прямая ссылка на видео";
   return "Неизвестный источник";
-}
-
-function formatFileSize(bytes: number): string {
-  if (!bytes) return "";
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

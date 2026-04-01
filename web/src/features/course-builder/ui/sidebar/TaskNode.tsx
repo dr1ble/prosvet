@@ -1,4 +1,6 @@
-import { Trash2, CheckCircle, Circle } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Trash2, CheckCircle, Circle, GripVertical } from "lucide-react";
 
 import type { BuilderTask } from "../../types";
 import { TASK_TYPE_LABELS } from "../../types";
@@ -14,11 +16,28 @@ interface TaskNodeProps {
 export function TaskNode({ lessonId, task }: TaskNodeProps) {
   const selectedTaskId = useCourseBuilderStore((s) => s.selectedTaskId);
   const selectTask = useCourseBuilderStore((s) => s.selectTask);
-  const removeTask = useCourseBuilderStore((s) => s.removeTask);
+  const removeTaskRequest = useCourseBuilderStore((s) => s.requestDelete);
   const updateTask = useCourseBuilderStore((s) => s.updateTask);
 
   const isSelected =
     selectedTaskId === task.id || `${selectedTaskId}` === `${task.id}`;
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `${task.id}`,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
     updateTask(lessonId, task.id!, { title: e.target.value });
@@ -30,9 +49,20 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={`${styles.task} ${isSelected ? styles.selected : ""}`}
       onClick={() => selectTask(task.id)}
     >
+      <div
+        className={styles.dragHandle}
+        {...attributes}
+        {...listeners}
+        title="Перетащить для изменения порядка"
+      >
+        <GripVertical size={12} />
+      </div>
+
       <button
         className={styles.requiredBtn}
         onClick={(e) => {
@@ -59,7 +89,7 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
         className={styles.removeBtn}
         onClick={(e) => {
           e.stopPropagation();
-          removeTask(lessonId, task.id!);
+          removeTaskRequest("task", task.id!, task.title, lessonId);
         }}
         title="Удалить задачу"
       >

@@ -50,15 +50,22 @@ def test_engine():
 
 @pytest.fixture
 def db_session(test_engine) -> Generator[Session, None, None]:
-    """Create a new database session for each test."""
-    SessionLocal = sessionmaker(bind=test_engine)
+    """Create a new database session wrapped in a rollback-only transaction.
     
-    session = SessionLocal()
+    Uses connection-level transaction that is never committed, ensuring
+    complete test isolation. All commits within the test are effectively
+    no-ops because the outer transaction is rolled back.
+    """
+    connection = test_engine.connect()
+    transaction = connection.begin()
+    session = sessionmaker(bind=connection)()
+    
     try:
         yield session
-        session.rollback()
     finally:
         session.close()
+        transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture

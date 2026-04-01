@@ -1,7 +1,7 @@
 .task {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 4px 8px;
   margin: 2px 0;
   border-radius: var(--radius-sm, 4px);
@@ -25,6 +25,19 @@
   );
 }
 
+.dragHandle {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary, #999);
+  cursor: grab;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
 .requiredBtn {
   display: flex;
   align-items: center;
@@ -33,6 +46,7 @@
   background: none;
   color: var(--text-secondary, #999);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .requiredBtn:hover {

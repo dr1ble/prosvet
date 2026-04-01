@@ -21,6 +21,12 @@ export interface CourseBuilderState {
   selectedLessonId: string | null;
   previewOpen: boolean;
   publishDialogOpen: boolean;
+  pendingDelete: {
+    type: "lesson" | "task";
+    id: string;
+    lessonId?: string;
+    title: string;
+  } | null;
 
   isDirty: boolean;
   isSaving: boolean;
@@ -30,11 +36,20 @@ export interface CourseBuilderState {
   validationErrors: ValidationError[];
 
   loadCourse: (courseId: string) => Promise<void>;
+  updateCourseMeta: (patch: Partial<Pick<BuilderCourse, "title">>) => void;
   selectTask: (taskId: string | null) => void;
   selectLesson: (lessonId: string | null) => void;
   togglePreview: () => void;
   openPublishDialog: () => void;
   closePublishDialog: () => void;
+  requestDelete: (
+    type: "lesson" | "task",
+    id: string,
+    title: string,
+    lessonId?: string,
+  ) => void;
+  confirmDelete: () => void;
+  cancelDelete: () => void;
 
   addLesson: () => void;
   removeLesson: (lessonId: string) => void;
@@ -67,6 +82,7 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
   selectedLessonId: null,
   previewOpen: false,
   publishDialogOpen: false,
+  pendingDelete: null,
   isDirty: false,
   isSaving: false,
   lastSavedAt: null,
@@ -88,12 +104,31 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
     }
   },
 
+  updateCourseMeta: (patch) =>
+    set((s) => ({
+      course: s.course ? { ...s.course, ...patch } : s.course,
+      isDirty: true,
+    })),
+
   selectTask: (taskId: string | null) => set({ selectedTaskId: taskId }),
   selectLesson: (lessonId: string | null) =>
     set({ selectedLessonId: lessonId }),
   togglePreview: () => set((s) => ({ previewOpen: !s.previewOpen })),
   openPublishDialog: () => set({ publishDialogOpen: true }),
   closePublishDialog: () => set({ publishDialogOpen: false }),
+  requestDelete: (type, id, title, lessonId) =>
+    set({ pendingDelete: { type, id, title, lessonId } }),
+  confirmDelete: () => {
+    const { pendingDelete, removeLesson, removeTask } = get();
+    if (!pendingDelete) return;
+    if (pendingDelete.type === "lesson") {
+      removeLesson(pendingDelete.id);
+    } else if (pendingDelete.type === "task" && pendingDelete.lessonId) {
+      removeTask(pendingDelete.lessonId, pendingDelete.id);
+    }
+    set({ pendingDelete: null });
+  },
+  cancelDelete: () => set({ pendingDelete: null }),
 
   addLesson: () => {
     const { course } = get();
