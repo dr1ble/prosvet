@@ -94,7 +94,9 @@ class GroupAssignmentUpdateIn(_BaseSchema):
     target_user_ids: list[UUID] | None = Field(default=None, max_length=10_000)
     starts_at: datetime | None = None
     ends_at: datetime | None = None
-    status: str | None = Field(default=None, pattern=r"^(draft|scheduled|active|completed|cancelled)$")
+    status: str | None = Field(
+        default=None, pattern=r"^(draft|scheduled|active|completed|cancelled)$"
+    )
 
     @model_validator(mode="after")
     def validate_dates(self):

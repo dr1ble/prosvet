@@ -25,8 +25,18 @@ def upgrade() -> None:
         sa.Column("policy_key", sa.String(length=128), nullable=False),
         sa.Column("role", sa.String(length=64), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("policy_key", "role", name="uq_rbac_policy_rule_policy_role"),
     )

@@ -508,17 +508,17 @@ class CatalogService:
                     "title": lesson.title,
                     "description": lesson.description,
                     "order_index": lesson.order_index,
-                        "tasks": [
-                            {
-                                "id": str(task.id),
-                                "task_type": task.task_type,
-                                "title": task.title,
-                                "order_index": task.order_index,
-                                "required": task.required,
-                                "payload": task.payload_json,
-                            }
-                            for task in tasks
-                        ],
+                    "tasks": [
+                        {
+                            "id": str(task.id),
+                            "task_type": task.task_type,
+                            "title": task.title,
+                            "order_index": task.order_index,
+                            "required": task.required,
+                            "payload": task.payload_json,
+                        }
+                        for task in tasks
+                    ],
                 }
             )
         structure: dict[str, Any] = {

@@ -658,12 +658,18 @@ export function CatalogWritePanel({
   const handleShowPreview = async () => {
     if (!selectedCourseId) return;
     setBuilderPending(true);
+    setTaskState({ pending: false, message: null, isError: false });
     try {
       const structure = await getCourseStructure(selectedCourseId);
       setCourseStructure(structure);
       setShowPreview(true);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to load preview");
+      setTaskState({
+        pending: false,
+        message:
+          error instanceof Error ? error.message : "Failed to load preview.",
+        isError: true,
+      });
     } finally {
       setBuilderPending(false);
     }

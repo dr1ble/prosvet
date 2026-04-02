@@ -88,9 +88,7 @@ def test_cheat_sheet_payload_parse():
 
 
 def test_unknown_payload_parse():
-    payload = screen_payload_adapter.validate_python(
-        {"type": "unknown", "raw": "blob"}
-    )
+    payload = screen_payload_adapter.validate_python({"type": "unknown", "raw": "blob"})
     assert isinstance(payload, UnknownPayload)
     assert payload.raw == "blob"
 

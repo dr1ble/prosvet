@@ -67,7 +67,14 @@ def downgrade() -> None:
             sa.Column("blocked_until", sa.DateTime(timezone=True), nullable=True),
             sa.Column("verified_at", sa.DateTime(timezone=True), nullable=True),
             sa.Column("status", sa.String(length=32), nullable=False, server_default="active"),
-            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+            sa.Column(
+                "created_at",
+                sa.DateTime(timezone=True),
+                nullable=False,
+                server_default=sa.text("now()"),
+            ),
             sa.PrimaryKeyConstraint("id"),
         )
-        op.create_index("ix_otp_challenges_phone_hash", "otp_challenges", ["phone_hash"], unique=False)
+        op.create_index(
+            "ix_otp_challenges_phone_hash", "otp_challenges", ["phone_hash"], unique=False
+        )

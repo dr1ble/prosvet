@@ -4,6 +4,7 @@ import {
 } from "@/features/catalog/catalog-presentation";
 import type { CourseDto, CourseReleaseDto } from "@/features/catalog/types";
 import type { UiMessages } from "@/shared/i18n/messages";
+import { DataState } from "@/shared/ui/data-state";
 import { SurfaceCard } from "@/shared/ui/surface-card";
 
 type CatalogReleaseListProps = {
@@ -25,25 +26,44 @@ export function CatalogReleaseList({
 }: CatalogReleaseListProps) {
   if (!selectedCourse) {
     return (
-      <SurfaceCard className={styles.empty} tone="muted">
-        {messages.catalog.chooseCourse}
-      </SurfaceCard>
+      <DataState
+        title={messages.catalog.chooseCourse}
+        description={
+          locale.startsWith("ru")
+            ? "Выберите курс в списке слева, чтобы увидеть историю релизов."
+            : "Choose a course in the sidebar to view release history."
+        }
+        className={styles.empty}
+      />
     );
   }
 
   if (releaseError) {
     return (
-      <SurfaceCard className={`${styles.empty} ${styles.error}`} tone="muted">
-        {releaseError}
-      </SurfaceCard>
+      <DataState
+        tone="error"
+        title={
+          locale.startsWith("ru")
+            ? "Не удалось загрузить релизы"
+            : "Failed to load releases"
+        }
+        description={releaseError}
+        className={`${styles.empty} ${styles.error}`}
+      />
     );
   }
 
   if (releases.length === 0) {
     return (
-      <SurfaceCard className={styles.empty} tone="muted">
-        {messages.catalog.noReleases}
-      </SurfaceCard>
+      <DataState
+        title={messages.catalog.noReleases}
+        description={
+          locale.startsWith("ru")
+            ? "Создайте первый релиз в правой панели, чтобы начать публикацию контента."
+            : "Create the first release in the right panel to start publishing content."
+        }
+        className={styles.empty}
+      />
     );
   }
 

@@ -476,6 +476,17 @@
   background: rgba(181, 54, 54, 0.05);
 }
 
+.actionsMenuError {
+  margin: -2px 0 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(181, 54, 54, 0.28);
+  background: rgba(181, 54, 54, 0.08);
+  color: #8b2f2f;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .metaBadge {
   min-height: 30px;
   display: inline-flex;

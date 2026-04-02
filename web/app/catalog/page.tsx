@@ -321,6 +321,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                           className={styles.menuActionButton}
                           contentClassName={styles.actionContent}
                           iconClassName={styles.actionIcon}
+                          errorClassName={styles.actionsMenuError}
                           courseId={selectedCourse.id}
                           status={selectedCourse.status}
                           archiveLabel={archiveCourseLabel}
@@ -331,6 +332,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                             className={styles.menuDeleteButton}
                             contentClassName={styles.actionContent}
                             iconClassName={styles.actionIcon}
+                            errorClassName={styles.actionsMenuError}
                             courseId={selectedCourse.id}
                             label={deleteCourseLabel}
                           />

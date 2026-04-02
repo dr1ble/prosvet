@@ -21,7 +21,7 @@ def log_auth_event(
         "ip_address": ip_address,
         "details": details or {},
     }
-    
+
     level = logging.INFO if success else logging.WARNING
     audit_logger.log(level, message)
 

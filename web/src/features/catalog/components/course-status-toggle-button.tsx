@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { updateCourseStatus } from "@/features/catalog/api";
 import type { CourseStatus } from "@/features/catalog/types";
+import { toUserErrorMessage } from "@/shared/lib/api-error";
 
 type CourseStatusToggleButtonProps = {
   courseId: string;
@@ -14,6 +15,7 @@ type CourseStatusToggleButtonProps = {
   className: string;
   contentClassName: string;
   iconClassName: string;
+  errorClassName: string;
 };
 
 export function CourseStatusToggleButton({
@@ -24,9 +26,11 @@ export function CourseStatusToggleButton({
   className,
   contentClassName,
   iconClassName,
+  errorClassName,
 }: CourseStatusToggleButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const nextStatus: CourseStatus = status === "archived" ? "draft" : "archived";
   const label = status === "archived" ? restoreLabel : archiveLabel;
@@ -37,64 +41,70 @@ export function CourseStatusToggleButton({
     }
 
     setPending(true);
+    setErrorMessage(null);
     try {
       await updateCourseStatus(courseId, nextStatus);
       router.refresh();
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Не удалось обновить статус курса";
-      window.alert(message);
+      setErrorMessage(
+        toUserErrorMessage(error, "Не удалось обновить статус курса."),
+      );
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <button
-      className={className}
-      type="button"
-      onClick={onToggle}
-      disabled={pending}
-    >
-      <span className={contentClassName}>
-        <span className={iconClassName} aria-hidden="true">
-          {status === "archived" ? (
-            <svg viewBox="0 0 20 20" fill="none" role="presentation">
-              <path
-                d="M10 3v14M10 3l5 5M10 3L5 8"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 20 20" fill="none" role="presentation">
-              <path
-                d="M3.5 6.5h13v10h-13z"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M7 9.5h6"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-              <path
-                d="M8.5 3.5h3"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          )}
+    <>
+      <button
+        className={className}
+        type="button"
+        onClick={onToggle}
+        disabled={pending}
+      >
+        <span className={contentClassName}>
+          <span className={iconClassName} aria-hidden="true">
+            {status === "archived" ? (
+              <svg viewBox="0 0 20 20" fill="none" role="presentation">
+                <path
+                  d="M10 3v14M10 3l5 5M10 3L5 8"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="none" role="presentation">
+                <path
+                  d="M3.5 6.5h13v10h-13z"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M7 9.5h6"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M8.5 3.5h3"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+          </span>
+          <span>{pending ? "..." : label}</span>
         </span>
-        <span>{pending ? "..." : label}</span>
-      </span>
-    </button>
+      </button>
+      {errorMessage ? (
+        <p className={errorClassName} role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+    </>
   );
 }

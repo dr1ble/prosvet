@@ -25,14 +25,23 @@ def upgrade() -> None:
         sa.Column("lesson_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="in_progress"),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["lesson_id"], ["course_lessons.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id", "lesson_id", name="uq_lesson_progress_user_lesson"),
     )
-    op.create_index(op.f("ix_lesson_progress_user_id"), "lesson_progress", ["user_id"], unique=False)
-    op.create_index(op.f("ix_lesson_progress_lesson_id"), "lesson_progress", ["lesson_id"], unique=False)
+    op.create_index(
+        op.f("ix_lesson_progress_user_id"), "lesson_progress", ["user_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_lesson_progress_lesson_id"), "lesson_progress", ["lesson_id"], unique=False
+    )
 
     op.execute(
         """

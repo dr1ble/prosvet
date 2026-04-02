@@ -24,8 +24,7 @@ from app.shared.auth.schemas import CurrentActor
 # Use main database (test database needs pg_hba config for external creation)
 # For isolated tests, use mock repositories instead of real DB
 TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    settings.database_url.replace("localhost", "127.0.0.1")
+    "TEST_DATABASE_URL", settings.database_url.replace("localhost", "127.0.0.1")
 )
 
 
@@ -33,14 +32,14 @@ TEST_DATABASE_URL = os.getenv(
 def test_engine():
     """Create test database engine for# entire test session."""
     engine = create_engine(TEST_DATABASE_URL, echo=False)
-    
+
     # Create all tables
     AuthBase.metadata.create_all(bind=engine)
     CatalogBase.metadata.create_all(bind=engine)
     SimulationBase.metadata.create_all(bind=engine)
-    
+
     yield engine
-    
+
     # Drop all tables after session
     SimulationBase.metadata.drop_all(bind=engine)
     CatalogBase.metadata.drop_all(bind=engine)
@@ -51,7 +50,7 @@ def test_engine():
 @pytest.fixture
 def db_session(test_engine) -> Generator[Session, None, None]:
     """Create a new database session wrapped in a rollback-only transaction.
-    
+
     Uses connection-level transaction that is never committed, ensuring
     complete test isolation. All commits within the test are effectively
     no-ops because the outer transaction is rolled back.
@@ -59,7 +58,7 @@ def db_session(test_engine) -> Generator[Session, None, None]:
     connection = test_engine.connect()
     transaction = connection.begin()
     session = sessionmaker(bind=connection)()
-    
+
     try:
         yield session
     finally:
@@ -130,21 +129,21 @@ def published_course():
     """Mock published test course (no DB interaction)."""
     course_id = uuid.uuid4()
     release_id = uuid.uuid4()
-    
+
     course = MagicMock(spec=Course)
     course.id = course_id
     course.slug = "published-course"
     course.title = "Published Course"
     course.description = "Test Description"
     course.status = "published"
-    
+
     release = MagicMock(spec=CourseRelease)
     release.id = release_id
     release.version = "1.0.0"
     release.status = "published"
     release.published_at = datetime.now(timezone.utc)
     release.changelog = "Initial release"
-    
+
     return course
 
 

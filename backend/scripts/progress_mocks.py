@@ -30,7 +30,9 @@ def _load_targets(db) -> dict[UUID, set[UUID]]:
     assignment_ids = {assignment.id for assignment in assignments}
 
     memberships = db.execute(
-        select(GroupMembership.group_id, GroupMembership.user_id).where(GroupMembership.group_id.in_(group_ids))
+        select(GroupMembership.group_id, GroupMembership.user_id).where(
+            GroupMembership.group_id.in_(group_ids)
+        )
     ).all()
     members_by_group: dict[UUID, set[UUID]] = defaultdict(set)
     for group_id, user_id in memberships:
@@ -67,7 +69,9 @@ def cleanup() -> None:
         user_ids = set().union(*assignment_targets.values())
 
         assignments = list(
-            db.scalars(select(GroupCourseAssignment).where(GroupCourseAssignment.id.in_(assignment_ids))).all()
+            db.scalars(
+                select(GroupCourseAssignment).where(GroupCourseAssignment.id.in_(assignment_ids))
+            ).all()
         )
         course_ids = {assignment.course_id for assignment in assignments}
 
@@ -146,7 +150,9 @@ def seed(seed_value: int) -> None:
                             if idx < completed_threshold
                             else LessonProgressStatus.IN_PROGRESS.value
                         )
-                        completed_at = now if status == LessonProgressStatus.COMPLETED.value else None
+                        completed_at = (
+                            now if status == LessonProgressStatus.COMPLETED.value else None
+                        )
 
                         pending_item = pending.get(key)
                         if pending_item is not None:
@@ -183,7 +189,9 @@ def seed(seed_value: int) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed mock lesson progress for groups/assignments.")
+    parser = argparse.ArgumentParser(
+        description="Seed mock lesson progress for groups/assignments."
+    )
     parser.add_argument("command", choices=["seed", "cleanup", "reset"])
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()

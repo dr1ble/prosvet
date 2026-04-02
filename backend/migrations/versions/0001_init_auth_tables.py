@@ -24,7 +24,14 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column(
             "role",
-            sa.Enum("administrator", "methodologist", "moderator", "user", name="user_role", native_enum=False),
+            sa.Enum(
+                "administrator",
+                "methodologist",
+                "moderator",
+                "user",
+                name="user_role",
+                native_enum=False,
+            ),
             nullable=False,
         ),
         sa.Column(
@@ -35,8 +42,18 @@ def upgrade() -> None:
         sa.Column("phone_hash", sa.String(length=64), nullable=False),
         sa.Column("display_name", sa.String(length=255), nullable=True),
         sa.Column("birth_date", sa.Date(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("phone_hash"),
     )
@@ -52,10 +69,17 @@ def upgrade() -> None:
         sa.Column("blocked_until", sa.DateTime(timezone=True), nullable=True),
         sa.Column("verified_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("status", sa.String(length=32), nullable=False, server_default="active"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_otp_challenges_phone_hash"), "otp_challenges", ["phone_hash"], unique=False)
+    op.create_index(
+        op.f("ix_otp_challenges_phone_hash"), "otp_challenges", ["phone_hash"], unique=False
+    )
 
     op.create_table(
         "qr_login_tokens",
@@ -65,12 +89,19 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("used_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("status", sa.String(length=32), nullable=False, server_default="active"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["issued_by_user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("token_hash"),
     )
-    op.create_index(op.f("ix_qr_login_tokens_token_hash"), "qr_login_tokens", ["token_hash"], unique=False)
+    op.create_index(
+        op.f("ix_qr_login_tokens_token_hash"), "qr_login_tokens", ["token_hash"], unique=False
+    )
 
     op.create_table(
         "user_sessions",
@@ -80,7 +111,12 @@ def upgrade() -> None:
         sa.Column("device_id_hash", sa.Text(), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
     )

@@ -70,7 +70,9 @@ class AuthRepository:
         self.db.flush()
         return session
 
-    def get_active_session_by_refresh_hash(self, refresh_token_hash: str, now: datetime) -> UserSession | None:
+    def get_active_session_by_refresh_hash(
+        self, refresh_token_hash: str, now: datetime
+    ) -> UserSession | None:
         stmt = (
             select(UserSession)
             .where(

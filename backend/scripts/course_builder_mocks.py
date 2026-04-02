@@ -169,9 +169,7 @@ def seed() -> None:
                         )
                     )
 
-            print(
-                f"[seeded] {course.slug} -> /course-builder/{course.id}"
-            )
+            print(f"[seeded] {course.slug} -> /course-builder/{course.id}")
 
 
 def main() -> None:

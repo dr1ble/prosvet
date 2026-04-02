@@ -27,13 +27,27 @@ def upgrade() -> None:
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("order_index", sa.Integer(), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False, server_default="draft"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["course_id"], ["courses.id"], ondelete="CASCADE"),
     )
-    op.create_index(op.f("ix_course_lessons_course_id"), "course_lessons", ["course_id"], unique=False)
-    op.create_unique_constraint("uq_lesson_order_per_course", "course_lessons", ["course_id", "order_index"])
+    op.create_index(
+        op.f("ix_course_lessons_course_id"), "course_lessons", ["course_id"], unique=False
+    )
+    op.create_unique_constraint(
+        "uq_lesson_order_per_course", "course_lessons", ["course_id", "order_index"]
+    )
 
     op.create_table(
         "lesson_tasks",
@@ -45,12 +59,19 @@ def upgrade() -> None:
         sa.Column("required", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("payload_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("checksum", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["lesson_id"], ["course_lessons.id"], ondelete="CASCADE"),
     )
     op.create_index(op.f("ix_lesson_tasks_lesson_id"), "lesson_tasks", ["lesson_id"], unique=False)
-    op.create_unique_constraint("uq_task_order_per_lesson", "lesson_tasks", ["lesson_id", "order_index"])
+    op.create_unique_constraint(
+        "uq_task_order_per_lesson", "lesson_tasks", ["lesson_id", "order_index"]
+    )
 
 
 def downgrade() -> None:

@@ -1,4 +1,5 @@
 import type { BuilderCourse, BuilderTask, ValidationError } from "./types";
+import { extractApiErrorMessage } from "@/shared/lib/api-error";
 
 const ADMIN_PROXY = "/api/admin";
 
@@ -15,7 +16,11 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const payload = await response.text();
     throw new Error(
-      `Request failed (${response.status}): ${payload || response.statusText}`,
+      extractApiErrorMessage(
+        payload,
+        response.status,
+        "Failed to process course builder request.",
+      ),
     );
   }
 

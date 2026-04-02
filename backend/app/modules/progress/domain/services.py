@@ -23,7 +23,11 @@ class ProgressService:
 
         course_ids = {item.assignment.course_id for item in assignment_targets}
         group_ids = {item.assignment.group_id for item in assignment_targets}
-        user_ids = set().union(*(item.user_ids for item in assignment_targets)) if assignment_targets else set()
+        user_ids = (
+            set().union(*(item.user_ids for item in assignment_targets))
+            if assignment_targets
+            else set()
+        )
 
         if user_id is not None:
             user_ids = {user_id}
@@ -33,7 +37,9 @@ class ProgressService:
         users_map = self.repo.get_users_map(user_ids)
 
         total_lessons_map = self.repo.get_course_lessons_count(course_ids)
-        completed_map = self.repo.get_completed_lessons_count(course_ids=course_ids, user_ids=user_ids)
+        completed_map = self.repo.get_completed_lessons_count(
+            course_ids=course_ids, user_ids=user_ids
+        )
 
         rows: list[ProgressOverviewRowOut] = []
         for item in assignment_targets:
@@ -56,9 +62,7 @@ class ProgressService:
                     continue
                 completed_lessons = completed_map.get((course.id, target_user_id), 0)
                 completion_rate = (
-                    float(completed_lessons) / float(total_lessons)
-                    if total_lessons > 0
-                    else 0.0
+                    float(completed_lessons) / float(total_lessons) if total_lessons > 0 else 0.0
                 )
                 rows.append(
                     ProgressOverviewRowOut(
@@ -77,7 +81,13 @@ class ProgressService:
                     )
                 )
 
-        rows.sort(key=lambda row: (row.group_name.lower(), row.course_title.lower(), row.user_display_name or ""))
+        rows.sort(
+            key=lambda row: (
+                row.group_name.lower(),
+                row.course_title.lower(),
+                row.user_display_name or "",
+            )
+        )
         return rows
 
     def upsert_lesson_progress(self, user_id: UUID, lesson_id: UUID, status: str):

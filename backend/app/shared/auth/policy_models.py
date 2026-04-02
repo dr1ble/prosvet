@@ -14,13 +14,17 @@ def _utcnow() -> datetime:
 
 class RbacPolicyRule(Base):
     __tablename__ = "rbac_policy_rules"
-    __table_args__ = (UniqueConstraint("policy_key", "role", name="uq_rbac_policy_rule_policy_role"),)
+    __table_args__ = (
+        UniqueConstraint("policy_key", "role", name="uq_rbac_policy_rule_policy_role"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     policy_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     role: Mapped[str] = mapped_column(String(64), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=_utcnow,

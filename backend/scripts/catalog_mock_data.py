@@ -428,7 +428,9 @@ def seed_mock_catalog_courses() -> None:
                 release.published_at = now
                 print(f"[refresh] release {blueprint['version']} for {slug}")
 
-            db.execute(delete(CourseReleaseScreen).where(CourseReleaseScreen.release_id == release.id))
+            db.execute(
+                delete(CourseReleaseScreen).where(CourseReleaseScreen.release_id == release.id)
+            )
 
             for screen_data in blueprint["screens"]:
                 payload = screen_data["payload"]

@@ -32,6 +32,7 @@ from app.shared.di.services import SimulationServiceDep
 
 router = APIRouter()
 
+
 def _to_media_asset_out(asset: SimulationMediaAsset) -> SimulationMediaAssetOut:
     return SimulationMediaAssetOut.model_validate(asset)
 

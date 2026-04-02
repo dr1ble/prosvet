@@ -64,12 +64,48 @@ def realistic_users_blueprint() -> list[DemoUserBlueprint]:
         DemoUserBlueprint("demo_lit_mod", "Демо Модератор", UserRole.MODERATOR),
     ]
     first_names = [
-        "Алексей", "Ирина", "Дмитрий", "Елена", "Сергей", "Марина", "Павел", "Ольга", "Андрей", "Наталья",
-        "Виктор", "Татьяна", "Роман", "Анна", "Евгений", "Светлана", "Николай", "Юлия", "Константин", "Вера",
+        "Алексей",
+        "Ирина",
+        "Дмитрий",
+        "Елена",
+        "Сергей",
+        "Марина",
+        "Павел",
+        "Ольга",
+        "Андрей",
+        "Наталья",
+        "Виктор",
+        "Татьяна",
+        "Роман",
+        "Анна",
+        "Евгений",
+        "Светлана",
+        "Николай",
+        "Юлия",
+        "Константин",
+        "Вера",
     ]
     last_names = [
-        "Иванов", "Петров", "Сидоров", "Смирнова", "Кузнецов", "Попова", "Соколов", "Лебедева", "Морозов", "Волкова",
-        "Соловьев", "Васильева", "Зайцев", "Павлова", "Семенов", "Голубева", "Виноградов", "Беляева", "Богданов", "Тихонова",
+        "Иванов",
+        "Петров",
+        "Сидоров",
+        "Смирнова",
+        "Кузнецов",
+        "Попова",
+        "Соколов",
+        "Лебедева",
+        "Морозов",
+        "Волкова",
+        "Соловьев",
+        "Васильева",
+        "Зайцев",
+        "Павлова",
+        "Семенов",
+        "Голубева",
+        "Виноградов",
+        "Беляева",
+        "Богданов",
+        "Тихонова",
     ]
     users: list[DemoUserBlueprint] = []
     for index in range(1, 61):
@@ -151,19 +187,29 @@ def cleanup() -> None:
         )
         demo_course_ids = {course.id for course in demo_courses}
 
-        group_ids_from_members = set(
-            db.scalars(
-                select(GroupMembership.group_id).where(GroupMembership.user_id.in_(demo_user_ids))
-            ).all()
-        ) if demo_user_ids else set()
+        group_ids_from_members = (
+            set(
+                db.scalars(
+                    select(GroupMembership.group_id).where(
+                        GroupMembership.user_id.in_(demo_user_ids)
+                    )
+                ).all()
+            )
+            if demo_user_ids
+            else set()
+        )
 
-        group_ids_from_assignments = set(
-            db.scalars(
-                select(GroupCourseAssignment.group_id).where(
-                    GroupCourseAssignment.course_id.in_(demo_course_ids)
-                )
-            ).all()
-        ) if demo_course_ids else set()
+        group_ids_from_assignments = (
+            set(
+                db.scalars(
+                    select(GroupCourseAssignment.group_id).where(
+                        GroupCourseAssignment.course_id.in_(demo_course_ids)
+                    )
+                ).all()
+            )
+            if demo_course_ids
+            else set()
+        )
 
         named_groups = list(
             db.scalars(
@@ -208,9 +254,7 @@ def cleanup() -> None:
                     )
                 )
 
-            db.execute(
-                delete(GroupMembership).where(GroupMembership.group_id.in_(demo_group_ids))
-            )
+            db.execute(delete(GroupMembership).where(GroupMembership.group_id.in_(demo_group_ids)))
             db.execute(delete(LearningGroup).where(LearningGroup.id.in_(demo_group_ids)))
 
         if demo_course_ids:
@@ -337,9 +381,7 @@ def _seed_realistic(db, demo_users: dict[str, User], courses: list[Course]) -> N
     rng = random.Random(42)
     admin_id = demo_users["demo_lit_admin"].id
     user_ids = [
-        user.id
-        for login, user in sorted(demo_users.items())
-        if login.startswith("demo_lit_user_")
+        user.id for login, user in sorted(demo_users.items()) if login.startswith("demo_lit_user_")
     ]
 
     group_names = [
@@ -422,7 +464,9 @@ def seed(clean_first: bool = True, profile: str = "basic") -> None:
             courses = _create_courses_and_lessons(db, normal_courses_blueprint())
             _seed_normal(db, demo_users, courses)
 
-        print(f"[seed] создан набор демо-данных ({profile}): пользователи, группы, курсы, назначения")
+        print(
+            f"[seed] создан набор демо-данных ({profile}): пользователи, группы, курсы, назначения"
+        )
 
     seed_progress(seed_value=42)
     print("[seed] demo progress generated")

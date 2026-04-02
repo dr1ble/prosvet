@@ -171,7 +171,11 @@ def _extract_library_binding(payload_json: dict[str, Any]) -> SimulationLibraryB
             except ValueError:
                 released_at = None
 
-    icon_url = raw_icon_url.strip()[:500] if isinstance(raw_icon_url, str) and raw_icon_url.strip() else None
+    icon_url = (
+        raw_icon_url.strip()[:500]
+        if isinstance(raw_icon_url, str) and raw_icon_url.strip()
+        else None
+    )
 
     return SimulationLibraryBinding(
         app_package_name=package_name[:255],

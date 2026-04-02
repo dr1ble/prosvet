@@ -1,0 +1,41 @@
+.state {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(58, 88, 115, 0.28);
+  background: rgba(245, 249, 255, 0.72);
+}
+
+.compact {
+  padding: 9px 10px;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #355471;
+}
+
+.description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #607a91;
+}
+
+.error {
+  border-style: solid;
+  border-color: rgba(181, 54, 54, 0.28);
+  background: rgba(181, 54, 54, 0.08);
+}
+
+.error .title {
+  color: #8b2f2f;
+}
+
+.error .description {
+  color: #965656;
+}

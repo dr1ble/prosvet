@@ -56,13 +56,17 @@ class GroupsService:
         group = self.repo.get_group_by_id(group_id)
         if group is None:
             raise GroupsError("Group not found.", status_code=404)
-        return self.repo.update_group(group=group, name=None, description=None, status=GroupStatus.ARCHIVED.value)
+        return self.repo.update_group(
+            group=group, name=None, description=None, status=GroupStatus.ARCHIVED.value
+        )
 
     def restore_group(self, group_id: UUID) -> LearningGroup:
         group = self.repo.get_group_by_id(group_id)
         if group is None:
             raise GroupsError("Group not found.", status_code=404)
-        return self.repo.update_group(group=group, name=None, description=None, status=GroupStatus.ACTIVE.value)
+        return self.repo.update_group(
+            group=group, name=None, description=None, status=GroupStatus.ACTIVE.value
+        )
 
     def list_group_members(self, group_id: UUID) -> list[GroupMemberOut]:
         group = self.repo.get_group_by_id(group_id)
@@ -103,7 +107,9 @@ class GroupsService:
             for user in users
         ]
 
-    def replace_group_members(self, group_id: UUID, payload: GroupMembersUpdateIn) -> list[GroupMemberOut]:
+    def replace_group_members(
+        self, group_id: UUID, payload: GroupMembersUpdateIn
+    ) -> list[GroupMemberOut]:
         group = self.repo.get_group_by_id(group_id)
         if group is None:
             raise GroupsError("Group not found.", status_code=404)
@@ -129,7 +135,9 @@ class GroupsService:
         active_user_ids = {user.id for user in users if user.status == UserStatus.ACTIVE}
         missing = user_ids - active_user_ids
         if missing:
-            raise GroupsError("Some target users were not found or are not active.", status_code=422)
+            raise GroupsError(
+                "Some target users were not found or are not active.", status_code=422
+            )
         return active_user_ids
 
     def create_group_assignment(
@@ -169,7 +177,9 @@ class GroupsService:
         assignment_id: UUID,
         payload: GroupAssignmentUpdateIn,
     ):
-        assignment = self.repo.get_group_assignment_by_id(group_id=group_id, assignment_id=assignment_id)
+        assignment = self.repo.get_group_assignment_by_id(
+            group_id=group_id, assignment_id=assignment_id
+        )
         if assignment is None:
             raise GroupsError("Assignment not found.", status_code=404)
 

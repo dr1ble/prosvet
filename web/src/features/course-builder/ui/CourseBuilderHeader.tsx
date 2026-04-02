@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { toUserErrorMessage } from "@/shared/lib/api-error";
+
 import { useCourseBuilderStore } from "../store";
 
 import styles from "./CourseBuilderHeader.module.css";
@@ -27,6 +29,7 @@ export function CourseBuilderHeader() {
     course?.description || "",
   );
   const [coverBusy, setCoverBusy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const showSaved = Boolean(lastSavedAt && !isDirty);
   const showUnsaved = Boolean(isDirty && !isSaving);
@@ -34,16 +37,15 @@ export function CourseBuilderHeader() {
 
   function handleTitleSubmit() {
     if (course && titleDraft.trim() && titleDraft !== course.title) {
+      setSaveError(null);
       updateCourseMeta({ title: titleDraft.trim() });
       void (async () => {
         try {
           const { patchCourseMeta } = await import("../api");
           await patchCourseMeta(course.id, { title: titleDraft.trim() });
         } catch (error) {
-          window.alert(
-            error instanceof Error
-              ? error.message
-              : "Не удалось сохранить название курса",
+          setSaveError(
+            toUserErrorMessage(error, "Не удалось сохранить название курса."),
           );
         }
       })();
@@ -62,16 +64,15 @@ export function CourseBuilderHeader() {
     const nextDescription = descriptionDraft.trim();
     const normalized = nextDescription.length > 0 ? nextDescription : null;
     if ((course.description ?? null) !== normalized) {
+      setSaveError(null);
       updateCourseMeta({ description: normalized });
       void (async () => {
         try {
           const { patchCourseMeta } = await import("../api");
           await patchCourseMeta(course.id, { description: normalized });
         } catch (error) {
-          window.alert(
-            error instanceof Error
-              ? error.message
-              : "Не удалось сохранить описание курса",
+          setSaveError(
+            toUserErrorMessage(error, "Не удалось сохранить описание курса."),
           );
         }
       })();
@@ -89,6 +90,7 @@ export function CourseBuilderHeader() {
   async function handleCoverUpload(file: File) {
     if (!course) return;
     setCoverBusy(true);
+    setSaveError(null);
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -98,6 +100,10 @@ export function CourseBuilderHeader() {
       });
       const { uploadCourseCover } = await import("../api");
       await uploadCourseCover(course.id, file.name, base64);
+    } catch (error) {
+      setSaveError(
+        toUserErrorMessage(error, "Не удалось загрузить обложку курса."),
+      );
     } finally {
       setCoverBusy(false);
     }
@@ -106,9 +112,14 @@ export function CourseBuilderHeader() {
   async function handleCoverRemove() {
     if (!course) return;
     setCoverBusy(true);
+    setSaveError(null);
     try {
       const { removeCourseCover } = await import("../api");
       await removeCourseCover(course.id);
+    } catch (error) {
+      setSaveError(
+        toUserErrorMessage(error, "Не удалось удалить обложку курса."),
+      );
     } finally {
       setCoverBusy(false);
     }
@@ -228,6 +239,12 @@ export function CourseBuilderHeader() {
               )}
             </div>
           )}
+
+          {saveError ? (
+            <p className={styles.inlineError} role="alert">
+              {saveError}
+            </p>
+          ) : null}
 
           <div className={styles.actionsRow}>
             <div className={styles.secondaryActions}>

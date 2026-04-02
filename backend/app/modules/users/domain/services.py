@@ -32,7 +32,9 @@ class UsersService:
                 UserRoleSummaryOut(
                     role=role,
                     count=count,
-                    permissions=permissions_for_role(next(user.role for user in users if user.role.value == role)),
+                    permissions=permissions_for_role(
+                        next(user.role for user in users if user.role.value == role)
+                    ),
                 )
                 for role, count in sorted(role_counts.items())
             ],

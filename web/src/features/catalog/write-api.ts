@@ -6,6 +6,7 @@ import type {
   CourseReleaseCreateInput,
   CourseReleaseDto,
 } from "./types";
+import { extractApiErrorMessage } from "@/shared/lib/api-error";
 
 async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const response = await fetch(path, {
@@ -19,7 +20,11 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const raw = await response.text();
   if (!response.ok) {
     throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
+      extractApiErrorMessage(
+        raw,
+        response.status,
+        "Failed to save catalog changes.",
+      ),
     );
   }
 

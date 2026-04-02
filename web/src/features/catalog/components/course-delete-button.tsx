@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { deleteCourse } from "@/features/catalog/api";
+import { toUserErrorMessage } from "@/shared/lib/api-error";
 
 type CourseDeleteButtonProps = {
   courseId: string;
@@ -11,6 +12,7 @@ type CourseDeleteButtonProps = {
   className: string;
   contentClassName: string;
   iconClassName: string;
+  errorClassName: string;
 };
 
 export function CourseDeleteButton({
@@ -19,9 +21,11 @@ export function CourseDeleteButton({
   className,
   contentClassName,
   iconClassName,
+  errorClassName,
 }: CourseDeleteButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleDelete() {
     if (pending) return;
@@ -32,58 +36,64 @@ export function CourseDeleteButton({
     if (!confirmed) return;
 
     setPending(true);
+    setErrorMessage(null);
     try {
       await deleteCourse(courseId);
       router.push("/catalog");
       router.refresh();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Не удалось удалить курс";
-      window.alert(message);
+      setErrorMessage(toUserErrorMessage(error, "Не удалось удалить курс."));
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <button
-      type="button"
-      className={className}
-      onClick={handleDelete}
-      disabled={pending}
-    >
-      <span className={contentClassName}>
-        <span className={iconClassName} aria-hidden="true">
-          <svg viewBox="0 0 20 20" fill="none" role="presentation">
-            <path
-              d="M4.5 6h11"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-            <path
-              d="M7.5 6V4.6h5V6"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M6.2 6.8V15a1 1 0 0 0 1 1h5.6a1 1 0 0 0 1-1V6.8"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M8.6 9.2v4.2M11.4 9.2v4.2"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
+    <>
+      <button
+        type="button"
+        className={className}
+        onClick={handleDelete}
+        disabled={pending}
+      >
+        <span className={contentClassName}>
+          <span className={iconClassName} aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" role="presentation">
+              <path
+                d="M4.5 6h11"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M7.5 6V4.6h5V6"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M6.2 6.8V15a1 1 0 0 0 1 1h5.6a1 1 0 0 0 1-1V6.8"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M8.6 9.2v4.2M11.4 9.2v4.2"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <span>{pending ? "..." : label}</span>
         </span>
-        <span>{pending ? "..." : label}</span>
-      </span>
-    </button>
+      </button>
+      {errorMessage ? (
+        <p className={errorClassName} role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+    </>
   );
 }

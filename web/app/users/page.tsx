@@ -8,6 +8,7 @@ import { UsersAdminTable } from "@/features/users/components/users-admin-table";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
 import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage } from "@/shared/i18n/lang";
+import { DataState } from "@/shared/ui/data-state";
 
 import styles from "./users.module.css";
 
@@ -126,23 +127,34 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
           {language === "ru" ? "Роли и доступы" : "Roles and permissions"}
         </h2>
         <div className={styles.roleGrid}>
-          {overview.role_summary.map((role) => (
-            <article key={role.role} className={styles.roleCard}>
-              <div className={styles.roleHead}>
-                <h3 className={styles.roleTitle}>
-                  {roleLabel(role.role, language)}
-                </h3>
-                <span className={styles.roleCount}>{role.count}</span>
-              </div>
-              <div className={styles.permissionList}>
-                {role.permissions.map((permission) => (
-                  <span key={permission} className={styles.permissionChip}>
-                    {permission}
-                  </span>
-                ))}
-              </div>
-            </article>
-          ))}
+          {overview.role_summary.length === 0 ? (
+            <DataState
+              title={language === "ru" ? "Нет ролей" : "No roles yet"}
+              description={
+                language === "ru"
+                  ? "Ролевой срез пока пуст. Проверьте загрузку данных пользователей."
+                  : "Role summary is empty. Verify user data source and assignments."
+              }
+            />
+          ) : (
+            overview.role_summary.map((role) => (
+              <article key={role.role} className={styles.roleCard}>
+                <div className={styles.roleHead}>
+                  <h3 className={styles.roleTitle}>
+                    {roleLabel(role.role, language)}
+                  </h3>
+                  <span className={styles.roleCount}>{role.count}</span>
+                </div>
+                <div className={styles.permissionList}>
+                  {role.permissions.map((permission) => (
+                    <span key={permission} className={styles.permissionChip}>
+                      {permission}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </section>
 

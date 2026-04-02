@@ -8,6 +8,7 @@ import {
 import type { CourseDto, CourseReleaseDto } from "@/features/catalog/types";
 import type { AppLanguage } from "@/shared/i18n/lang";
 import type { UiMessages } from "@/shared/i18n/messages";
+import { DataState } from "@/shared/ui/data-state";
 import { SurfaceCard } from "@/shared/ui/surface-card";
 
 type CatalogSidebarProps = {
@@ -60,13 +61,22 @@ export function CatalogSidebar({
         <span className={styles.countBadge}>{courses.length}</span>
       </div>
       {coursesError ? (
-        <SurfaceCard className={`${styles.empty} ${styles.error}`} tone="muted">
-          {coursesError}
-        </SurfaceCard>
+        <DataState
+          tone="error"
+          title={
+            language === "ru"
+              ? "Не удалось загрузить курсы"
+              : "Failed to load courses"
+          }
+          description={coursesError}
+          className={`${styles.empty} ${styles.error}`}
+        />
       ) : courses.length === 0 ? (
-        <SurfaceCard className={styles.empty} tone="muted">
-          {messages.catalog.noCourses}
-        </SurfaceCard>
+        <DataState
+          title={language === "ru" ? "Курсы не найдены" : "No courses"}
+          description={messages.catalog.noCourses}
+          className={styles.empty}
+        />
       ) : (
         <ul className={styles.courseList}>
           {courses.map((course) => {

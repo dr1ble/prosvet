@@ -26,8 +26,18 @@ def upgrade() -> None:
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("status", sa.String(length=32), nullable=False, server_default="draft"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("slug"),
     )
@@ -41,12 +51,19 @@ def upgrade() -> None:
         sa.Column("changelog", sa.Text(), nullable=True),
         sa.Column("status", sa.String(length=32), nullable=False, server_default="draft"),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["course_id"], ["courses.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("course_id", "version", name="uq_course_release_version"),
     )
-    op.create_index(op.f("ix_course_releases_course_id"), "course_releases", ["course_id"], unique=False)
+    op.create_index(
+        op.f("ix_course_releases_course_id"), "course_releases", ["course_id"], unique=False
+    )
 
     op.create_table(
         "course_release_screens",
@@ -57,7 +74,12 @@ def upgrade() -> None:
         sa.Column("order_index", sa.Integer(), nullable=False),
         sa.Column("payload_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("checksum", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["release_id"], ["course_releases.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("release_id", "screen_key", name="uq_release_screen_key"),

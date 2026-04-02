@@ -1,4 +1,5 @@
 import type { CourseDto, ValidationResult } from "../catalog/types";
+import { extractApiErrorMessage } from "@/shared/lib/api-error";
 
 async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -8,7 +9,11 @@ async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
   const raw = await response.text();
   if (!response.ok) {
     throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
+      extractApiErrorMessage(
+        raw,
+        response.status,
+        "Failed to process course wizard request.",
+      ),
     );
   }
   if (!raw) return {} as T;

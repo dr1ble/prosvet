@@ -22,6 +22,7 @@ import type {
 } from "@/features/groups/types";
 import type { CourseDto } from "@/features/catalog/types";
 import { toUserErrorMessage } from "@/shared/lib/api-error";
+import { DataState } from "@/shared/ui/data-state";
 
 import styles from "./groups-workspace.module.css";
 
@@ -605,14 +606,15 @@ export function GroupsWorkspace({
 
       <div className={styles.panel}>
         {!selectedGroup ? (
-          <div className={styles.emptyStateCard}>
-            <h3 className={styles.sectionTitle}>{text.selectGroup}</h3>
-            <p className={styles.muted}>
-              {isRu
+          <DataState
+            title={text.selectGroup}
+            description={
+              isRu
                 ? "После выбора группы здесь появится полный сценарий: данные, участники и назначения."
-                : "After selecting a group, the full workflow will appear here: details, members, and assignments."}
-            </p>
-          </div>
+                : "After selecting a group, the full workflow will appear here: details, members, and assignments."
+            }
+            className={styles.emptyStateCard}
+          />
         ) : (
           <>
             <div className={styles.headerRow}>
@@ -789,11 +791,17 @@ export function GroupsWorkspace({
               ) : null}
 
               {uniqueUsers.length === 0 ? (
-                <p className={styles.muted}>
-                  {isRu
-                    ? "Нет доступных пользователей для добавления в группу."
-                    : "No users are available to add."}
-                </p>
+                <DataState
+                  compact
+                  title={
+                    isRu ? "Нет доступных пользователей" : "No users available"
+                  }
+                  description={
+                    isRu
+                      ? "Добавьте пользователей в систему, затем вернитесь к набору участников группы."
+                      : "Add users to the system, then return to group membership setup."
+                  }
+                />
               ) : (
                 <>
                   <input
@@ -851,11 +859,15 @@ export function GroupsWorkspace({
                     })}
                   </div>
                   {filteredUsers.length === 0 ? (
-                    <p className={styles.muted}>
-                      {isRu
-                        ? "По этому фильтру участники не найдены."
-                        : "No members match this filter."}
-                    </p>
+                    <DataState
+                      compact
+                      title={isRu ? "Ничего не найдено" : "No matches"}
+                      description={
+                        isRu
+                          ? "Измените фильтр или строку поиска, чтобы увидеть участников."
+                          : "Adjust filters or search query to see members."
+                      }
+                    />
                   ) : null}
                 </>
               )}
@@ -1054,11 +1066,15 @@ export function GroupsWorkspace({
                       })}
                     </div>
                     {filteredAssignmentUsers.length === 0 ? (
-                      <p className={styles.muted}>
-                        {isRu
-                          ? "По этому фильтру участники не найдены."
-                          : "No members match this filter."}
-                      </p>
+                      <DataState
+                        compact
+                        title={isRu ? "Ничего не найдено" : "No matches"}
+                        description={
+                          isRu
+                            ? "Измените фильтр целевых участников или строку поиска."
+                            : "Adjust target-user filter or search query."
+                        }
+                      />
                     ) : null}
                   </>
                 ) : null}
@@ -1067,14 +1083,17 @@ export function GroupsWorkspace({
               <ul className={styles.list}>
                 {assignments.length === 0 ? (
                   <li className={styles.assignmentEmpty}>
-                    <strong>
-                      {isRu ? "Назначений пока нет" : "No assignments yet"}
-                    </strong>
-                    <span>
-                      {isRu
-                        ? "Выберите курс и сохраните первое назначение, чтобы открыть обучение для группы."
-                        : "Choose a course and save the first assignment to open learning for the group."}
-                    </span>
+                    <DataState
+                      compact
+                      title={
+                        isRu ? "Назначений пока нет" : "No assignments yet"
+                      }
+                      description={
+                        isRu
+                          ? "Выберите курс и сохраните первое назначение, чтобы открыть обучение для группы."
+                          : "Choose a course and save the first assignment to open learning for the group."
+                      }
+                    />
                   </li>
                 ) : (
                   assignments.map((assignment) => (
@@ -1188,7 +1207,14 @@ export function GroupsWorkspace({
               </div>
             </section>
 
-            {error ? <p className={styles.error}>{error}</p> : null}
+            {error ? (
+              <DataState
+                tone="error"
+                role="alert"
+                title={isRu ? "Операция не выполнена" : "Operation failed"}
+                description={error}
+              />
+            ) : null}
             {success ? <p className={styles.success}>{success}</p> : null}
             <p className={styles.muted}>
               {isRu
@@ -1314,11 +1340,15 @@ export function GroupsWorkspace({
             </div>
 
             {filteredEditingAssignmentUsers.length === 0 ? (
-              <p className={styles.muted}>
-                {isRu
-                  ? "По этому фильтру участники не найдены."
-                  : "No members match this filter."}
-              </p>
+              <DataState
+                compact
+                title={isRu ? "Ничего не найдено" : "No matches"}
+                description={
+                  isRu
+                    ? "Измените поиск в модальном окне индивидуальных целей."
+                    : "Adjust search in the target users modal."
+                }
+              />
             ) : null}
 
             <div className={styles.modalActions}>

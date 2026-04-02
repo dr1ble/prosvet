@@ -37,8 +37,12 @@ class LearningGroup(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    status: Mapped[str] = mapped_column(String(32), default=GroupStatus.ACTIVE.value, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32), default=GroupStatus.ACTIVE.value, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=_utcnow,
@@ -49,7 +53,9 @@ class LearningGroup(Base):
 
 class GroupMembership(Base):
     __tablename__ = "group_memberships"
-    __table_args__ = (UniqueConstraint("group_id", "user_id", name="uq_group_memberships_group_user"),)
+    __table_args__ = (
+        UniqueConstraint("group_id", "user_id", name="uq_group_memberships_group_user"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     group_id: Mapped[uuid.UUID] = mapped_column(
@@ -64,7 +70,9 @@ class GroupMembership(Base):
         index=True,
         nullable=False,
     )
-    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
 
 
 class GroupCourseAssignment(Base):
@@ -101,7 +109,9 @@ class GroupCourseAssignment(Base):
         default=AssignmentStatus.ACTIVE.value,
         nullable=False,
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=_utcnow,
@@ -133,4 +143,6 @@ class GroupCourseAssignmentTargetUser(Base):
         index=True,
         nullable=False,
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )

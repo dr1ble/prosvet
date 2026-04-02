@@ -5,6 +5,7 @@ import { useState } from "react";
 import { updateUser } from "@/features/users/api";
 import type { UserOverviewItemDto } from "@/features/users/types";
 import { toUserErrorMessage } from "@/shared/lib/api-error";
+import { DataState } from "@/shared/ui/data-state";
 
 import styles from "./users-admin-table.module.css";
 
@@ -69,104 +70,122 @@ export function UsersAdminTable({
 
   return (
     <div className={styles.tableWrap}>
-      {error ? <p className={styles.error}>{error}</p> : null}
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>{language === "ru" ? "Имя" : "Name"}</th>
-            <th>{language === "ru" ? "Логин" : "Login"}</th>
-            <th>{language === "ru" ? "Роль" : "Role"}</th>
-            <th>{language === "ru" ? "Статус" : "Status"}</th>
-            <th>{language === "ru" ? "Доступы" : "Permissions"}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.user_id}>
-              {(() => {
-                const isCurrentUser = user.user_id === currentUserId;
-                return (
-                  <>
-                    <td>
-                      <input
-                        className={styles.inlineInput}
-                        defaultValue={user.display_name ?? user.login ?? ""}
-                        onBlur={(event) => {
-                          const nextValue = event.target.value.trim();
-                          if (
-                            (user.display_name ?? user.login ?? "") !==
-                            nextValue
-                          ) {
-                            void handlePatch(user.user_id, {
-                              display_name: nextValue || null,
-                            });
-                          }
-                        }}
-                      />
-                    </td>
-                    <td>{user.login ?? "-"}</td>
-                    <td>
-                      <select
-                        className={styles.inlineSelect}
-                        value={user.role}
-                        onChange={(event) =>
-                          void handlePatch(user.user_id, {
-                            role: event.target.value,
-                          })
-                        }
-                        disabled={pendingId === user.user_id || isCurrentUser}
-                      >
-                        <option value="administrator">
-                          {roleLabel("administrator", language)}
-                        </option>
-                        <option value="methodologist">
-                          {roleLabel("methodologist", language)}
-                        </option>
-                        <option value="moderator">
-                          {roleLabel("moderator", language)}
-                        </option>
-                        <option value="user">
-                          {roleLabel("user", language)}
-                        </option>
-                      </select>
-                    </td>
-                    <td>
-                      <button
-                        className={`${styles.statusButton} ${user.status === "active" ? styles.statusActive : styles.statusBlocked}`}
-                        type="button"
-                        onClick={() =>
-                          void handlePatch(user.user_id, {
-                            status:
-                              user.status === "active" ? "blocked" : "active",
-                          })
-                        }
-                        disabled={pendingId === user.user_id || isCurrentUser}
-                        title={
-                          isCurrentUser
-                            ? language === "ru"
-                              ? "Нельзя менять собственный статус"
-                              : "Cannot change your own status"
-                            : undefined
-                        }
-                      >
-                        {statusLabel(user.status, language)}
-                      </button>
-                    </td>
-                    <td>
-                      {user.permissions.length}
-                      {isCurrentUser ? (
-                        <span className={styles.selfBadge}>
-                          {language === "ru" ? "Вы" : "You"}
-                        </span>
-                      ) : null}
-                    </td>
-                  </>
-                );
-              })()}
+      {error ? (
+        <DataState
+          tone="error"
+          role="alert"
+          title={language === "ru" ? "Не удалось обновить" : "Update failed"}
+          description={error}
+        />
+      ) : null}
+      {users.length === 0 ? (
+        <DataState
+          title={language === "ru" ? "Нет пользователей" : "No users"}
+          description={
+            language === "ru"
+              ? "Список пользователей пока пуст. Добавьте пользователей или проверьте источник данных."
+              : "User list is empty. Add users or verify data source."
+          }
+        />
+      ) : (
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>{language === "ru" ? "Имя" : "Name"}</th>
+              <th>{language === "ru" ? "Логин" : "Login"}</th>
+              <th>{language === "ru" ? "Роль" : "Role"}</th>
+              <th>{language === "ru" ? "Статус" : "Status"}</th>
+              <th>{language === "ru" ? "Доступы" : "Permissions"}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.user_id}>
+                {(() => {
+                  const isCurrentUser = user.user_id === currentUserId;
+                  return (
+                    <>
+                      <td>
+                        <input
+                          className={styles.inlineInput}
+                          defaultValue={user.display_name ?? user.login ?? ""}
+                          onBlur={(event) => {
+                            const nextValue = event.target.value.trim();
+                            if (
+                              (user.display_name ?? user.login ?? "") !==
+                              nextValue
+                            ) {
+                              void handlePatch(user.user_id, {
+                                display_name: nextValue || null,
+                              });
+                            }
+                          }}
+                        />
+                      </td>
+                      <td>{user.login ?? "-"}</td>
+                      <td>
+                        <select
+                          className={styles.inlineSelect}
+                          value={user.role}
+                          onChange={(event) =>
+                            void handlePatch(user.user_id, {
+                              role: event.target.value,
+                            })
+                          }
+                          disabled={pendingId === user.user_id || isCurrentUser}
+                        >
+                          <option value="administrator">
+                            {roleLabel("administrator", language)}
+                          </option>
+                          <option value="methodologist">
+                            {roleLabel("methodologist", language)}
+                          </option>
+                          <option value="moderator">
+                            {roleLabel("moderator", language)}
+                          </option>
+                          <option value="user">
+                            {roleLabel("user", language)}
+                          </option>
+                        </select>
+                      </td>
+                      <td>
+                        <button
+                          className={`${styles.statusButton} ${user.status === "active" ? styles.statusActive : styles.statusBlocked}`}
+                          type="button"
+                          onClick={() =>
+                            void handlePatch(user.user_id, {
+                              status:
+                                user.status === "active" ? "blocked" : "active",
+                            })
+                          }
+                          disabled={pendingId === user.user_id || isCurrentUser}
+                          title={
+                            isCurrentUser
+                              ? language === "ru"
+                                ? "Нельзя менять собственный статус"
+                                : "Cannot change your own status"
+                              : undefined
+                          }
+                        >
+                          {statusLabel(user.status, language)}
+                        </button>
+                      </td>
+                      <td>
+                        {user.permissions.length}
+                        {isCurrentUser ? (
+                          <span className={styles.selfBadge}>
+                            {language === "ru" ? "Вы" : "You"}
+                          </span>
+                        ) : null}
+                      </td>
+                    </>
+                  );
+                })()}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

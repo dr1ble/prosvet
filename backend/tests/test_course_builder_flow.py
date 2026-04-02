@@ -120,7 +120,7 @@ def admin_actor():
 @pytest.fixture()
 def builder_client(db_session, admin_actor):
     """TestClient with real DB service and admin auth override.
-    
+
     Overrides get_db to use the test's session WITHOUT auto-commit,
     so all DB operations within a test share the same session and
     can be rolled back together at test end.
@@ -324,8 +324,7 @@ class TestCourseStructure:
         assert len(l2["tasks"]) == 1
         assert l2["tasks"][0]["task_type"] == "theory_video"
         assert (
-            l2["tasks"][0]["payload"]["video_url"]
-            == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            l2["tasks"][0]["payload"]["video_url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         )
 
     def test_structure_nonexistent_course_404(self, builder_client):
@@ -502,7 +501,9 @@ class TestValidateCourse:
                                 "title": "Theory",
                                 "order_index": 0,
                                 "required": True,
-                                "payload": {"content": "<p>This is a long enough content for validation</p>"},
+                                "payload": {
+                                    "content": "<p>This is a long enough content for validation</p>"
+                                },
                             }
                         ],
                     }
@@ -827,7 +828,9 @@ class TestFullCourseBuilderFlow:
                                 "title": "Теория",
                                 "order_index": 0,
                                 "required": True,
-                                "payload": {"content": "<h1>Введение</h1><p>Добро пожаловать в курс.</p>"},
+                                "payload": {
+                                    "content": "<h1>Введение</h1><p>Добро пожаловать в курс.</p>"
+                                },
                             },
                             {
                                 "id": None,
@@ -893,7 +896,9 @@ class TestFullCourseBuilderFlow:
         structure = resp.json()
         assert len(structure["lessons"]) == 2
         l1_tasks = structure["lessons"][0]["tasks"]
-        assert l1_tasks[0]["payload"]["content"] == "<h1>Введение</h1><p>Добро пожаловать в курс.</p>"
+        assert (
+            l1_tasks[0]["payload"]["content"] == "<h1>Введение</h1><p>Добро пожаловать в курс.</p>"
+        )
         assert l1_tasks[1]["payload"]["questions"][0]["question"] == "Сколько будет 2+2?"
 
         # Step 5: Validate — should pass

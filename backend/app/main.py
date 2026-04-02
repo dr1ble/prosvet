@@ -52,7 +52,8 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
- 
+
+
 def _seed_admin_on_startup() -> None:
     try:
         admin_login = (settings.admin_login or "").strip().lower()
@@ -72,5 +73,6 @@ def _seed_admin_on_startup() -> None:
     except Exception:
         # Do not crash startup; admin bootstrap will occur on first login if needed
         pass
+
 
 _seed_admin_on_startup()

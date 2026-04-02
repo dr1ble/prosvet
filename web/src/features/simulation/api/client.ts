@@ -1,5 +1,6 @@
 import type { SimulationDraft, SimulationStoreType } from "../model/types";
 import { normalizeSimulationDraft } from "../model/validation";
+import { extractApiErrorMessage } from "@/shared/lib/api-error";
 
 type DraftApiOut = {
   id: string;
@@ -159,6 +160,16 @@ const recentGetResponses = new Map<
   }
 >();
 
+function toSimulationApiError(raw: string, status: number): Error {
+  return new Error(
+    extractApiErrorMessage(
+      raw,
+      status,
+      "Failed to process simulation request.",
+    ),
+  );
+}
+
 async function getJson<T>(
   path: string,
   options?: {
@@ -188,9 +199,7 @@ async function getJson<T>(
 
     const raw = await response.text();
     if (!response.ok) {
-      throw new Error(
-        `Request failed (${response.status}): ${raw || response.statusText}`,
-      );
+      throw toSimulationApiError(raw, response.status);
     }
 
     if (!raw) {
@@ -228,9 +237,7 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
 
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
-    );
+    throw toSimulationApiError(raw, response.status);
   }
 
   if (!raw) {
@@ -252,9 +259,7 @@ async function patchJson<T>(path: string, payload: unknown): Promise<T> {
 
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
-    );
+    throw toSimulationApiError(raw, response.status);
   }
 
   if (!raw) {
@@ -272,9 +277,7 @@ async function deleteRequest(path: string): Promise<void> {
 
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
-    );
+    throw toSimulationApiError(raw, response.status);
   }
 }
 
@@ -287,9 +290,7 @@ async function postForm<T>(path: string, formData: FormData): Promise<T> {
 
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
-    );
+    throw toSimulationApiError(raw, response.status);
   }
 
   if (!raw) {
@@ -587,8 +588,6 @@ export async function deleteSimulationLibraryItemRemote(
 
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
-    );
+    throw toSimulationApiError(raw, response.status);
   }
 }

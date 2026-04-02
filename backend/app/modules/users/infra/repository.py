@@ -9,7 +9,9 @@ class UsersRepository:
         self.db = db
 
     def list_users(self) -> list[User]:
-        stmt = select(User).order_by(User.display_name.asc().nulls_last(), User.login.asc().nulls_last())
+        stmt = select(User).order_by(
+            User.display_name.asc().nulls_last(), User.login.asc().nulls_last()
+        )
         return list(self.db.scalars(stmt).all())
 
     def get_user(self, user_id: str) -> User | None:

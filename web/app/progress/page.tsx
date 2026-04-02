@@ -10,6 +10,7 @@ import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
 import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage } from "@/shared/i18n/lang";
 import { ActionLink } from "@/shared/ui/action-link";
+import { DataState } from "@/shared/ui/data-state";
 
 import styles from "./progress.module.css";
 
@@ -300,7 +301,11 @@ export default async function ProgressPage({
             </h2>
             <div className={styles.bars}>
               {statusStats.length === 0 ? (
-                <p className={styles.muted}>Нет данных</p>
+                <DataState
+                  compact
+                  title="Нет данных"
+                  description="Пока нет назначений, по которым можно построить распределение по статусам."
+                />
               ) : (
                 statusStats.map((item) => (
                   <div key={item.status} className={styles.barRow}>
@@ -324,7 +329,11 @@ export default async function ProgressPage({
             <h2 className={styles.chartTitle}>Топ групп по выполнению</h2>
             <div className={styles.bars}>
               {topGroups.length === 0 ? (
-                <p className={styles.muted}>Нет данных</p>
+                <DataState
+                  compact
+                  title="Нет данных"
+                  description="Нет записей для сравнения групп по выполнению."
+                />
               ) : (
                 topGroups.map((item) => (
                   <div key={item.name} className={styles.barRow}>
@@ -440,28 +449,27 @@ export default async function ProgressPage({
           </span>
         </div>
 
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Группа</th>
-                <th>Курс</th>
-                <th>Пользователь</th>
-                <th>Статус назначения</th>
-                <th>Завершено уроков</th>
-                <th>Всего уроков</th>
-                <th>Прогресс</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.length === 0 ? (
+        {sortedRows.length === 0 ? (
+          <DataState
+            title="Нет данных для таблицы"
+            description="Поменяйте фильтры или отключите режим «Только отстающие», чтобы увидеть записи по прогрессу."
+          />
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
                 <tr>
-                  <td colSpan={7} className={styles.muted}>
-                    Нет данных
-                  </td>
+                  <th>Группа</th>
+                  <th>Курс</th>
+                  <th>Пользователь</th>
+                  <th>Статус назначения</th>
+                  <th>Завершено уроков</th>
+                  <th>Всего уроков</th>
+                  <th>Прогресс</th>
                 </tr>
-              ) : (
-                sortedRows.map((row) => (
+              </thead>
+              <tbody>
+                {sortedRows.map((row) => (
                   <tr
                     key={`${row.assignment_id}-${row.user_id}`}
                     className={
@@ -496,11 +504,11 @@ export default async function ProgressPage({
                       </span>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </main>
   );

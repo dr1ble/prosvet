@@ -27,7 +27,9 @@ class ProgressRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list_assignments(self, group_id: UUID | None, course_id: UUID | None) -> list[GroupCourseAssignment]:
+    def list_assignments(
+        self, group_id: UUID | None, course_id: UUID | None
+    ) -> list[GroupCourseAssignment]:
         stmt = select(GroupCourseAssignment)
         if group_id is not None:
             stmt = stmt.where(GroupCourseAssignment.group_id == group_id)
@@ -57,7 +59,9 @@ class ProgressRepository:
         users = list(self.db.scalars(stmt).all())
         return {user.id: user for user in users}
 
-    def get_assignment_targets(self, assignments: list[GroupCourseAssignment]) -> list[AssignmentTarget]:
+    def get_assignment_targets(
+        self, assignments: list[GroupCourseAssignment]
+    ) -> list[AssignmentTarget]:
         if not assignments:
             return []
 
@@ -126,7 +130,9 @@ class ProgressRepository:
             LessonProgress.lesson_id == lesson_id,
         )
         item = self.db.scalar(stmt)
-        completed_at = datetime.now(timezone.utc) if status == LessonProgressStatus.COMPLETED.value else None
+        completed_at = (
+            datetime.now(timezone.utc) if status == LessonProgressStatus.COMPLETED.value else None
+        )
         if item is None:
             item = LessonProgress(
                 user_id=user_id,

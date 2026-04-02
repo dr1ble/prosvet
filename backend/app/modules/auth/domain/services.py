@@ -76,7 +76,9 @@ class AuthService:
     def refresh_session(self, refresh_token: str) -> AuthResponse:
         now = _utcnow()
         refresh_token_hash = stable_hash(refresh_token, settings.security_pepper)
-        current_session = self.repo.get_active_session_by_refresh_hash(refresh_token_hash=refresh_token_hash, now=now)
+        current_session = self.repo.get_active_session_by_refresh_hash(
+            refresh_token_hash=refresh_token_hash, now=now
+        )
         if current_session is None:
             raise AuthError("Refresh token is invalid or expired.", status_code=401)
 
@@ -96,7 +98,9 @@ class AuthService:
     def logout(self, refresh_token: str) -> None:
         now = _utcnow()
         refresh_token_hash = stable_hash(refresh_token, settings.security_pepper)
-        session = self.repo.get_active_session_by_refresh_hash(refresh_token_hash=refresh_token_hash, now=now)
+        session = self.repo.get_active_session_by_refresh_hash(
+            refresh_token_hash=refresh_token_hash, now=now
+        )
         if session is not None:
             self.repo.revoke_session(session, now)
 

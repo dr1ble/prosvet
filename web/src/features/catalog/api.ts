@@ -1,4 +1,5 @@
 import { apiBaseUrl } from "@/shared/config";
+import { extractApiErrorMessage } from "@/shared/lib/api-error";
 
 import type {
   CourseDto,
@@ -13,14 +14,23 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     cache: "no-store",
   });
 
+  const payload = await response.text();
+
   if (!response.ok) {
-    const payload = await response.text();
     throw new Error(
-      `Request failed (${response.status}): ${payload || response.statusText}`,
+      extractApiErrorMessage(
+        payload,
+        response.status,
+        "Failed to load catalog data.",
+      ),
     );
   }
 
-  return (await response.json()) as T;
+  if (!payload) {
+    return {} as T;
+  }
+
+  return JSON.parse(payload) as T;
 }
 
 export async function fetchCourses(): Promise<CourseDto[]> {
@@ -72,7 +82,11 @@ export async function updateCourseStatus(
   const payload = await response.text();
   if (!response.ok) {
     throw new Error(
-      `Request failed (${response.status}): ${payload || response.statusText}`,
+      extractApiErrorMessage(
+        payload,
+        response.status,
+        "Failed to update course status.",
+      ),
     );
   }
 
@@ -86,15 +100,12 @@ export async function deleteCourse(courseId: string): Promise<void> {
 
   if (!response.ok) {
     const payload = await response.text();
-    let detail = payload || response.statusText;
-    try {
-      const parsed = JSON.parse(payload) as { detail?: string };
-      if (parsed?.detail) {
-        detail = parsed.detail;
-      }
-    } catch {
-      // keep raw payload
-    }
-    throw new Error(`Request failed (${response.status}): ${detail}`);
+    throw new Error(
+      extractApiErrorMessage(
+        payload,
+        response.status,
+        "Failed to delete course.",
+      ),
+    );
   }
 }

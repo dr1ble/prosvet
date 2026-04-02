@@ -33,7 +33,12 @@ def upgrade() -> None:
         sa.Column("storage_key", sa.String(length=500), nullable=False),
         sa.Column("content_type", sa.String(length=120), nullable=False),
         sa.Column("size_bytes", sa.Integer(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("storage_key"),
@@ -49,5 +54,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(op.f("ix_simulation_media_assets_owner_user_id"), table_name="simulation_media_assets")
+    op.drop_index(
+        op.f("ix_simulation_media_assets_owner_user_id"), table_name="simulation_media_assets"
+    )
     op.drop_table("simulation_media_assets")
