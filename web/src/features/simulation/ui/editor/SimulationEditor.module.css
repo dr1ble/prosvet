@@ -23,17 +23,25 @@
 }
 
 .backButton {
-  font-size: 13px;
-  color: var(--accent-primary, #3b82f6);
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  color: #5d7590;
   text-decoration: none;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
 }
 
 .backButton:hover {
-  text-decoration: underline;
+  color: #2a4e6e;
+}
+
+.backButton svg {
+  width: 14px;
+  height: 14px;
 }
 
 .toolbarCenter {

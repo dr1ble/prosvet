@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.orm import Session
 
 from app.modules.auth.api.schemas import (
     AuthMeOut,
+    AuthMeUpdateIn,
     AuthResponse,
     LoginIn,
     LogoutOut,
@@ -13,6 +15,7 @@ from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.domain.permissions import permissions_for_role
 from app.modules.users.models import User
 from app.shared.auth.deps import get_current_user
+from app.shared.db.deps import get_db
 from app.shared.di.services import AuthServiceDep
 from app.shared.security.audit import log_login_attempt
 from app.shared.security.rate_limit import limiter
@@ -71,6 +74,25 @@ def refresh_session(request: Request, payload: RefreshTokenIn, service: AuthServ
 
 @router.get("/me", response_model=AuthMeOut)
 def auth_me(current_user: User = Depends(get_current_user)) -> AuthMeOut:
+    return AuthMeOut(
+        user_id=current_user.id,
+        role=current_user.role.value,
+        status=current_user.status.value,
+        display_name=current_user.display_name,
+        permissions=permissions_for_role(current_user.role),
+    )
+
+
+@router.patch("/me", response_model=AuthMeOut)
+def update_auth_me(
+    payload: AuthMeUpdateIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AuthMeOut:
+    display_name = payload.display_name.strip() if payload.display_name else None
+    current_user.display_name = display_name or None
+    db.add(current_user)
+    db.flush()
     return AuthMeOut(
         user_id=current_user.id,
         role=current_user.role.value,

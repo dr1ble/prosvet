@@ -4,6 +4,7 @@ import type {
   CourseDto,
   CourseReleaseDto,
   CourseReleaseFilters,
+  CourseStatus,
 } from "./types";
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -54,4 +55,46 @@ export async function fetchCourseReleases(
       },
     },
   );
+}
+
+export async function updateCourseStatus(
+  courseId: string,
+  status: CourseStatus,
+): Promise<CourseDto> {
+  const response = await fetch(`/api/admin/catalog/courses/${courseId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  const payload = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `Request failed (${response.status}): ${payload || response.statusText}`,
+    );
+  }
+
+  return payload ? (JSON.parse(payload) as CourseDto) : ({} as CourseDto);
+}
+
+export async function deleteCourse(courseId: string): Promise<void> {
+  const response = await fetch(`/api/admin/catalog/courses/${courseId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const payload = await response.text();
+    let detail = payload || response.statusText;
+    try {
+      const parsed = JSON.parse(payload) as { detail?: string };
+      if (parsed?.detail) {
+        detail = parsed.detail;
+      }
+    } catch {
+      // keep raw payload
+    }
+    throw new Error(`Request failed (${response.status}): ${detail}`);
+  }
 }

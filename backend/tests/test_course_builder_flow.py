@@ -939,7 +939,7 @@ class TestRollbackAndCover:
         delete_resp = builder_client.delete(f"/api/v1/catalog/courses/{course_id}/cover")
         assert delete_resp.status_code == 200
 
-    def test_rollback_creates_new_release(self, builder_client):
+    def test_rollback_reuses_existing_release(self, builder_client):
         course = self._create(builder_client, "rollback-course")
         course_id = course["id"]
 
@@ -982,14 +982,14 @@ class TestRollbackAndCover:
                 "changelog": "Rollback",
             },
         )
-        assert rollback.status_code == 201
-        assert rollback.json()["version"] == "1.0.1"
+        assert rollback.status_code == 200
+        assert rollback.json()["version"] == "1.0.0"
 
         releases = builder_client.get(f"/api/v1/catalog/courses/{course_id}/releases")
         assert releases.status_code == 200
         versions = [item["version"] for item in releases.json()]
         assert "1.0.0" in versions
-        assert "1.0.1" in versions
+        assert "1.0.1" not in versions
 
     @staticmethod
     def _create(client, slug: str) -> dict:

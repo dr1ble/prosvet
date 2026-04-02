@@ -87,7 +87,17 @@ class CatalogService:
             course=course,
             title=payload.title,
             description=payload.description,
+            status=payload.status,
         )
+
+    def delete_course(self, course_id: UUID) -> None:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        if course.status != CourseStatus.ARCHIVED.value:
+            raise CatalogError("Only archived courses can be deleted.", status_code=409)
+
+        self.repo.delete_course(course)
 
     def create_release(
         self,
@@ -514,6 +524,7 @@ class CatalogService:
         structure: dict[str, Any] = {
             "course_id": str(course.id),
             "course_title": course.title,
+            "course_description": course.description,
             "lessons": lessons_list,
         }
         return structure
@@ -697,6 +708,7 @@ class CatalogService:
         version: str,
         changelog: str | None = None,
     ) -> CourseRelease:
+        del version, changelog
         course = self.repo.get_course_by_id(course_id)
         if course is None:
             raise CatalogError("Course not found.", status_code=404)
@@ -705,35 +717,57 @@ class CatalogService:
         if source_release is None or source_release.course_id != course_id:
             raise CatalogError("Release not found for this course.", status_code=404)
 
-        existing = self.repo.get_release_by_version(course_id=course.id, version=version)
-        if existing is not None:
-            raise CatalogError("Release version already exists.", status_code=409)
-
         screens = self.repo.list_release_screens(source_release.id)
         if not screens:
             raise CatalogError("Selected release has no screens.", status_code=422)
 
-        now = _utcnow()
-        release = self.repo.create_release(
-            course_id=course.id,
-            version=version,
-            changelog=changelog or f"Rollback to release {source_release.version}",
-            status=ReleaseStatus.PUBLISHED.value,
-            published_at=now,
-        )
+        existing_lessons = self.repo.list_lessons_by_course(course_id, include_archived=True)
+        for lesson in existing_lessons:
+            self.repo.delete_lesson(lesson)
 
-        for screen in screens:
-            self.repo.add_release_screen(
-                release_id=release.id,
-                screen_key=screen.screen_key,
-                title=screen.title,
-                order_index=screen.order_index,
-                payload=screen.payload_json,
-                checksum=screen.checksum,
+        restored_lessons: dict[str, CourseLesson] = {}
+        restored_task_order: dict[str, int] = {}
+
+        ordered_screens = sorted(screens, key=lambda item: item.order_index)
+        for screen in ordered_screens:
+            payload = screen.payload_json or {}
+            lesson_key = str(payload.get("lesson_id") or f"screen-{screen.order_index}")
+            lesson_title = str(payload.get("lesson_title") or "Восстановленный урок").strip()
+            if lesson_key not in restored_lessons:
+                restored_lessons[lesson_key] = self.repo.create_lesson(
+                    course_id=course_id,
+                    title=lesson_title or "Восстановленный урок",
+                    description=None,
+                    order_index=len(restored_lessons),
+                    status=LessonStatus.DRAFT.value,
+                )
+                restored_task_order[lesson_key] = 0
+
+            task_payload = payload.get("content")
+            if not isinstance(task_payload, dict):
+                task_payload = {}
+
+            task_type = str(payload.get("task_type") or "theory_text")
+            task_title = screen.title.strip() if screen.title else "Восстановленный блок"
+
+            self.repo.create_task(
+                lesson_id=restored_lessons[lesson_key].id,
+                task_type=task_type,
+                title=task_title or "Восстановленный блок",
+                order_index=restored_task_order[lesson_key],
+                required=True,
+                payload=task_payload,
+                checksum=_checksum_payload(task_payload),
             )
+            restored_task_order[lesson_key] += 1
+
+        now = _utcnow()
+        source_release.status = ReleaseStatus.PUBLISHED.value
+        source_release.published_at = now
+        self.db.flush()
 
         course.status = CourseStatus.ACTIVE.value
-        return release
+        return source_release
 
     def update_course_structure_bulk(
         self,
@@ -860,6 +894,7 @@ class CatalogService:
         return {
             "course_id": str(course.id),
             "course_title": course.title,
+            "course_description": course.description,
             "status": course.status,
             "lessons": lessons_data,
         }

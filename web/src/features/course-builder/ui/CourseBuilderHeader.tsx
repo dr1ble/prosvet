@@ -1,21 +1,12 @@
-import {
-  BookOpen,
-  Eye,
-  Save,
-  Upload,
-  Edit2,
-  Undo2,
-  Redo2,
-  ImagePlus,
-  ImageOff,
-} from "lucide-react";
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { useCourseBuilderStore } from "../store";
 
 import styles from "./CourseBuilderHeader.module.css";
 
 export function CourseBuilderHeader() {
+  const router = useRouter();
   const course = useCourseBuilderStore((s) => s.course);
   const isDirty = useCourseBuilderStore((s) => s.isDirty);
   const isSaving = useCourseBuilderStore((s) => s.isSaving);
@@ -30,17 +21,69 @@ export function CourseBuilderHeader() {
   const updateCourseMeta = useCourseBuilderStore((s) => s.updateCourseMeta);
 
   const [editingTitle, setEditingTitle] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
   const [titleDraft, setTitleDraft] = useState(course?.title || "");
+  const [descriptionDraft, setDescriptionDraft] = useState(
+    course?.description || "",
+  );
   const [coverBusy, setCoverBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const showSaved = Boolean(lastSavedAt && !isDirty);
+  const showUnsaved = Boolean(isDirty && !isSaving);
+  const showSaving = Boolean(isSaving);
 
   function handleTitleSubmit() {
     if (course && titleDraft.trim() && titleDraft !== course.title) {
       updateCourseMeta({ title: titleDraft.trim() });
+      void (async () => {
+        try {
+          const { patchCourseMeta } = await import("../api");
+          await patchCourseMeta(course.id, { title: titleDraft.trim() });
+        } catch (error) {
+          window.alert(
+            error instanceof Error
+              ? error.message
+              : "Не удалось сохранить название курса",
+          );
+        }
+      })();
     } else {
       setTitleDraft(course?.title || "");
     }
     setEditingTitle(false);
+  }
+
+  function handleDescriptionSubmit() {
+    if (!course) {
+      setEditingDescription(false);
+      return;
+    }
+
+    const nextDescription = descriptionDraft.trim();
+    const normalized = nextDescription.length > 0 ? nextDescription : null;
+    if ((course.description ?? null) !== normalized) {
+      updateCourseMeta({ description: normalized });
+      void (async () => {
+        try {
+          const { patchCourseMeta } = await import("../api");
+          await patchCourseMeta(course.id, { description: normalized });
+        } catch (error) {
+          window.alert(
+            error instanceof Error
+              ? error.message
+              : "Не удалось сохранить описание курса",
+          );
+        }
+      })();
+    } else {
+      setDescriptionDraft(course.description || "");
+    }
+    setEditingDescription(false);
+  }
+
+  function cancelDescriptionEdit() {
+    setDescriptionDraft(course?.description || "");
+    setEditingDescription(false);
   }
 
   async function handleCoverUpload(file: File) {
@@ -73,137 +116,246 @@ export function CourseBuilderHeader() {
 
   return (
     <header className={styles.header}>
-      <div className={styles.left}>
-        <BookOpen size={20} />
-        {editingTitle ? (
-          <input
-            className={styles.titleEditInput}
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={handleTitleSubmit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleTitleSubmit();
-              if (e.key === "Escape") {
-                setTitleDraft(course?.title || "");
-                setEditingTitle(false);
-              }
-            }}
-            autoFocus
-          />
-        ) : (
-          <h1
-            className={styles.title}
-            onClick={() => {
-              setEditingTitle(true);
-              setTitleDraft(course?.title || "");
-            }}
-            title="Нажмите для редактирования"
+      <div className={styles.topRow}>
+        <div className={styles.left}>
+          <div className={styles.titleRow}>
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={() => router.push("/catalog")}
+              aria-label="К списку курсов"
+              title="К курсам"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                role="presentation"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12.8 4.8 7.6 10l5.2 5.2"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+
+            {editingTitle ? (
+              <input
+                className={styles.titleEditInput}
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={handleTitleSubmit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleTitleSubmit();
+                  if (e.key === "Escape") {
+                    setTitleDraft(course?.title || "");
+                    setEditingTitle(false);
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
+              <h1
+                className={styles.title}
+                onClick={() => {
+                  setEditingTitle(true);
+                  setTitleDraft(course?.title || "");
+                }}
+                title="Нажмите для редактирования"
+              >
+                {course?.title || "Загрузка..."}
+              </h1>
+            )}
+            {course && (
+              <span className={`${styles.badge} ${styles[course.status]}`}>
+                {course.status === "draft"
+                  ? "Черновик"
+                  : course.status === "active"
+                    ? "Опубликован"
+                    : "Архив"}
+              </span>
+            )}
+          </div>
+
+          {course?.description ? (
+            <button
+              type="button"
+              className={`${styles.descriptionInline} ${styles.descriptionInlineButton}`}
+              onClick={() => {
+                setEditingDescription(true);
+                setDescriptionDraft(course.description || "");
+              }}
+              title="Нажмите, чтобы отредактировать описание"
+            >
+              <p className={styles.description}>{course.description}</p>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.addDescriptionBtn}
+              onClick={() => {
+                setEditingDescription(true);
+                setDescriptionDraft("");
+              }}
+            >
+              + Добавить описание
+            </button>
+          )}
+        </div>
+
+        <div className={styles.right}>
+          {(showSaved || showUnsaved || showSaving) && (
+            <div className={styles.stateRow}>
+              {showSaved && (
+                <span className={styles.savedAt}>
+                  Сохранено:{" "}
+                  {lastSavedAt?.toLocaleTimeString("ru-RU", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
+              {showUnsaved && (
+                <span className={styles.unsaved}>
+                  Есть несохранённые изменения
+                </span>
+              )}
+              {showSaving && (
+                <span className={styles.saving}>Сохранение...</span>
+              )}
+            </div>
+          )}
+
+          <div className={styles.actionsRow}>
+            <div className={styles.secondaryActions}>
+              <button
+                className={styles.btn}
+                onClick={() => undo()}
+                disabled={!canUndo}
+              >
+                Отменить
+              </button>
+
+              <button
+                className={styles.btn}
+                onClick={() => redo()}
+                disabled={!canRedo}
+              >
+                Повторить
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    void handleCoverUpload(file);
+                  }
+                  e.currentTarget.value = "";
+                }}
+              />
+
+              <button
+                className={styles.btn}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={coverBusy || !course}
+              >
+                Обложка
+              </button>
+
+              <button
+                className={styles.btn}
+                onClick={() => void handleCoverRemove()}
+                disabled={coverBusy || !course}
+              >
+                Убрать
+              </button>
+            </div>
+
+            <div className={styles.primaryActions}>
+              <button
+                className={styles.btn}
+                onClick={() => save()}
+                disabled={isSaving || !isDirty}
+              >
+                Сохранить
+              </button>
+
+              <button
+                className={`${styles.btn} ${previewOpen ? styles.btnActive : ""}`}
+                onClick={() => togglePreview()}
+              >
+                Превью
+              </button>
+            </div>
+
+            <div className={styles.publishAction}>
+              <button
+                className={`${styles.btn} ${styles.publish}`}
+                onClick={() =>
+                  useCourseBuilderStore.getState().openPublishDialog()
+                }
+              >
+                Опубликовать
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {editingDescription && (
+        <div
+          className={styles.descriptionOverlay}
+          onClick={cancelDescriptionEdit}
+        >
+          <div
+            className={styles.descriptionDialog}
+            onClick={(event) => event.stopPropagation()}
           >
-            {course?.title || "Загрузка..."}
-            <Edit2 size={12} className={styles.editIcon} />
-          </h1>
-        )}
-        {course && (
-          <span className={`${styles.badge} ${styles[course.status]}`}>
-            {course.status === "draft"
-              ? "Черновик"
-              : course.status === "active"
-                ? "Опубликован"
-                : "Архив"}
-          </span>
-        )}
-      </div>
-
-      <div className={styles.right}>
-        {lastSavedAt && !isDirty && (
-          <span className={styles.savedAt}>
-            Сохранено:{" "}
-            {lastSavedAt.toLocaleTimeString("ru-RU", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-        )}
-        {isDirty && !isSaving && (
-          <span className={styles.unsaved}>Есть несохранённые изменения</span>
-        )}
-        {isSaving && <span className={styles.saving}>Сохранение...</span>}
-
-        <button
-          className={styles.btn}
-          onClick={() => undo()}
-          disabled={!canUndo}
-        >
-          <Undo2 size={16} />
-          Отменить
-        </button>
-
-        <button
-          className={styles.btn}
-          onClick={() => redo()}
-          disabled={!canRedo}
-        >
-          <Redo2 size={16} />
-          Повторить
-        </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              void handleCoverUpload(file);
-            }
-            e.currentTarget.value = "";
-          }}
-        />
-
-        <button
-          className={styles.btn}
-          onClick={() => fileInputRef.current?.click()}
-          disabled={coverBusy || !course}
-        >
-          <ImagePlus size={16} />
-          Обложка
-        </button>
-
-        <button
-          className={styles.btn}
-          onClick={() => void handleCoverRemove()}
-          disabled={coverBusy || !course}
-        >
-          <ImageOff size={16} />
-          Убрать
-        </button>
-
-        <button
-          className={styles.btn}
-          onClick={() => save()}
-          disabled={isSaving || !isDirty}
-        >
-          <Save size={16} />
-          Сохранить
-        </button>
-
-        <button
-          className={`${styles.btn} ${previewOpen ? styles.btnActive : ""}`}
-          onClick={() => togglePreview()}
-        >
-          <Eye size={16} />
-          Превью
-        </button>
-
-        <button
-          className={`${styles.btn} ${styles.publish}`}
-          onClick={() => useCourseBuilderStore.getState().openPublishDialog()}
-        >
-          <Upload size={16} />
-          Опубликовать
-        </button>
-      </div>
+            <div className={styles.descriptionHead}>
+              <span className={styles.descriptionLabel}>Описание курса</span>
+            </div>
+            <textarea
+              className={styles.descriptionEditInput}
+              value={descriptionDraft}
+              onChange={(e) => setDescriptionDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  handleDescriptionSubmit();
+                }
+                if (e.key === "Escape") {
+                  cancelDescriptionEdit();
+                }
+              }}
+              placeholder="Добавьте описание курса"
+              rows={6}
+              autoFocus
+            />
+            <div className={styles.descriptionDialogActions}>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={cancelDescriptionEdit}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.publish}`}
+                onClick={handleDescriptionSubmit}
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

@@ -1,6 +1,5 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Trash2, CheckCircle, Circle, GripVertical, Copy } from "lucide-react";
 
 import type { BuilderTask } from "../../types";
 import { TASK_TYPE_LABELS } from "../../types";
@@ -16,6 +15,7 @@ interface TaskNodeProps {
 export function TaskNode({ lessonId, task }: TaskNodeProps) {
   const selectedTaskId = useCourseBuilderStore((s) => s.selectedTaskId);
   const selectTask = useCourseBuilderStore((s) => s.selectTask);
+  const selectLesson = useCourseBuilderStore((s) => s.selectLesson);
   const removeTaskRequest = useCourseBuilderStore((s) => s.requestDelete);
   const duplicateTask = useCourseBuilderStore((s) => s.duplicateTask);
   const updateTask = useCourseBuilderStore((s) => s.updateTask);
@@ -44,16 +44,15 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
     updateTask(lessonId, task.id!, { title: e.target.value });
   }
 
-  function toggleRequired() {
-    updateTask(lessonId, task.id!, { required: !task.required });
-  }
-
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`${styles.task} ${isSelected ? styles.selected : ""}`}
-      onClick={() => selectTask(task.id)}
+      onClick={() => {
+        selectLesson(lessonId);
+        selectTask(task.id);
+      }}
     >
       <div
         className={styles.dragHandle}
@@ -61,18 +60,8 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
         {...listeners}
         title="Перетащить для изменения порядка"
       >
-        <GripVertical size={12} />
+        ::
       </div>
-
-      <button
-        className={styles.requiredBtn}
-        onClick={(e) => {
-          e.stopPropagation();
-          toggleRequired();
-        }}
-      >
-        {task.required ? <CheckCircle size={14} /> : <Circle size={14} />}
-      </button>
 
       <span className={styles.typeLabel}>
         {TASK_TYPE_LABELS[task.taskType]}
@@ -82,8 +71,14 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
         className={styles.taskTitle}
         value={task.title}
         onChange={handleTitleChange}
+        autoFocus={Boolean(task.id?.startsWith("local_"))}
         onClick={(e) => e.stopPropagation()}
-        placeholder="Название задачи"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === "Escape") {
+            e.currentTarget.blur();
+          }
+        }}
+        placeholder="Название блока"
       />
 
       <button
@@ -93,9 +88,9 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
           if (!task.id) return;
           void duplicateTask(lessonId, task.id);
         }}
-        title="Дублировать задачу"
+        title="Дублировать блок"
       >
-        <Copy size={12} />
+        ⧉
       </button>
 
       <button
@@ -104,9 +99,9 @@ export function TaskNode({ lessonId, task }: TaskNodeProps) {
           e.stopPropagation();
           removeTaskRequest("task", task.id!, task.title, lessonId);
         }}
-        title="Удалить задачу"
+        title="Удалить блок"
       >
-        <Trash2 size={12} />
+        ✕
       </button>
     </div>
   );

@@ -44,13 +44,25 @@ class CatalogRepository:
         self.db.flush()
         return course
 
-    def update_course(self, course: Course, title: str | None, description: str | None) -> Course:
+    def update_course(
+        self,
+        course: Course,
+        title: str | None,
+        description: str | None,
+        status: str | None,
+    ) -> Course:
         if title is not None:
             course.title = title
         if description is not None:
             course.description = description
+        if status is not None:
+            course.status = status
         self.db.flush()
         return course
+
+    def delete_course(self, course: Course) -> None:
+        self.db.delete(course)
+        self.db.flush()
 
     def get_release_by_version(self, course_id: UUID, version: str) -> CourseRelease | None:
         stmt = select(CourseRelease).where(
@@ -196,6 +208,10 @@ class CatalogRepository:
 
     def restore_lesson(self, lesson_id: UUID) -> CourseLesson | None:
         return self.update_lesson(lesson_id, status=LessonStatus.DRAFT.value)
+
+    def delete_lesson(self, lesson: CourseLesson) -> None:
+        self.db.delete(lesson)
+        self.db.flush()
 
     def get_next_lesson_order_index(self, course_id: UUID) -> int:
         stmt = select(func.max(CourseLesson.order_index)).where(CourseLesson.course_id == course_id)

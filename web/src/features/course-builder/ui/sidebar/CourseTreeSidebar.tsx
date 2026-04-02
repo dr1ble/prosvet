@@ -8,12 +8,10 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Plus, BookOpen } from "lucide-react";
 
 import { useCourseBuilderStore } from "../../store";
 import { LessonNode } from "./LessonNode";
@@ -58,8 +56,7 @@ export function CourseTreeSidebar() {
   return (
     <div className={styles.container}>
       <div className={styles.courseHeader}>
-        <BookOpen size={16} />
-        <span className={styles.courseTitle}>{course.title}</span>
+        <span className={styles.courseTitle}>Структура курса</span>
       </div>
 
       <DndContext
@@ -88,7 +85,6 @@ export function CourseTreeSidebar() {
       </DndContext>
 
       <button className={styles.addBtn} onClick={addLesson}>
-        <Plus size={16} />
         Добавить урок
       </button>
     </div>

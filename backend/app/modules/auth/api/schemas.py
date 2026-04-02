@@ -31,5 +31,9 @@ class AuthMeOut(BaseModel):
     permissions: list[str] = Field(default_factory=list)
 
 
+class AuthMeUpdateIn(BaseModel):
+    display_name: str | None = Field(default=None, max_length=255)
+
+
 class LogoutOut(BaseModel):
     status: str = "logged_out"

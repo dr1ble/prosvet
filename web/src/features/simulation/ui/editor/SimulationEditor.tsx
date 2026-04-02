@@ -1349,7 +1349,6 @@ function SimulationEditorInner({
             noTarget: "-- Не выбрано --",
             deleteHotspot: "Удалить зону",
             deleteScreen: "Удалить экран",
-            backToMenu: "Назад",
             showAllConnections: "Показать все связи",
             showOnlySelectedConnections: "Показывать только выбранную зону",
             resizeSidebar: "Изменить ширину левого меню",
@@ -1380,7 +1379,6 @@ function SimulationEditorInner({
             noTarget: "-- None --",
             deleteHotspot: "Delete hotspot",
             deleteScreen: "Delete screen",
-            backToMenu: "Back",
             showAllConnections: "Show all links",
             showOnlySelectedConnections: "Show selected hotspot only",
             resizeSidebar: "Resize left panel",
@@ -1390,6 +1388,9 @@ function SimulationEditorInner({
           },
     [language],
   );
+
+  const backToMenuAria =
+    language === "ru" ? "Назад к рабочему столу" : "Back to dashboard";
 
   const handleAddScreen = useCallback(() => {
     const newId = `screen-${Date.now()}`;
@@ -2986,8 +2987,25 @@ function SimulationEditorInner({
     <div className={styles.container}>
       <header className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
-          <a href={`/dashboard?lang=${language}`} className={styles.backButton}>
-            ← {labels.backToMenu}
+          <a
+            href={`/dashboard?lang=${language}`}
+            className={styles.backButton}
+            aria-label={backToMenuAria}
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              role="presentation"
+              aria-hidden="true"
+            >
+              <path
+                d="M11.8 4.6 6.4 10l5.4 5.4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </a>
           <span className={styles.scope}>{scopeLabel}</span>
         </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { extractApiErrorMessage } from "@/shared/lib/api-error";
+
 type AuthResponse = {
   status: string;
 };
@@ -28,7 +30,11 @@ async function postJson<T>(path: string, payload?: unknown): Promise<T> {
   const raw = await response.text();
   if (!response.ok) {
     throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
+      extractApiErrorMessage(
+        raw,
+        response.status,
+        "Не удалось выполнить запрос.",
+      ),
     );
   }
 
@@ -46,7 +52,11 @@ async function getJson<T>(path: string): Promise<T> {
   const raw = await response.text();
   if (!response.ok) {
     throw new Error(
-      `Request failed (${response.status}): ${raw || response.statusText}`,
+      extractApiErrorMessage(
+        raw,
+        response.status,
+        "Не удалось загрузить данные профиля.",
+      ),
     );
   }
 
@@ -76,4 +86,28 @@ export function logoutAdminSession(): Promise<LogoutOut> {
 
 export function fetchAdminAuthMe(): Promise<AdminAuthMe> {
   return getJson<AdminAuthMe>("/api/admin/auth/me");
+}
+
+export function updateAdminProfile(payload: {
+  display_name: string | null;
+}): Promise<AdminAuthMe> {
+  return fetch("/api/admin/auth/me", {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  }).then(async (response) => {
+    const raw = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        extractApiErrorMessage(
+          raw,
+          response.status,
+          "Не удалось обновить профиль.",
+        ),
+      );
+    }
+    return raw ? (JSON.parse(raw) as AdminAuthMe) : ({} as AdminAuthMe);
+  });
 }

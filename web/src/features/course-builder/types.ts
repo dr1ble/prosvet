@@ -25,6 +25,7 @@ export interface BuilderLesson {
 export interface BuilderCourse {
   id: string;
   title: string;
+  description: string | null;
   status: "draft" | "active" | "archived";
   lessons: BuilderLesson[];
 }
@@ -39,11 +40,11 @@ export interface ValidationError {
 }
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
-  theory_text: "📝 Текст",
-  theory_video: "🎬 Видео",
-  quiz: "❓ Квиз",
-  simulation: "🎮 Симуляция",
-  cheat_sheet: "📄 Шпаргалка",
+  theory_text: "Текст",
+  theory_video: "Видео",
+  quiz: "Квиз",
+  simulation: "Симуляция",
+  cheat_sheet: "Шпаргалка",
 };
 
 export function defaultPayload(taskType: TaskType): Record<string, unknown> {

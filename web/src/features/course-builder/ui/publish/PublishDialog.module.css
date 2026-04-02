@@ -3,21 +3,25 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1000;
+  overflow: auto;
+  padding: 20px 12px;
 }
 
 .dialog {
   width: 90%;
   max-width: 560px;
-  max-height: 90vh;
+  max-height: calc(100vh - 40px);
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin: 0 auto;
 }
 
 .header {
@@ -36,16 +40,14 @@
 }
 
 .closeBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
+  padding: 4px 10px;
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  background: #fff;
   color: var(--text-secondary, #666);
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: 6px;
   transition: all 0.15s;
 }
 
@@ -55,8 +57,11 @@
 }
 
 .body {
-  flex: 1;
-  overflow-y: auto;
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -75,12 +80,32 @@
   color: var(--text-secondary, #666);
 }
 
+.fieldHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+}
+
 .input {
   padding: 8px 12px;
   border: 1px solid var(--border-default, #e0e0e0);
   border-radius: var(--radius-sm, 6px);
   font: inherit;
   font-size: 14px;
+}
+
+.versionValue {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid #d5dee8;
+  border-radius: var(--radius-sm, 6px);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background: #f0f3f7;
+  color: #6b7f92;
 }
 
 .input:focus {
@@ -116,7 +141,7 @@
 .validationHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 10px 14px;
   background: var(--surface-card-muted, #f5f5f5);
   border-bottom: 1px solid var(--border-default, #e0e0e0);
@@ -189,6 +214,17 @@
   font-size: 13px;
 }
 
+.issueLink {
+  width: 100%;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.issueLink:hover {
+  filter: brightness(0.97);
+}
+
 .errorItem {
   background: color-mix(
     in srgb,
@@ -217,12 +253,6 @@
   border: 1px solid color-mix(in srgb, #adb5bd 35%, transparent);
   color: var(--text-primary, #1a1a1a);
   font-size: 13px;
-}
-
-.errorIcon,
-.warningIcon {
-  flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .summary {
@@ -264,6 +294,7 @@
   padding: 14px 20px;
   border-top: 1px solid var(--border-default, #e0e0e0);
   background: var(--surface-card-muted, #f5f5f5);
+  flex-shrink: 0;
 }
 
 .cancelBtn {

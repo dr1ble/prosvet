@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { useCourseBuilderStore } from "../../store";
 import { TASK_TYPE_LABELS } from "../../types";
 import { RichTextEditor } from "./RichTextEditor";
@@ -12,6 +10,10 @@ export function ContentArea() {
   const course = useCourseBuilderStore((s) => s.course);
   const selectedTaskId = useCourseBuilderStore((s) => s.selectedTaskId);
   const selectedLessonId = useCourseBuilderStore((s) => s.selectedLessonId);
+  const addLesson = useCourseBuilderStore((s) => s.addLesson);
+  const selectLesson = useCourseBuilderStore((s) => s.selectLesson);
+  const duplicateTask = useCourseBuilderStore((s) => s.duplicateTask);
+  const requestDelete = useCourseBuilderStore((s) => s.requestDelete);
 
   if (!course) {
     return <div className={styles.empty}>Загрузка курса...</div>;
@@ -19,8 +21,12 @@ export function ContentArea() {
 
   if (course.lessons.length === 0) {
     return (
-      <div className={styles.empty}>
-        <p>Курс пустой. Добавьте первый урок в панели слева.</p>
+      <div className={styles.emptyStateCard}>
+        <h3>Начнем сборку курса</h3>
+        <p>Первый шаг — добавьте урок. Затем внутри урока создайте блоки.</p>
+        <button className={styles.primaryBtn} onClick={addLesson}>
+          Добавить первый урок
+        </button>
       </div>
     );
   }
@@ -34,17 +40,64 @@ export function ContentArea() {
   );
 
   if (!selectedTask) {
+    const firstLesson = course.lessons[0];
     return (
-      <div className={styles.empty}>
-        <p>Выберите задачу для редактирования</p>
+      <div className={styles.emptyStateCard}>
+        <h3>Выберите блок</h3>
+        <p>Выберите блок в левом дереве курса или добавьте новый в уроке.</p>
+        <button
+          className={styles.secondaryBtn}
+          onClick={() => selectLesson(firstLesson.id || null)}
+        >
+          Перейти к первому уроку
+        </button>
       </div>
     );
   }
 
   return (
     <div className={styles.editor}>
-      <div className={styles.breadcrumb}>
-        {selectedLesson?.title} → {TASK_TYPE_LABELS[selectedTask.taskType]}
+      <div className={styles.editorTop}>
+        <div className={styles.editorMetaRow}>
+          <div className={styles.breadcrumb}>
+            <span className={styles.breadcrumbLesson}>
+              {selectedLesson?.title}
+            </span>
+            <span className={styles.breadcrumbArrow}>→</span>
+            <span className={styles.breadcrumbType}>
+              {TASK_TYPE_LABELS[selectedTask.taskType]}
+            </span>
+          </div>
+
+          <div className={styles.taskActions}>
+            <button
+              type="button"
+              className={styles.taskActionBtn}
+              onClick={() =>
+                void duplicateTask(selectedLesson!.id!, selectedTask.id!)
+              }
+            >
+              Дублировать блок
+            </button>
+            <button
+              type="button"
+              className={`${styles.taskActionBtn} ${styles.taskActionDanger}`}
+              onClick={() =>
+                requestDelete(
+                  "task",
+                  selectedTask.id!,
+                  selectedTask.title || "Без названия",
+                  selectedLesson!.id!,
+                )
+              }
+            >
+              Удалить блок
+            </button>
+          </div>
+        </div>
+        <h2 className={styles.editorTitle}>
+          {selectedTask.title || "Без названия"}
+        </h2>
       </div>
 
       <div className={styles.editorBody}>
@@ -166,7 +219,7 @@ function TaskEditor({
       );
 
     default:
-      return <div className={styles.placeholder}>Неизвестный тип задачи</div>;
+      return <div className={styles.placeholder}>Неизвестный тип блока</div>;
   }
 }
 

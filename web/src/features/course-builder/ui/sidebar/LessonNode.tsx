@@ -14,14 +14,6 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import {
-  GripVertical,
-  Book,
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Trash2,
-} from "lucide-react";
 import { useState } from "react";
 
 import type { BuilderLesson } from "../../types";
@@ -93,34 +85,41 @@ export function LessonNode({ lesson, isSelected, onSelect }: LessonNodeProps) {
     >
       <div className={styles.header}>
         <div className={styles.dragHandle} {...attributes} {...listeners}>
-          <GripVertical size={14} />
+          ::
         </div>
 
         <button
           className={styles.expandBtn}
           onClick={() => setExpanded(!expanded)}
+          title={expanded ? "Свернуть" : "Развернуть"}
         >
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {expanded ? "▾" : "▸"}
         </button>
-
-        <Book size={14} className={styles.icon} />
 
         <input
           className={styles.titleInput}
           value={lesson.title}
           onChange={handleTitleChange}
+          autoFocus={Boolean(lesson.id?.startsWith("local_"))}
           onClick={(e) => {
             e.stopPropagation();
             onSelect();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "Escape") {
+              e.currentTarget.blur();
+            }
           }}
         />
 
         <button
           className={styles.removeBtn}
-          onClick={() => removeLessonRequest(lesson.id!, lesson.title)}
+          onClick={() =>
+            removeLessonRequest("lesson", lesson.id!, lesson.title)
+          }
           title="Удалить урок"
         >
-          <Trash2 size={14} />
+          ✕
         </button>
       </div>
 
@@ -163,7 +162,7 @@ export function LessonNode({ lesson, isSelected, onSelect }: LessonNodeProps) {
                     defaultValue=""
                   >
                     <option value="" disabled>
-                      + Добавить задачу
+                      + Добавить блок
                     </option>
                     {Object.entries(TASK_TYPE_LABELS).map(([type, label]) => (
                       <option key={type} value={type}>

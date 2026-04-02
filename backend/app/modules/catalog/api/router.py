@@ -249,6 +249,21 @@ def update_course(
     return _to_course_out(course, request)
 
 
+@router.delete("/courses/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_course(
+    course_id: UUID,
+    service: CatalogServiceDep,
+    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> None:
+    try:
+        course = service.repo.get_course_by_id(course_id)
+        service.delete_course(course_id=course_id)
+        if course is not None:
+            _delete_course_cover(course.slug)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
 @router.post(
     "/courses/{course_id}/releases",
     response_model=CourseReleaseOut,
@@ -563,7 +578,6 @@ def publish_course(
 @router.post(
     "/courses/{course_id}/rollback",
     response_model=CourseReleaseOut,
-    status_code=status.HTTP_201_CREATED,
 )
 def rollback_course_release(
     course_id: UUID,

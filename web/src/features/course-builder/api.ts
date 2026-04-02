@@ -1,11 +1,4 @@
-import type {
-  BuilderCourse,
-  BuilderLesson,
-  BuilderTask,
-  ValidationError,
-} from "./types";
-
-import { apiBaseUrl } from "@/shared/config";
+import type { BuilderCourse, BuilderTask, ValidationError } from "./types";
 
 const ADMIN_PROXY = "/api/admin";
 
@@ -49,6 +42,7 @@ export async function fetchCourseStructure(
   const data = await fetchJson<{
     course_id: string;
     course_title: string;
+    course_description?: string | null;
     lessons: Array<{
       id: string;
       title: string;
@@ -68,6 +62,7 @@ export async function fetchCourseStructure(
   return {
     id: data.course_id,
     title: data.course_title,
+    description: data.course_description ?? null,
     status: "draft",
     lessons: data.lessons.map((l) => ({
       id: l.id,
@@ -106,6 +101,7 @@ export async function bulkUpdateStructure(
   const data = await fetchJson<{
     course_id: string;
     course_title: string;
+    course_description?: string | null;
     status: string;
     lessons: Array<{
       id: string;
@@ -129,6 +125,7 @@ export async function bulkUpdateStructure(
   return {
     id: data.course_id,
     title: data.course_title,
+    description: data.course_description ?? null,
     status: data.status as BuilderCourse["status"],
     lessons: data.lessons.map((l) => ({
       id: l.id,
@@ -145,6 +142,16 @@ export async function bulkUpdateStructure(
       })),
     })),
   };
+}
+
+export async function patchCourseMeta(
+  courseId: string,
+  patch: { title?: string; description?: string | null },
+): Promise<{ id: string; title: string; description: string | null }> {
+  return fetchJson(`/catalog/courses/${courseId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
 }
 
 export async function validateCourse(courseId: string): Promise<{

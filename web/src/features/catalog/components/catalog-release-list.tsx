@@ -65,19 +65,18 @@ export function CatalogReleaseList({
           </div>
 
           <div className={styles.releaseMeta}>
-            <span>
-              {messages.catalog.screens}: {release.screen_count}
-            </span>
-            <span>
-              {messages.catalog.createdAt}:{" "}
-              {new Date(release.created_at).toLocaleString(locale)}
-            </span>
             {release.published_at && (
-              <span>
+              <span className={styles.releaseMetaStrong}>
                 {messages.catalog.publishedAt}:{" "}
                 {new Date(release.published_at).toLocaleString(locale)}
               </span>
             )}
+            <span className={styles.releaseMetaSoft}>
+              {messages.catalog.createdAt}:{" "}
+              {new Date(release.created_at).toLocaleString(locale)}
+              {" · "}
+              {messages.catalog.screens}: {release.screen_count}
+            </span>
           </div>
           {release.changelog && (
             <p className={styles.releaseNote}>{release.changelog}</p>

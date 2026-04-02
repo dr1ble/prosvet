@@ -35,6 +35,24 @@ export function CatalogSidebar({
   messages,
   styles,
 }: CatalogSidebarProps) {
+  const initialsFromTitle = (title: string): string => {
+    const parts = title.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+    if (parts.length === 0) return "C";
+    return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
+  };
+
+  const updatedPrefix = language === "ru" ? "Обновлен" : "Updated";
+  const dateTimeFormatter = new Intl.DateTimeFormat(
+    language === "ru" ? "ru-RU" : "en-US",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
+
   return (
     <SurfaceCard as="aside" className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
@@ -66,13 +84,35 @@ export function CatalogSidebar({
                   })}
                   className={`${styles.courseItem} ${active ? styles.courseItemActive : ""}`}
                 >
-                  <p className={styles.courseTitle}>{course.title}</p>
-                  <div className={styles.courseMetaRow}>
-                    <span className={styles.courseSlug}>{course.slug}</span>
+                  <div className={styles.courseHeadRow}>
+                    {course.cover_url ? (
+                      <span
+                        className={styles.courseCover}
+                        style={{ backgroundImage: `url(${course.cover_url})` }}
+                        aria-label={course.title}
+                      />
+                    ) : (
+                      <span
+                        className={styles.courseCoverStub}
+                        aria-hidden="true"
+                      >
+                        {initialsFromTitle(course.title)}
+                      </span>
+                    )}
+                    <p className={styles.courseTitle}>{course.title}</p>
                     <span className={statusClass(course.status, styles)}>
                       {statusLabel(course.status, messages)}
                     </span>
                   </div>
+                  {course.description ? (
+                    <p className={styles.courseDescription}>
+                      {course.description}
+                    </p>
+                  ) : null}
+                  <p className={styles.courseUpdatedAt}>
+                    {updatedPrefix}:{" "}
+                    {dateTimeFormatter.format(new Date(course.updated_at))}
+                  </p>
                 </Link>
               </li>
             );

@@ -20,4 +20,16 @@ POLICY_ROLE_MAP: dict[str, set[UserRole]] = {
         UserRole.ADMINISTRATOR,
         UserRole.METHODOLOGIST,
     },
+    "groups.view": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+    },
+    "groups.manage": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+    },
+    "progress.view": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+    },
 }

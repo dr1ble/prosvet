@@ -175,7 +175,7 @@ function TaskRenderer({ task }: { task: BuilderTask }) {
       return (
         <QuizPreview
           questions={
-            (task.payload as { questions?: unknown[] }).questions || []
+            (task.payload as { questions?: QuizQuestion[] }).questions || []
           }
         />
       );
@@ -206,7 +206,7 @@ function TaskRenderer({ task }: { task: BuilderTask }) {
       );
 
     default:
-      return <p>Неизвестный тип задачи</p>;
+      return <p>Неизвестный тип блока</p>;
   }
 }
 

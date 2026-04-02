@@ -1,5 +1,4 @@
-import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { BuilderCourse, ValidationError } from "../../types";
 
@@ -13,13 +12,43 @@ interface PublishDialogProps {
     version: string,
     changelog?: string,
   ) => Promise<void>;
+  onNavigateToIssue: (lessonId?: string, taskId?: string) => void;
   onClose: () => void;
+}
+
+function parseVersion(value: string): [number, number, number] | null {
+  const parts = value.split(".");
+  if (parts.length !== 3) return null;
+  const major = Number(parts[0]);
+  const minor = Number(parts[1]);
+  const patch = Number(parts[2]);
+  if ([major, minor, patch].some((item) => Number.isNaN(item))) return null;
+  return [major, minor, patch];
+}
+
+function compareVersions(
+  a: [number, number, number],
+  b: [number, number, number],
+): number {
+  if (a[0] !== b[0]) return a[0] - b[0];
+  if (a[1] !== b[1]) return a[1] - b[1];
+  return a[2] - b[2];
+}
+
+function buildNextVersion(versions: string[]): string {
+  const parsed = versions
+    .map((item) => parseVersion(item))
+    .filter((item): item is [number, number, number] => item !== null);
+  if (parsed.length === 0) return "1.0.0";
+  const latest = parsed.sort(compareVersions)[parsed.length - 1];
+  return `${latest[0]}.${latest[1]}.${latest[2] + 1}`;
 }
 
 export function PublishDialog({
   course,
   onPublish,
   onRollback,
+  onNavigateToIssue,
   onClose,
 }: PublishDialogProps) {
   const [version, setVersion] = useState("1.0.0");
@@ -28,39 +57,26 @@ export function PublishDialog({
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [warnings, setWarnings] = useState<ValidationError[]>([]);
   const [validated, setValidated] = useState(false);
-  const [loadingVersion, setLoadingVersion] = useState(true);
   const [releases, setReleases] = useState<
     Array<{ id: string; version: string }>
   >([]);
   const [rollingBack, setRollingBack] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadLatestVersion() {
-      try {
-        const response = await fetch(
-          `/api/admin/catalog/courses/${course.id}/releases`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          const loadedReleases = data.items || data || [];
-          setReleases(loadedReleases);
-          if (loadedReleases.length > 0) {
-            const latest = loadedReleases[0].version || "0.0.0";
-            const parts = latest.split(".").map(Number);
-            parts[2] = (parts[2] || 0) + 1;
-            setVersion(parts.join("."));
-          }
-        }
-      } catch {
-        // fallback to 1.0.0
-      } finally {
-        setLoadingVersion(false);
-      }
+  const loadNextVersion = useCallback(async (): Promise<string> => {
+    const response = await fetch(
+      `/api/admin/catalog/courses/${course.id}/releases`,
+    );
+    if (!response.ok) {
+      throw new Error("Не удалось получить список версий курса");
     }
-    loadLatestVersion();
+    const data = await response.json();
+    const loadedReleases: Array<{ id: string; version: string }> =
+      data.items || data || [];
+    setReleases(loadedReleases);
+    return buildNextVersion(loadedReleases.map((item) => item.version));
   }, [course.id]);
 
-  async function handleValidate() {
+  const runValidation = useCallback(() => {
     const foundErrors: ValidationError[] = [];
     const foundWarnings: ValidationError[] = [];
 
@@ -75,7 +91,7 @@ export function PublishDialog({
       if (lesson.tasks.length === 0) {
         foundErrors.push({
           type: "empty_lesson",
-          message: `Урок "${lesson.title}" не содержит задач`,
+          message: `Урок "${lesson.title}" не содержит блоков`,
           lessonId: lesson.id || undefined,
           lessonTitle: lesson.title,
         });
@@ -85,7 +101,7 @@ export function PublishDialog({
         if (!task.title.trim()) {
           foundWarnings.push({
             type: "empty_task_title",
-            message: `Задача без названия в уроке "${lesson.title}"`,
+            message: `Блок без названия в уроке "${lesson.title}"`,
             lessonId: lesson.id || undefined,
             taskId: task.id || undefined,
           });
@@ -97,7 +113,7 @@ export function PublishDialog({
         ) {
           foundErrors.push({
             type: "empty_text_content",
-            message: `Текстовая задача "${task.title || "без названия"}" пуста`,
+            message: `Текстовый блок "${task.title || "без названия"}" пуст`,
             lessonId: lesson.id || undefined,
             taskId: task.id || undefined,
             taskTitle: task.title,
@@ -110,7 +126,7 @@ export function PublishDialog({
         ) {
           foundErrors.push({
             type: "empty_video_url",
-            message: `Видео задача "${task.title || "без названия"}" не имеет URL`,
+            message: `Видео-блок "${task.title || "без названия"}" не имеет URL`,
             lessonId: lesson.id || undefined,
             taskId: task.id || undefined,
             taskTitle: task.title,
@@ -164,7 +180,24 @@ export function PublishDialog({
     setErrors(foundErrors);
     setWarnings(foundWarnings);
     setValidated(true);
-  }
+  }, [course]);
+
+  useEffect(() => {
+    async function loadLatestVersion() {
+      try {
+        const nextVersion = await loadNextVersion();
+        setVersion(nextVersion);
+      } catch {
+        // fallback to 1.0.0
+        setVersion("1.0.0");
+      }
+    }
+    loadLatestVersion();
+  }, [loadNextVersion]);
+
+  useEffect(() => {
+    runValidation();
+  }, [runValidation]);
 
   async function handlePublish() {
     if (errors.length > 0) return;
@@ -173,10 +206,28 @@ export function PublishDialog({
       await onPublish(version, changelog);
       onClose();
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Ошибка публикации";
+      if (
+        message.toLowerCase().includes("already exists") ||
+        message.toLowerCase().includes("version") ||
+        message.includes("409")
+      ) {
+        try {
+          const nextVersion = await loadNextVersion();
+          if (nextVersion !== version) {
+            setVersion(nextVersion);
+            await onPublish(nextVersion, changelog);
+            onClose();
+            return;
+          }
+        } catch {
+          // keep original publish error below
+        }
+      }
       setErrors([
         {
           type: "publish_error",
-          message: err instanceof Error ? err.message : "Ошибка публикации",
+          message,
         },
       ]);
     } finally {
@@ -189,14 +240,14 @@ export function PublishDialog({
     setRollingBack(releaseId);
     try {
       const rollbackChangelog =
-        changelog.trim() || `Rollback to release ${sourceVersion}`;
+        changelog.trim() || `Возврат к версии ${sourceVersion}`;
       await onRollback(releaseId, version, rollbackChangelog);
       onClose();
     } catch (err) {
       setErrors([
         {
           type: "rollback_error",
-          message: err instanceof Error ? err.message : "Ошибка отката",
+          message: err instanceof Error ? err.message : "Ошибка возврата",
         },
       ]);
     } finally {
@@ -212,19 +263,17 @@ export function PublishDialog({
         <div className={styles.header}>
           <h2>Публикация курса</h2>
           <button className={styles.closeBtn} onClick={onClose}>
-            <XCircle size={20} />
+            Закрыть
           </button>
         </div>
 
         <div className={styles.body}>
           <div className={styles.field}>
             <label>Версия</label>
-            <input
-              className={styles.input}
-              value={version}
-              onChange={(e) => setVersion(e.target.value)}
-              placeholder="1.0.0"
-            />
+            <div className={styles.versionValue} aria-live="polite">
+              {version || "1.0.0"}
+            </div>
+            <p className={styles.fieldHint}>Версия формируется автоматически</p>
           </div>
 
           <div className={styles.field}>
@@ -241,15 +290,11 @@ export function PublishDialog({
           <div className={styles.validationSection}>
             <div className={styles.validationHeader}>
               <h3>Валидация</h3>
-              <button className={styles.validateBtn} onClick={handleValidate}>
-                Проверить
-              </button>
             </div>
 
             {!validated && (
               <p className={styles.validationHint}>
-                Нажмите &quot;Проверить&quot; для поиска ошибок перед
-                публикацией
+                Выполняется автоматическая проверка...
               </p>
             )}
 
@@ -257,7 +302,6 @@ export function PublishDialog({
               <div className={styles.validationResults}>
                 {errors.length === 0 && warnings.length === 0 && (
                   <div className={styles.validationOk}>
-                    <CheckCircle size={18} />
                     <span>Все проверки пройдены</span>
                   </div>
                 )}
@@ -265,10 +309,19 @@ export function PublishDialog({
                 {errors.length > 0 && (
                   <div className={styles.errorList}>
                     {errors.map((err, i) => (
-                      <div key={i} className={styles.errorItem}>
-                        <XCircle size={16} className={styles.errorIcon} />
+                      <button
+                        key={i}
+                        type="button"
+                        className={`${styles.errorItem} ${styles.issueLink}`}
+                        onClick={() =>
+                          onNavigateToIssue(
+                            err.lessonId || undefined,
+                            err.taskId || undefined,
+                          )
+                        }
+                      >
                         <span>{err.message}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -276,13 +329,19 @@ export function PublishDialog({
                 {warnings.length > 0 && (
                   <div className={styles.warningList}>
                     {warnings.map((warn, i) => (
-                      <div key={i} className={styles.warningItem}>
-                        <AlertTriangle
-                          size={16}
-                          className={styles.warningIcon}
-                        />
+                      <button
+                        key={i}
+                        type="button"
+                        className={`${styles.warningItem} ${styles.issueLink}`}
+                        onClick={() =>
+                          onNavigateToIssue(
+                            warn.lessonId || undefined,
+                            warn.taskId || undefined,
+                          )
+                        }
+                      >
                         <span>{warn.message}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -298,7 +357,7 @@ export function PublishDialog({
               </span>
             </div>
             <div className={styles.summaryItem}>
-              <span className={styles.summaryLabel}>Задач:</span>
+              <span className={styles.summaryLabel}>Блоков:</span>
               <span className={styles.summaryValue}>
                 {course.lessons.reduce((sum, l) => sum + l.tasks.length, 0)}
               </span>
@@ -333,7 +392,7 @@ export function PublishDialog({
                       }
                       disabled={!!rollingBack || !version.trim()}
                     >
-                      {rollingBack === release.id ? "Откат..." : "Откатить"}
+                      {rollingBack === release.id ? "Возврат..." : "Вернуть"}
                     </button>
                   </div>
                 ))}

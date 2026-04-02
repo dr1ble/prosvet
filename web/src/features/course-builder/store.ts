@@ -18,6 +18,11 @@ function cloneCourse(course: BuilderCourse): BuilderCourse {
   return JSON.parse(JSON.stringify(course)) as BuilderCourse;
 }
 
+function toPersistedId(id: string | null): string | null {
+  if (!id) return null;
+  return id.startsWith("local_") ? null : id;
+}
+
 export interface CourseBuilderState {
   courseId: string;
   course: BuilderCourse | null;
@@ -44,7 +49,9 @@ export interface CourseBuilderState {
   validationErrors: ValidationError[];
 
   loadCourse: (courseId: string) => Promise<void>;
-  updateCourseMeta: (patch: Partial<Pick<BuilderCourse, "title">>) => void;
+  updateCourseMeta: (
+    patch: Partial<Pick<BuilderCourse, "title" | "description">>,
+  ) => void;
   selectTask: (taskId: string | null) => void;
   selectLesson: (lessonId: string | null) => void;
   togglePreview: () => void;
@@ -168,8 +175,9 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
   addLesson: () => {
     const { course } = get();
     if (!course) return;
+    const newLessonId = genLocalId();
     const newLesson: BuilderLesson = {
-      id: null,
+      id: newLessonId,
       title: "Новый урок",
       description: null,
       orderIndex: course.lessons.length,
@@ -180,6 +188,8 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
         ? { ...s.course, lessons: [...s.course.lessons, newLesson] }
         : s.course,
       isDirty: true,
+      selectedLessonId: newLessonId,
+      selectedTaskId: null,
       historyPast: s.course
         ? [...s.historyPast, cloneCourse(s.course)]
         : s.historyPast,
@@ -258,15 +268,16 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
   addTask: (lessonId: string, taskType: TaskType) => {
     set((s) => {
       if (!s.course) return s;
+      const newTaskId = genLocalId();
       return {
         course: {
           ...s.course,
           lessons: s.course.lessons.map((l) => {
             if (l.id !== lessonId && `${l.id}` !== lessonId) return l;
             const newTask: BuilderTask = {
-              id: null,
+              id: newTaskId,
               taskType,
-              title: `Новая задача`,
+              title: "Новый блок",
               orderIndex: l.tasks.length,
               required: true,
               payload: defaultPayload(taskType),
@@ -275,6 +286,8 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
           }),
         },
         isDirty: true,
+        selectedLessonId: lessonId,
+        selectedTaskId: newTaskId,
         historyPast: [...s.historyPast, cloneCourse(s.course)],
         historyFuture: [],
         canUndo: true,
@@ -424,12 +437,12 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
       const updated = await bulkUpdateStructure(
         course.id,
         course.lessons.map((l) => ({
-          id: l.id,
+          id: toPersistedId(l.id),
           title: l.title,
           description: l.description,
           order_index: l.orderIndex,
           tasks: l.tasks.map((t) => ({
-            id: t.id,
+            id: toPersistedId(t.id),
             task_type: t.taskType,
             title: t.title,
             order_index: t.orderIndex,
@@ -439,11 +452,32 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
         })),
       );
 
-      set({
-        course: updated,
-        isDirty: false,
-        isSaving: false,
-        lastSavedAt: new Date(),
+      set((s) => {
+        const hasLesson = updated.lessons.some(
+          (l) => `${l.id}` === `${s.selectedLessonId}`,
+        );
+        const fallbackLesson = updated.lessons[0]?.id ?? null;
+        const nextSelectedLessonId = hasLesson
+          ? s.selectedLessonId
+          : fallbackLesson;
+
+        const selectedLesson = updated.lessons.find(
+          (l) => `${l.id}` === `${nextSelectedLessonId}`,
+        );
+        const hasTask = selectedLesson?.tasks.some(
+          (t) => `${t.id}` === `${s.selectedTaskId}`,
+        );
+        const fallbackTask = selectedLesson?.tasks[0]?.id ?? null;
+        const nextSelectedTaskId = hasTask ? s.selectedTaskId : fallbackTask;
+
+        return {
+          course: updated,
+          isDirty: false,
+          isSaving: false,
+          lastSavedAt: new Date(),
+          selectedLessonId: nextSelectedLessonId,
+          selectedTaskId: nextSelectedTaskId,
+        };
       });
     } catch (err) {
       set({
@@ -474,7 +508,9 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
       const { publishCourse: doPublish } = await import("./api");
       await doPublish(course.id, version, changelog);
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : "Publish failed" });
+      const message = err instanceof Error ? err.message : "Publish failed";
+      set({ error: message });
+      throw new Error(message);
     }
   },
 
@@ -485,10 +521,18 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
     try {
       const { rollbackCourse } = await import("./api");
       await rollbackCourse(course.id, releaseId, version, changelog);
+      const { fetchCourseStructure } = await import("./api");
+      const updated = await fetchCourseStructure(course.id);
+      set((s) => ({
+        course: updated,
+        isDirty: false,
+        selectedLessonId: updated.lessons[0]?.id ?? s.selectedLessonId,
+        selectedTaskId: updated.lessons[0]?.tasks[0]?.id ?? s.selectedTaskId,
+      }));
     } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : "Rollback failed",
-      });
+      const message = err instanceof Error ? err.message : "Rollback failed";
+      set({ error: message });
+      throw new Error(message);
     }
   },
 

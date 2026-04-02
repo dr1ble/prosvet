@@ -17,6 +17,8 @@ export function CourseBuilderLayout() {
   const closePublishDialog = useCourseBuilderStore((s) => s.closePublishDialog);
   const publish = useCourseBuilderStore((s) => s.publish);
   const rollback = useCourseBuilderStore((s) => s.rollback);
+  const selectLesson = useCourseBuilderStore((s) => s.selectLesson);
+  const selectTask = useCourseBuilderStore((s) => s.selectTask);
   const confirmDelete = useCourseBuilderStore((s) => s.confirmDelete);
   const cancelDelete = useCourseBuilderStore((s) => s.cancelDelete);
 
@@ -46,6 +48,15 @@ export function CourseBuilderLayout() {
           course={course}
           onPublish={publish}
           onRollback={rollback}
+          onNavigateToIssue={(lessonId, taskId) => {
+            if (lessonId) {
+              selectLesson(lessonId);
+            }
+            if (taskId) {
+              selectTask(taskId);
+            }
+            closePublishDialog();
+          }}
           onClose={closePublishDialog}
         />
       )}
@@ -54,14 +65,12 @@ export function CourseBuilderLayout() {
         <ConfirmDialog
           open={!!pendingDelete}
           title={
-            pendingDelete.type === "lesson"
-              ? "Удалить урок?"
-              : "Удалить задачу?"
+            pendingDelete.type === "lesson" ? "Удалить урок?" : "Удалить блок?"
           }
           message={
             pendingDelete.type === "lesson"
-              ? `Урок "${pendingDelete.title}" и все его задачи будут удалены. Это действие нельзя отменить.`
-              : `Задача "${pendingDelete.title}" будет удалена. Это действие нельзя отменить.`
+              ? `Урок "${pendingDelete.title}" и все его блоки будут удалены. Это действие нельзя отменить.`
+              : `Блок "${pendingDelete.title}" будет удален. Это действие нельзя отменить.`
           }
           confirmLabel="Удалить"
           danger

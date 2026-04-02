@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 
 import { loginAdmin } from "@/features/auth/api";
+import { toUserErrorMessage } from "@/shared/lib/api-error";
 import type { AppLanguage } from "@/shared/i18n/lang";
 import { getUiMessages } from "@/shared/i18n/messages";
 
@@ -28,11 +29,7 @@ export function AuthForm({ language }: AuthFormProps) {
       await loginAdmin(login.trim(), password);
       window.location.assign(`/dashboard?lang=${language}`);
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : messages.auth.signInError,
-      );
+      setError(toUserErrorMessage(requestError, messages.auth.signInError));
     } finally {
       setPending(false);
     }

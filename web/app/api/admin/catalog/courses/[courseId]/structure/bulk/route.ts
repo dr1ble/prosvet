@@ -1,9 +1,4 @@
-import { NextResponse } from "next/server";
-
-import {
-  getAdminAccessToken,
-  proxyBackendAdminJson,
-} from "@/shared/server/backend-admin-proxy";
+import { proxyBackendAdminJson } from "@/shared/server/backend-admin-proxy";
 
 type RouteParams = {
   params: Promise<{

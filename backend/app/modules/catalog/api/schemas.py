@@ -28,6 +28,7 @@ class CourseCreateIn(_BaseSchema):
 class CourseUpdateIn(_BaseSchema):
     title: str | None = Field(default=None, min_length=3, max_length=255)
     description: str | None = Field(default=None, max_length=5_000)
+    status: Literal["draft", "active", "archived"] | None = None
 
 
 class CourseListQuery(_BaseSchema):
@@ -197,6 +198,7 @@ class BulkCourseStructureIn(_BaseSchema):
 class BulkCourseStructureOut(_BaseSchema):
     course_id: UUID
     course_title: str
+    course_description: str | None = None
     status: str
     lessons: list[dict[str, Any]]
 

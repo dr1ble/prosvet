@@ -8,6 +8,13 @@ from app.modules.catalog.infra.models import (
     CourseReleaseScreen,
     LessonTask,
 )
+from app.modules.groups.infra.models import (
+    GroupCourseAssignment,
+    GroupCourseAssignmentTargetUser,
+    GroupMembership,
+    LearningGroup,
+)
+from app.modules.progress.infra.models import LessonProgress
 from app.modules.simulation.infra.models import SimulationDraft, SimulationMediaAsset
 from app.modules.users.models import User
 from app.shared.auth.policy_models import RbacPolicyRule
@@ -21,6 +28,11 @@ __all__ = [
     "LessonTask",
     "CourseRelease",
     "CourseReleaseScreen",
+    "LearningGroup",
+    "GroupMembership",
+    "GroupCourseAssignment",
+    "GroupCourseAssignmentTargetUser",
+    "LessonProgress",
     "SimulationDraft",
     "SimulationMediaAsset",
     "RbacPolicyRule",

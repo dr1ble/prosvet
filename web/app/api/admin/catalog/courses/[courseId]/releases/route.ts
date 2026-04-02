@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { proxyBackendAdminPost } from "@/shared/server/backend-admin-proxy";
+import {
+  proxyBackendAdminGet,
+  proxyBackendAdminPost,
+} from "@/shared/server/backend-admin-proxy";
 
 type RouteParams = {
   params: Promise<{
@@ -26,4 +29,19 @@ export async function POST(
       { status: 400 },
     );
   }
+}
+
+export async function GET(
+  request: Request,
+  { params }: RouteParams,
+): Promise<Response> {
+  const { courseId } = await params;
+  const url = new URL(request.url);
+  const query = url.searchParams.toString();
+  const suffix = query ? `?${query}` : "";
+
+  return proxyBackendAdminGet({
+    request,
+    path: `/catalog/courses/${courseId}/releases${suffix}`,
+  });
 }

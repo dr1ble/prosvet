@@ -1,0 +1,13 @@
+.badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(40, 69, 95, 0.16);
+  background: linear-gradient(145deg, #f6fbff, #e8f0fa);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2d5273;
+  font-size: 13px;
+  font-weight: 700;
+}

@@ -1,40 +1,59 @@
 .container {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border-default, #e0e0e0);
-  border-radius: var(--radius-sm, 6px);
+  border: 1px solid rgba(42, 70, 96, 0.16);
+  border-radius: 12px;
   overflow: hidden;
+  background: #fff;
 }
 
 .toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 2px;
-  padding: 6px 8px;
-  background: var(--surface-card-muted, #f5f5f5);
-  border-bottom: 1px solid var(--border-default, #e0e0e0);
+  padding: 8px;
+  background: #f3f7fc;
+  border-bottom: 1px solid rgba(42, 70, 96, 0.14);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.toolbarGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
 }
 
 .toolBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-primary, #1a1a1a);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.toolBtn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .toolBtn:hover {
   background: #fff;
-  border-color: var(--border-default, #e0e0e0);
+  border-color: rgba(42, 70, 96, 0.16);
 }
 
 .toolBtn.active {
@@ -53,22 +72,22 @@
 
 .separator {
   width: 1px;
-  height: 20px;
+  height: 22px;
   margin: 4px 4px;
-  background: var(--border-default, #e0e0e0);
+  background: rgba(42, 70, 96, 0.16);
   align-self: center;
 }
 
 .editorWrapper {
-  min-height: 200px;
+  min-height: 320px;
 }
 
 .editorWrapper .ProseMirror {
-  padding: 12px 16px;
-  min-height: 200px;
+  padding: 16px 18px;
+  min-height: 320px;
   outline: none;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .editorWrapper .ProseMirror:focus {
@@ -140,6 +159,35 @@
   text-decoration: underline;
 }
 
+.editorWrapper .ProseMirror hr {
+  display: none;
+}
+
+.editorWrapper .ProseMirror p,
+.editorWrapper .ProseMirror span,
+.editorWrapper .ProseMirror div {
+  border-top: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+.editorWrapper .ProseMirror ::spelling-error,
+.editorWrapper .ProseMirror ::grammar-error {
+  text-decoration: none !important;
+  background: none !important;
+}
+
+.editorWrapper .ProseMirror ::-webkit-spelling-error,
+.editorWrapper .ProseMirror ::-webkit-grammar-error {
+  text-decoration: none !important;
+  background: none !important;
+}
+
+.editorWrapper .ProseMirror-dropcursor,
+.editorWrapper .ProseMirror-gapcursor {
+  display: none !important;
+}
+
 .editorWrapper .ProseMirror img {
   max-width: 100%;
   height: auto;
@@ -151,4 +199,16 @@
   padding: 12px;
   color: var(--text-secondary, #666);
   font-size: 13px;
+}
+
+.metricsBar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 6px 10px;
+  border-top: 1px solid rgba(42, 70, 96, 0.12);
+  background: #fbfdff;
+  color: #6a7f94;
+  font-size: 11px;
+  font-weight: 600;
 }

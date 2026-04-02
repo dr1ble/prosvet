@@ -6,6 +6,7 @@ export interface CourseDto {
   slug: string;
   title: string;
   description: string | null;
+  cover_url: string | null;
   status: CourseStatus;
   created_at: string;
   updated_at: string;
