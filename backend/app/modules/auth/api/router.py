@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy import select
+from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.modules.auth.api.schemas import (
@@ -12,9 +13,10 @@ from app.modules.auth.api.schemas import (
     RefreshTokenIn,
 )
 from app.modules.auth.domain.errors import AuthError
-from app.modules.auth.domain.permissions import permissions_for_role
+from app.modules.auth.domain.permissions import ROLE_PERMISSION_TEMPLATES
 from app.modules.users.models import User
 from app.shared.auth.deps import get_current_user
+from app.shared.auth.policy_models import RbacPolicyRule
 from app.shared.db.deps import get_db
 from app.shared.di.services import AuthServiceDep
 from app.shared.security.audit import log_login_attempt
@@ -37,7 +39,9 @@ def login(payload: LoginIn, request: Request, service: AuthServiceDep) -> AuthRe
     ip = get_client_ip(request)
     try:
         response = service.login(login=payload.login, password=payload.password)
-        log_login_attempt(login=payload.login, success=True, user_id=str(response.user_id), ip_address=ip)
+        log_login_attempt(
+            login=payload.login, success=True, user_id=str(response.user_id), ip_address=ip
+        )
         return response
     except AuthError as exc:
         log_login_attempt(login=payload.login, success=False, ip_address=ip)
@@ -53,7 +57,6 @@ def login(payload: LoginIn, request: Request, service: AuthServiceDep) -> AuthRe
         ) from exc
 
 
-
 @router.post("/qr/activate", response_model=AuthResponse)
 @limiter.limit("10/minute")
 def activate_qr(request: Request, payload: QrActivateIn, service: AuthServiceDep) -> AuthResponse:
@@ -65,21 +68,41 @@ def activate_qr(request: Request, payload: QrActivateIn, service: AuthServiceDep
 
 @router.post("/refresh", response_model=AuthResponse)
 @limiter.limit("20/minute")
-def refresh_session(request: Request, payload: RefreshTokenIn, service: AuthServiceDep) -> AuthResponse:
+def refresh_session(
+    request: Request, payload: RefreshTokenIn, service: AuthServiceDep
+) -> AuthResponse:
     try:
         return service.refresh_session(payload.refresh_token)
     except AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
+def _compute_permissions_from_db(role: str, db: Session) -> list[str]:
+    try:
+        rows = db.scalars(
+            select(RbacPolicyRule.policy_key).where(
+                RbacPolicyRule.role == role,
+                RbacPolicyRule.enabled.is_(True),
+            )
+        ).all()
+        if rows:
+            return sorted(set(rows))
+    except SQLAlchemyError:
+        pass
+    return list(ROLE_PERMISSION_TEMPLATES.get(role, []))
+
+
 @router.get("/me", response_model=AuthMeOut)
-def auth_me(current_user: User = Depends(get_current_user)) -> AuthMeOut:
+def auth_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AuthMeOut:
     return AuthMeOut(
         user_id=current_user.id,
         role=current_user.role.value,
         status=current_user.status.value,
         display_name=current_user.display_name,
-        permissions=permissions_for_role(current_user.role),
+        permissions=_compute_permissions_from_db(current_user.role.value, db),
     )
 
 
@@ -98,7 +121,7 @@ def update_auth_me(
         role=current_user.role.value,
         status=current_user.status.value,
         display_name=current_user.display_name,
-        permissions=permissions_for_role(current_user.role),
+        permissions=_compute_permissions_from_db(current_user.role.value, db),
     )
 
 

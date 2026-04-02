@@ -204,6 +204,31 @@ function TileIcon({ id, className }: { id: string; className?: string }) {
     );
   }
 
+  if (id === "rbac") {
+    return (
+      <svg
+        className={className}
+        viewBox="0 0 20 20"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M10 2.5L15.5 5v5c0 3.5-2.2 5.7-5.5 6.7-3.3-1-5.5-3.2-5.5-6.7V5L10 2.5Z"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M7.5 10l1.7 1.7L12.5 8.4"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
   return (
     <svg
       className={className}
@@ -391,6 +416,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           : "Interface language and workspace preferences.",
       href: `/dashboard?lang=${language}&modal=settings`,
       requiredPermissions: ["dashboard.view"],
+    },
+    {
+      id: "rbac",
+      title: language === "ru" ? "Управление доступом" : "Access Management",
+      description:
+        language === "ru"
+          ? "Настройка ролей и политик доступа к функциям системы."
+          : "Configure roles and access policies for system features.",
+      href: `/rbac?lang=${language}`,
+      requiredPermissions: ["rbac.manage"],
     },
   ];
   const visibleTiles = tiles.filter((tile) =>
