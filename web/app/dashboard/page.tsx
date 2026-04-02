@@ -11,6 +11,7 @@ import { fetchCourses } from "@/features/catalog/api";
 import { fetchGroups, fetchGroupUsers } from "@/features/groups/api";
 import { fetchProgressOverview } from "@/features/progress/api";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
+import { DataState } from "@/shared/ui/data-state";
 import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage, type AppLanguage } from "@/shared/i18n/lang";
 import { getUiMessages } from "@/shared/i18n/messages";
@@ -499,11 +500,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </header>
 
       {visibleTiles.length === 0 ? (
-        <section className={styles.emptyState}>
-          {language === "ru"
-            ? "Для вашей роли пока не настроены функции панели."
-            : "No dashboard functions are configured for your role yet."}
-        </section>
+        <DataState
+          title={
+            language === "ru"
+              ? "Нет доступных разделов"
+              : "No sections available"
+          }
+          description={
+            language === "ru"
+              ? "Для вашей роли пока не настроены функции панели."
+              : "No dashboard functions are configured for your role yet."
+          }
+        />
       ) : (
         <section className={styles.workspaceSplit}>
           <aside className={styles.sectionsSidebar}>
