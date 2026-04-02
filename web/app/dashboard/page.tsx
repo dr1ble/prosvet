@@ -229,6 +229,25 @@ function TileIcon({ id, className }: { id: string; className?: string }) {
     );
   }
 
+  if (id === "search") {
+    return (
+      <svg
+        className={className}
+        viewBox="0 0 20 20"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
   return (
     <svg
       className={className}
@@ -426,6 +445,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           : "Configure roles and access policies for system features.",
       href: `/rbac?lang=${language}`,
       requiredPermissions: ["rbac.manage"],
+    },
+    {
+      id: "search",
+      title: language === "ru" ? "Поиск" : "Search",
+      description:
+        language === "ru"
+          ? "Поиск курсов, пользователей и групп по всей системе."
+          : "Search courses, users, and groups across the system.",
+      href: `/search?lang=${language}`,
+      requiredPermissions: ["search.view"],
     },
   ];
   const visibleTiles = tiles.filter((tile) =>
