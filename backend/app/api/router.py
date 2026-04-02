@@ -7,6 +7,7 @@ from app.modules.catalog.api.router import router as catalog_router
 from app.modules.groups.api.router import router as groups_router
 from app.modules.progress.api.router import router as progress_router
 from app.modules.rbac.api.router import router as rbac_router
+from app.modules.search.api.router import router as search_router
 from app.modules.simulation.api.router import router as simulation_router
 from app.modules.users.api.router import router as users_router
 
@@ -20,3 +21,4 @@ api_router.include_router(progress_router, prefix="/progress", tags=["progress"]
 api_router.include_router(simulation_router, prefix="/simulation", tags=["simulation"])
 api_router.include_router(users_router, prefix="/users", tags=["users"])
 api_router.include_router(rbac_router, prefix="/rbac", tags=["rbac"])
+api_router.include_router(search_router, prefix="/search", tags=["search"])
