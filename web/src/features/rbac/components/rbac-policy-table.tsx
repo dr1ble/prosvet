@@ -51,6 +51,7 @@ export function RbacPolicyTable({
   language,
 }: RbacPolicyTableProps) {
   const [matrix, setMatrix] = useState(() => buildMatrix(initialRules));
+  const [selectedRole, setSelectedRole] = useState<KnownRole | "all">("all");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{
     type: "success" | "error";
@@ -112,15 +113,41 @@ export function RbacPolicyTable({
   const saveLabel = language === "ru" ? "Сохранить" : "Save";
   const savingLabel = language === "ru" ? "Сохранение..." : "Saving...";
   const policyColumnLabel = language === "ru" ? "Политика" : "Policy";
+  const roleModeLabel =
+    language === "ru" ? "Редактирование роли" : "Editing role";
+  const roleColumns = selectedRole === "all" ? KNOWN_ROLES : [selectedRole];
 
   return (
     <div className={styles.panel}>
+      <div className={styles.roleFilters}>
+        <span className={styles.roleFiltersLabel}>{roleModeLabel}</span>
+        <button
+          type="button"
+          className={`${styles.roleFilterBtn} ${selectedRole === "all" ? styles.roleFilterBtnActive : ""}`}
+          onClick={() => setSelectedRole("all")}
+          disabled={saving}
+        >
+          {language === "ru" ? "Все роли" : "All roles"}
+        </button>
+        {KNOWN_ROLES.map((role) => (
+          <button
+            key={role}
+            type="button"
+            className={`${styles.roleFilterBtn} ${selectedRole === role ? styles.roleFilterBtnActive : ""}`}
+            onClick={() => setSelectedRole(role)}
+            disabled={saving}
+          >
+            {ROLE_LABELS[role]?.[language] ?? role}
+          </button>
+        ))}
+      </div>
+
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>
             <tr>
               <th>{policyColumnLabel}</th>
-              {KNOWN_ROLES.map((role) => (
+              {roleColumns.map((role) => (
                 <th key={role}>{ROLE_LABELS[role]?.[language] ?? role}</th>
               ))}
             </tr>
@@ -140,7 +167,7 @@ export function RbacPolicyTable({
                       </span>
                     </div>
                   </td>
-                  {KNOWN_ROLES.map((role) => {
+                  {roleColumns.map((role) => {
                     const cell = roleMap.get(role)!;
                     return (
                       <td key={role}>

@@ -475,6 +475,12 @@
   flex-shrink: 0;
 }
 
+.sidebarLead:has([data-icon="settings"]) .sidebarIcon,
+.sidebarLead:has([data-icon="rbac"]) .sidebarIcon {
+  width: 14px;
+  height: 14px;
+}
+
 .primaryTitle {
   margin: 0;
   font-size: 24px;
@@ -731,14 +737,16 @@
 
 .langOption {
   border: 1px solid rgba(40, 69, 95, 0.16);
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
-  min-height: 74px;
-  padding: 10px;
-  display: grid;
-  gap: 4px;
+  min-height: 48px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
   color: #23435e;
+  font-weight: 700;
 }
 
 .langOption span {

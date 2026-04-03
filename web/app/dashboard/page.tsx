@@ -188,17 +188,16 @@ function TileIcon({ id, className }: { id: string; className?: string }) {
         aria-hidden="true"
       >
         <path
-          d="M10 3.5 11.3 5.7l2.5.6-.9 2.4 1.6 2-2 1.6.6 2.5-2.4-.9-2.2 1.3-1.3-2.2-2.5-.6.9-2.4-1.6-2 2-1.6-.6-2.5 2.4.9L10 3.5Z"
+          d="M10 6.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM7.5 10a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0z"
           stroke="currentColor"
           strokeWidth="1.4"
-          strokeLinejoin="round"
         />
-        <circle
-          cx="10"
-          cy="10"
-          r="2.1"
+        <path
+          d="M12.245 1.679c-.66-2.238-3.83-2.238-4.49 0l-.118.399a1.091 1.091 0 0 1-1.569.65l-.365-.2c-2.05-1.115-4.291 1.127-3.175 3.176l.199.365a1.091 1.091 0 0 1-.65 1.569l-.399.118c-2.238.66-2.238 3.83 0 4.49l.399.118a1.091 1.091 0 0 1 .65 1.569l-.2.365c-1.115 2.05 1.127 4.291 3.176 3.175l.365-.199a1.091 1.091 0 0 1 1.569.65l.118.399c.66 2.238 3.83 2.238 4.49 0l.118-.399a1.091 1.091 0 0 1 1.569-.65l.365.2c2.05 1.115 4.291-1.127 3.175-3.176l-.199-.365a1.091 1.091 0 0 1 .65-1.569l.399-.118c2.238-.66 2.238-3.83 0-4.49l-.399-.118a1.091 1.091 0 0 1-.65-1.569l.2-.365c1.115-2.05-1.127-4.291-3.176-3.175l-.365.199a1.091 1.091 0 0 1-1.569-.65z"
           stroke="currentColor"
           strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
       </svg>
     );
@@ -220,25 +219,6 @@ function TileIcon({ id, className }: { id: string; className?: string }) {
         />
         <path
           d="M7.5 10l1.7 1.7L12.5 8.4"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-
-  if (id === "search") {
-    return (
-      <svg
-        className={className}
-        viewBox="0 0 20 20"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
           stroke="currentColor"
           strokeWidth="1.4"
           strokeLinecap="round"
@@ -350,16 +330,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     language === "ru" ? "Настройки профиля" : "Profile settings";
   const interfaceLanguageTitle =
     language === "ru" ? "Язык интерфейса" : "Interface language";
-  const interfaceLanguageText =
-    language === "ru"
-      ? "Язык применяется ко всем рабочим экранам."
-      : "Language is applied across all workspace screens.";
-  const ruText =
-    language === "ru" ? "Основной рабочий язык" : "Primary working language";
-  const enText =
-    language === "ru"
-      ? "Когда нужен английский интерфейс"
-      : "Use when English UI is needed";
   const currentLabel = language === "ru" ? "Сейчас выбран" : "Current";
 
   const catalogHref = `/catalog?lang=${language}`;
@@ -445,16 +415,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           : "Configure roles and access policies for system features.",
       href: `/rbac?lang=${language}`,
       requiredPermissions: ["rbac.manage"],
-    },
-    {
-      id: "search",
-      title: language === "ru" ? "Поиск" : "Search",
-      description:
-        language === "ru"
-          ? "Поиск курсов, пользователей и групп по всей системе."
-          : "Search courses, users, and groups across the system.",
-      href: `/search?lang=${language}`,
-      requiredPermissions: ["search.view"],
     },
   ];
   const visibleTiles = tiles.filter((tile) =>
@@ -751,32 +711,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <h3 className={styles.modalSectionTitle}>
                   {interfaceLanguageTitle}
                 </h3>
-                <p className={styles.modalText}>{interfaceLanguageText}</p>
                 <div className={styles.langRow}>
                   <Link
                     href={`/dashboard?lang=ru&modal=settings`}
                     className={`${styles.langOption} ${language === "ru" ? styles.langOptionActive : ""}`}
                   >
                     <strong>Русский</strong>
-                    <span>{ruText}</span>
                   </Link>
                   <Link
                     href={`/dashboard?lang=en&modal=settings`}
                     className={`${styles.langOption} ${language === "en" ? styles.langOptionActive : ""}`}
                   >
                     <strong>English</strong>
-                    <span>{enText}</span>
                   </Link>
                 </div>
                 <p className={styles.modalText}>
                   {currentLabel}: <strong>{language.toUpperCase()}</strong>
                 </p>
-                <Link
-                  className={styles.modalLinkButton}
-                  href={`/dashboard?lang=${language}&modal=profile`}
-                >
-                  {profileSettingsTitle}
-                </Link>
               </div>
             ) : (
               <div className={styles.modalBody}>

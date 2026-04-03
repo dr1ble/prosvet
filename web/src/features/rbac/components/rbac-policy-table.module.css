@@ -32,6 +32,36 @@
   padding: 20px;
 }
 
+.roleFilters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.roleFiltersLabel {
+  font-size: 13px;
+  color: var(--text-muted, #6b7280);
+  margin-right: 2px;
+}
+
+.roleFilterBtn {
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-secondary, #374151);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.roleFilterBtnActive {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
 .tableWrapper {
   overflow-x: auto;
 }

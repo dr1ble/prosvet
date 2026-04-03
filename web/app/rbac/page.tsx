@@ -43,12 +43,37 @@ export default async function RbacPage({
     return (
       <main className={styles.page}>
         <header className={styles.topBar}>
-          <Link
-            href={`/dashboard?lang=${language}`}
-            className={styles.backLink}
-          >
-            {language === "ru" ? "← Назад" : "← Back"}
-          </Link>
+          <div className={styles.headerMain}>
+            <div className={styles.titleRow}>
+              <Link
+                className={styles.backIconLink}
+                href={`/dashboard?lang=${language}`}
+                aria-label={
+                  language === "ru"
+                    ? "Назад к рабочему столу"
+                    : "Back to dashboard"
+                }
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  role="presentation"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M11.8 4.6 6.4 10l5.4 5.4"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Link>
+              <h1 className={styles.pageTitle}>
+                {language === "ru" ? "Нет доступа" : "Access Denied"}
+              </h1>
+            </div>
+          </div>
         </header>
         <DataState
           title={language === "ru" ? "Нет доступа" : "Access Denied"}
@@ -69,12 +94,37 @@ export default async function RbacPage({
     return (
       <main className={styles.page}>
         <header className={styles.topBar}>
-          <Link
-            href={`/dashboard?lang=${language}`}
-            className={styles.backLink}
-          >
-            {language === "ru" ? "← Назад" : "← Back"}
-          </Link>
+          <div className={styles.headerMain}>
+            <div className={styles.titleRow}>
+              <Link
+                className={styles.backIconLink}
+                href={`/dashboard?lang=${language}`}
+                aria-label={
+                  language === "ru"
+                    ? "Назад к рабочему столу"
+                    : "Back to dashboard"
+                }
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  role="presentation"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M11.8 4.6 6.4 10l5.4 5.4"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Link>
+              <h1 className={styles.pageTitle}>
+                {language === "ru" ? "Ошибка загрузки" : "Failed to load"}
+              </h1>
+            </div>
+          </div>
         </header>
         <DataState
           title={language === "ru" ? "Ошибка загрузки" : "Failed to load"}
@@ -99,11 +149,36 @@ export default async function RbacPage({
   return (
     <main className={styles.page}>
       <header className={styles.topBar}>
-        <Link href={`/dashboard?lang=${language}`} className={styles.backLink}>
-          {backLabel}
-        </Link>
-        <h1 className={styles.pageTitle}>{pageTitle}</h1>
-        <p className={styles.pageDescription}>{pageDescription}</p>
+        <div className={styles.headerMain}>
+          <div className={styles.titleRow}>
+            <Link
+              className={styles.backIconLink}
+              href={`/dashboard?lang=${language}`}
+              aria-label={
+                language === "ru"
+                  ? "Назад к рабочему столу"
+                  : "Back to dashboard"
+              }
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                role="presentation"
+                aria-hidden="true"
+              >
+                <path
+                  d="M11.8 4.6 6.4 10l5.4 5.4"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+            <h1 className={styles.pageTitle}>{pageTitle}</h1>
+          </div>
+          <p className={styles.pageDescription}>{pageDescription}</p>
+        </div>
       </header>
 
       <RbacPolicyTable

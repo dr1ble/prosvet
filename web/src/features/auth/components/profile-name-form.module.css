@@ -21,6 +21,43 @@
   background: #fff;
   padding: 0 12px;
   color: #244760;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inputWrap {
+  display: flex;
+  gap: 8px;
+}
+
+.inputWrap input {
+  flex: 1;
+}
+
+.iconButton {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(40, 69, 95, 0.14);
+  background: #fff;
+  color: #294b69;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconButton:hover {
+  background: #f3f8ff;
+  border-color: rgba(29, 115, 226, 0.28);
+}
+
+.iconButtonSaved {
+  background: #e8f5e9;
+  border-color: rgba(46, 125, 50, 0.3);
+  color: #2e7d32;
 }
 
 .button {

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { updateAdminProfile } from "@/features/auth/api";
 import type { AppLanguage } from "@/shared/i18n/lang";
@@ -11,15 +12,19 @@ import styles from "./profile-name-form.module.css";
 type ProfileNameFormProps = {
   language: AppLanguage;
   initialValue: string;
+  hideSubmit?: boolean;
 };
 
 export function ProfileNameForm({
   language,
   initialValue,
+  hideSubmit = false,
 }: ProfileNameFormProps) {
+  const router = useRouter();
   const [value, setValue] = useState(initialValue);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const saveLabel = language === "ru" ? "Сохранить имя" : "Save name";
   const savingLabel = language === "ru" ? "Сохранение..." : "Saving...";
@@ -31,7 +36,8 @@ export function ProfileNameForm({
     setError(null);
     try {
       await updateAdminProfile({ display_name: value.trim() || null });
-      window.location.assign(`/dashboard?lang=${language}&modal=profile`);
+      setSaved(true);
+      router.refresh();
     } catch (requestError) {
       setError(
         toUserErrorMessage(
@@ -50,15 +56,27 @@ export function ProfileNameForm({
     <form className={styles.form} onSubmit={handleSubmit}>
       <label className={styles.field}>
         <span>{label}</span>
-        <input
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          maxLength={255}
-        />
+        <div className={styles.inputWrap}>
+          <input
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value);
+              setSaved(false);
+            }}
+            maxLength={255}
+          />
+          {!hideSubmit && (
+            <button
+              className={`${styles.iconButton} ${saved ? styles.iconButtonSaved : ""}`}
+              type="submit"
+              disabled={pending}
+              aria-label={pending ? savingLabel : saveLabel}
+            >
+              {pending ? "..." : saved ? "✓" : "✓"}
+            </button>
+          )}
+        </div>
       </label>
-      <button className={styles.button} type="submit" disabled={pending}>
-        {pending ? savingLabel : saveLabel}
-      </button>
       {error ? <p className={styles.error}>{error}</p> : null}
     </form>
   );
