@@ -8,6 +8,45 @@
     <string name="lesson_continue_learning">Продолжить обучение</string>
     <string name="lesson_choose_other_course">Выбрать другой курс</string>
 
+    <string name="learning_choose_course_title">Обучение</string>
+    <string name="learning_choose_course_subtitle">Выберите курс и продолжайте обучение в удобном темпе.</string>
+    <string name="learning_search_placeholder">Поиск курсов...</string>
+    <string name="learning_all_courses">Все курсы</string>
+    <string name="learning_gosuslugi">Госуслуги</string>
+    <string name="learning_banks">Банки</string>
+    <string name="learning_messengers">Мессенджеры</string>
+    <string name="learning_cybersecurity">Кибербезопасность</string>
+    <string name="learning_no_bundle_open_catalog">Сначала откройте курс из каталога на вкладке «Главная», и он появится в разделе обучения.</string>
+    <string name="learning_open_catalog">Открыть каталог</string>
+    <string name="learning_open_lesson">Урок %1$d</string>
+    <string name="learning_start_lesson">Начать урок</string>
+    <string name="learning_preview_only">Только предпросмотр</string>
+    <string name="learning_course_details">Детали урока</string>
+    <string name="learning_you_will_learn">Вы научитесь</string>
+    <string name="learning_course_steps">%1$d шагов</string>
+    <string name="learning_course_progress">%1$d из %2$d уроков</string>
+    <string name="learning_course_progress_label">Ваш прогресс</string>
+    <string name="learning_course_your_progress">Прогресс курса: %1$d%%</string>
+    <string name="learning_progress_percent">%1$d%%</string>
+    <string name="learning_course_track_label">Базовый курс</string>
+    <string name="learning_course_rating">4.9★</string>
+    <string name="learning_status_completed">Пройдено</string>
+    <string name="learning_status_current">Текущий</string>
+    <string name="learning_status_available">Доступен</string>
+    <string name="learning_status_locked">Заблокирован</string>
+    <string name="learning_lesson_progress">Прогресс урока: %1$d%%</string>
+    <string name="learning_lesson_progress_label">Прогресс урока</string>
+    <string name="learning_lesson_overview_title">О чем этот урок</string>
+    <string name="learning_ready_title">Готовы начать?</string>
+    <string name="learning_ready_subtitle">Ваш прогресс будет сохранен автоматически.</string>
+
+    <plurals name="learning_course_time">
+        <item quantity="one">%1$d минута</item>
+        <item quantity="few">%1$d минуты</item>
+        <item quantity="many">%1$d минут</item>
+        <item quantity="other">%1$d минут</item>
+    </plurals>
+
     <string name="payload_interactive_simulation">Интерактивная симуляция</string>
     <string name="payload_hotspot_count_one">%1$d активная зона</string>
     <string name="payload_hotspot_count_few">%1$d активные зоны</string>

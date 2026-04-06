@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import com.digitaledu.core.common.toUserMessage
 import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.ui.ObserveEffects
+import com.digitaledu.core.ui.util.BackHandler
 import com.digitaledu.feature.catalog.api.CatalogEffect
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
 import com.digitaledu.feature.catalog.api.CatalogIntent
@@ -83,6 +84,10 @@ fun HomeRoute(
         if (effect is ProfileEffect.LoggedOut) {
             onLoggedOut()
         }
+    }
+
+    BackHandler(enabled = selectedTab != HomeTab.Courses) {
+        selectedTab = HomeTab.Courses
     }
 
     LaunchedEffect(pendingGroupQrToken) {
