@@ -1,4 +1,4 @@
-.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check mobile-theme-guard kg-sync kg-sync-force init-test-db builder-mocks builder-mocks-clean builder-mocks-reset progress-mocks progress-mocks-clean progress-mocks-reset literacy-demo-seed literacy-demo-clean literacy-demo-reset literacy-demo-realistic-seed literacy-demo-realistic-reset
+.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check mobile-theme-guard kg-sync kg-sync-force init-test-db builder-mocks builder-mocks-clean builder-mocks-reset progress-mocks progress-mocks-clean progress-mocks-reset literacy-demo-seed literacy-demo-clean literacy-demo-reset literacy-demo-realistic-seed literacy-demo-realistic-reset mobile-runtime-seed mobile-runtime-clean mobile-runtime-reset mobile-runtime-verify mobile-runtime-heavy-seed mobile-runtime-heavy-reset mobile-runtime-heavy-verify
 PROJECT_ROOT := $(CURDIR)
 MOCK_DB_URL ?= postgresql+psycopg://app:app@127.0.0.1:5432/app
 
@@ -84,6 +84,29 @@ literacy-demo-realistic-seed:
 literacy-demo-realistic-reset:
 	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make literacy-demo-realistic-reset"; exit 1; fi
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/digital_literacy_demo_seed.py reset --profile realistic
+
+mobile-runtime-seed:
+	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py seed
+
+mobile-runtime-clean:
+	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py cleanup
+
+mobile-runtime-reset:
+	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make mobile-runtime-reset"; exit 1; fi
+	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py reset
+
+mobile-runtime-verify:
+	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py verify
+
+mobile-runtime-heavy-seed:
+	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py seed --profile mobile-heavy
+
+mobile-runtime-heavy-reset:
+	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make mobile-runtime-heavy-reset"; exit 1; fi
+	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py reset --profile mobile-heavy
+
+mobile-runtime-heavy-verify:
+	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py verify --profile mobile-heavy
 
 install-hooks:
 	./scripts/install-git-hooks.sh
