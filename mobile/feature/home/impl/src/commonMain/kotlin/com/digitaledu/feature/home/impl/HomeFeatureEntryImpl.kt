@@ -1,6 +1,7 @@
 package com.digitaledu.feature.home.impl
 
 import androidx.navigation.NavGraphBuilder
+import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
@@ -17,6 +18,7 @@ internal class HomeFeatureEntryImpl(
     private val catalogUiEntry: CatalogUiEntry,
     private val playerUiEntry: PlayerUiEntry,
     private val profileUiEntry: ProfileUiEntry,
+    private val authRepository: AuthRepository,
     private val groupQrRepository: GroupQrRepository,
 ) : HomeFeatureEntry {
     override fun register(
@@ -35,6 +37,7 @@ internal class HomeFeatureEntryImpl(
             catalogUiEntry = catalogUiEntry,
             playerUiEntry = playerUiEntry,
             profileUiEntry = profileUiEntry,
+            authRepository = authRepository,
             groupQrRepository = groupQrRepository,
         )
     }

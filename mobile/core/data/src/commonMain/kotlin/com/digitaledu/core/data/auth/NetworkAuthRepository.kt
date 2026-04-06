@@ -1,6 +1,7 @@
 package com.digitaledu.core.data.auth
 
 import com.digitaledu.core.model.auth.AuthTokens
+import com.digitaledu.core.model.auth.AuthMe
 import com.digitaledu.core.network.AuthNetworkDataSource
 import com.digitaledu.core.network.NetworkException
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +53,12 @@ class NetworkAuthRepository(
             }
         }
         authSessionStore.clear()
+    }
+
+    override suspend fun getCurrentUser(): AuthMe {
+        return withFreshAccessToken { accessToken ->
+            networkDataSource.getCurrentUser(accessToken = accessToken)
+        }
     }
 
     override suspend fun <T> withFreshAccessToken(

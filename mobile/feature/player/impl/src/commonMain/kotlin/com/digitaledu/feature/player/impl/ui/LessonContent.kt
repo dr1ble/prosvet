@@ -1069,180 +1069,21 @@ private fun buildLearningCoursePreviews(
     bundle: CatalogBundle?,
     currentScreenIndex: Int,
 ): List<LearningCoursePreview> {
-    val mockCourses = buildMockLearningCourses()
-    val realCourse = bundle?.let { openedBundle ->
+    val openedBundle = bundle ?: return emptyList()
+    val category = inferCategoryFromTitle(openedBundle.course.title)
+    return listOf(
         LearningCoursePreview(
             id = openedBundle.course.id,
             title = openedBundle.course.title,
             description = openedBundle.course.description ?: "Практический курс с пошаговыми уроками",
-            category = inferCategoryFromTitle(openedBundle.course.title),
+            category = category,
             lessons = openedBundle.screens,
             progressIndex = currentScreenIndex.coerceIn(0, openedBundle.screens.lastIndex.coerceAtLeast(0)),
-            completedLessonsCount = (currentScreenIndex + 1).coerceAtLeast(0),
+            completedLessonsCount = (currentScreenIndex + 1).coerceIn(0, openedBundle.screens.size),
             totalLessonsCount = openedBundle.screens.size.coerceAtLeast(1),
             estimatedDurationMinutes = estimateDurationMinutes(openedBundle.screens),
-            coverImageUrl = resolveCoverImageUrl(openedBundle.screens, inferCategoryFromTitle(openedBundle.course.title)),
+            coverImageUrl = resolveCoverImageUrl(openedBundle.screens, category),
             isPlayableBundle = true,
-        )
-    }
-
-    if (realCourse == null) {
-        return mockCourses
-    }
-
-    return buildList {
-        add(realCourse)
-        addAll(mockCourses.filterNot { it.id == realCourse.id })
-    }
-}
-
-private fun buildMockLearningCourses(): List<LearningCoursePreview> {
-    return listOf(
-        LearningCoursePreview(
-            id = "mock-gosuslugi",
-            title = "Госуслуги без стресса",
-            description = "Научитесь записываться к врачу, оплачивать ЖКХ и оформлять документы не выходя из дома.",
-            category = LearningCategory.Gosuslugi,
-            lessons = listOf(
-                mockLesson(
-                    id = "mock-gos-1",
-                    title = "Подтверждение аккаунта",
-                    orderIndex = 1,
-                    payload = ArticlePayload(markdownContent = "Как подтвердить учетную запись за 10 минут"),
-                ),
-                mockLesson(
-                    id = "mock-gos-2",
-                    title = "Запись к врачу онлайн",
-                    orderIndex = 2,
-                    payload = SimulationPayload(
-                        imageUrl = "https://example.com/healthcare.png",
-                        isStart = true,
-                    ),
-                ),
-                mockLesson(
-                    id = "mock-gos-3",
-                    title = "Штрафы и налоги",
-                    orderIndex = 3,
-                    payload = VideoPayload(
-                        videoUrl = "https://example.com/video-gos.mp4",
-                        durationSec = 370,
-                    ),
-                ),
-            ),
-            progressIndex = 1,
-            completedLessonsCount = 4,
-            totalLessonsCount = 10,
-            estimatedDurationMinutes = 45,
-            coverImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuDNPc7h1B1AZXRWDyhSY4RA70NpHIaz0wflGRhwQWxdLW0IpOtXfMY0PHDd2yo_i_cbSrgLJ2iwilYnaHuRIroUwM8bkf2tH6oKiWLkAECJ95jUWcA4LzBcCOR3Xb3HLgekcT0pg2kpuSAd4FIjkZdCcZKC1KLdnlf6wsU_UH2Ee809RrI90E5KPYw8kMiz5Y1luqqcheZrEaTs_QC3S30yGY1NOuMIYkVMuBCkBUPmpWRcuH0NbTjw6ptZdIqZx_YY9-IsPS6C4fKU",
-            isPlayableBundle = false,
-        ),
-        LearningCoursePreview(
-            id = "mock-banks",
-            title = "Безопасные онлайн-платежи",
-            description = "Как пользоваться мобильным банком, переводить деньги близким и защитить свой счет.",
-            category = LearningCategory.Banks,
-            lessons = listOf(
-                mockLesson(
-                    id = "mock-bank-1",
-                    title = "Настройка лимитов по карте",
-                    orderIndex = 1,
-                    payload = CheatSheetPayload(referenceId = "limits-checklist"),
-                ),
-                mockLesson(
-                    id = "mock-bank-2",
-                    title = "Перевод по номеру телефона",
-                    orderIndex = 2,
-                    payload = SimulationPayload(
-                        imageUrl = "https://example.com/sbp.png",
-                        isCompletion = true,
-                    ),
-                ),
-                mockLesson(
-                    id = "mock-bank-3",
-                    title = "Как распознать поддельный сайт",
-                    orderIndex = 3,
-                    payload = ArticlePayload(markdownContent = "Чек-лист признаков фишинга"),
-                ),
-                mockLesson(
-                    id = "mock-bank-4",
-                    title = "Горячая линия и блокировка карты",
-                    orderIndex = 4,
-                    payload = UnknownPayload(raw = "Практика действий при подозрительной операции"),
-                ),
-            ),
-            progressIndex = 2,
-            completedLessonsCount = 1,
-            totalLessonsCount = 8,
-            estimatedDurationMinutes = 80,
-            coverImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuBCcKwODqyUG45Tw2Nyq-Z8LfyGvVaLnKcy7KSOC_IuvyZdwvqwe-t70yg3US5qXClTMZwu4YIm6QqBXuNgHxB5mJlIDa7TXyppuCc_bMOQuaU7l1Okvi1uQzamUP2_2jjXPr94-hAqMhGMPWc_up9huCWSq0ZIMoqrQ5u0Ny4W7FkBf8JYJFqi4Dxpese_wpMkiF8tkuJICB4W_JUZd34eBuhffRAgoj97NVa3IPbRuqZp5ilfSE2s0kWtl7xWlCrVIf-FWDbvKOe3",
-            isPlayableBundle = false,
-        ),
-        LearningCoursePreview(
-            id = "mock-messengers",
-            title = "Общение в WhatsApp и Telegram",
-            description = "Отправка фото, видеозвонки внукам и создание семейных чатов без лишних сложностей.",
-            category = LearningCategory.Messengers,
-            lessons = listOf(
-                mockLesson(
-                    id = "mock-msg-1",
-                    title = "Создание безопасного профиля",
-                    orderIndex = 1,
-                    payload = ArticlePayload(markdownContent = "Настройки приватности в мессенджерах"),
-                ),
-                mockLesson(
-                    id = "mock-msg-2",
-                    title = "Проверка ссылок перед переходом",
-                    orderIndex = 2,
-                    payload = VideoPayload(
-                        videoUrl = "https://example.com/video-messenger.mp4",
-                        durationSec = 245,
-                    ),
-                ),
-            ),
-            progressIndex = 0,
-            completedLessonsCount = 0,
-            totalLessonsCount = 6,
-            estimatedDurationMinutes = 55,
-            coverImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuDNcE6OGAOxEXYGTS8dYM7BjDVMoTRuuWYaIas1n8aWW-puqdOOiq55KIK5nZ4gxTlwpYB0CMvZX1WQUX8tU0fvjhBE8vCQR7m1oJwagmrk3FFhV_wGhfmqqPwPWYZuampmu_SXeld6JWSBzs3mI-2VdQDBxXxgtqjljtl5Nj_CqX9jPczzfDE5bn5VGvsR5nd8qZtXB_JXXprgpU0U3JhIFxOKqjVeKpwyxwr7CGM0m4fxdfMT-WMlENm0yFwf6bCXhLyH6Eaok0ds",
-            isPlayableBundle = false,
-        ),
-        LearningCoursePreview(
-            id = "mock-cybersecurity",
-            title = "Защита от мошенников",
-            description = "Как распознать подозрительные звонки и ссылки, чтобы ваши данные оставались в безопасности.",
-            category = LearningCategory.Cybersecurity,
-            lessons = listOf(
-                mockLesson(
-                    id = "mock-cyber-1",
-                    title = "Надежные пароли",
-                    orderIndex = 1,
-                    payload = CheatSheetPayload(referenceId = "passwords-101"),
-                ),
-                mockLesson(
-                    id = "mock-cyber-2",
-                    title = "Двухфакторная аутентификация",
-                    orderIndex = 2,
-                    payload = SimulationPayload(
-                        imageUrl = "https://example.com/2fa.png",
-                        hotspots = emptyList(),
-                    ),
-                ),
-                mockLesson(
-                    id = "mock-cyber-3",
-                    title = "Публичный Wi‑Fi без риска",
-                    orderIndex = 3,
-                    payload = VideoPayload(
-                        videoUrl = "https://example.com/video-wifi.mp4",
-                        durationSec = 302,
-                    ),
-                ),
-            ),
-            progressIndex = 0,
-            completedLessonsCount = 8,
-            totalLessonsCount = 12,
-            estimatedDurationMinutes = 120,
-            coverImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuB_D3ISYkeIT3VOKg4vMNgxNHXgE06mHS74vRzTvsQ2oXMkEb4WasctJdHN_9-oxxa95JrCYSEnloD8DBKzXP2DarClqxwoVV-ZcLR7y8gPiB2MOYg1bF-yAqWRsYhySbfITpo8nsX0wKpjLChTGy57z3p6RJ18kbRdJQfkLdAm_hc-ty0Q8EgjWllhCM3UuVwonEr7eC-iWFyHbkLkp2llUrw83irtCpLQDnsA09p_N4xSYAecFSyN_MDQGeI92zHJMhJEN9F6uap0",
-            isPlayableBundle = false,
         ),
     )
 }
@@ -1293,21 +1134,6 @@ private fun inferCategoryFromTitle(title: String): LearningCategory {
         "кибер" in normalized || "безопас" in normalized || "2fa" in normalized -> LearningCategory.Cybersecurity
         else -> LearningCategory.Gosuslugi
     }
-}
-
-private fun mockLesson(
-    id: String,
-    title: String,
-    orderIndex: Int,
-    payload: ScreenPayload,
-): CatalogScreen {
-    return CatalogScreen(
-        id = id,
-        screenKey = id,
-        title = title,
-        orderIndex = orderIndex,
-        payload = payload,
-    )
 }
 
 private fun ScreenPayload.toLearningPoints(): List<String> {

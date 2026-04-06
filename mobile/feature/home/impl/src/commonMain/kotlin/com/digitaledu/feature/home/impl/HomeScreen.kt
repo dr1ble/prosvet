@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
@@ -59,7 +59,9 @@ import com.digitaledu.feature.profile.api.ProfileUiEntry
 import com.digitaledu.feature.profile.api.ProfileUiState
 import digital_education_mobile.feature.home.`impl`.generated.resources.Res
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_learning
-import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_progress
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_progress_empty
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_progress_format
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_select_course
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_start
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_recommended
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_recommended_all
@@ -68,7 +70,8 @@ import digital_education_mobile.feature.home.`impl`.generated.resources.home_sos
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_courses
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_lesson
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_profile
-import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_courses
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_courses_default
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_courses_personalized
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_lesson
 import org.jetbrains.compose.resources.stringResource
 
@@ -79,6 +82,7 @@ fun HomeScreen(
     catalogUiState: CatalogUiState,
     playerUiState: PlayerUiState,
     profileUiState: ProfileUiState,
+    currentUserDisplayName: String?,
     catalogUiEntry: CatalogUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
@@ -175,6 +179,8 @@ fun HomeScreen(
             HomeTab.Courses -> {
                 HomeCoursesContent(
                     uiState = catalogUiState,
+                    playerUiState = playerUiState,
+                    currentUserDisplayName = currentUserDisplayName,
                     onOpenCourse = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
                     onRefresh = { onCatalogIntent(CatalogIntent.RefreshCourses) },
                     onOpenLessonTab = { onTabSelected(HomeTab.Lesson) },
@@ -222,11 +228,19 @@ fun HomeScreen(
 @Composable
 private fun HomeCoursesContent(
     uiState: CatalogUiState,
+    playerUiState: PlayerUiState,
+    currentUserDisplayName: String?,
     onOpenCourse: (String) -> Unit,
     onRefresh: () -> Unit,
     onOpenLessonTab: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val titleText = if (currentUserDisplayName != null) {
+        stringResource(Res.string.home_title_courses_personalized, currentUserDisplayName)
+    } else {
+        stringResource(Res.string.home_title_courses_default)
+    }
+
     if (uiState.isLoading && uiState.courses.isEmpty()) {
         CenteredLoadingIndicator(modifier = modifier)
         return
@@ -244,7 +258,7 @@ private fun HomeCoursesContent(
     ) {
         item {
             Text(
-                text = stringResource(Res.string.home_title_courses),
+                text = titleText,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -292,6 +306,7 @@ private fun HomeCoursesContent(
         item {
             ContinueLearningCard(
                 course = uiState.courses.firstOrNull(),
+                playerUiState = playerUiState,
                 onStart = {
                     val firstSlug = uiState.courses.firstOrNull()?.slug
                     if (firstSlug != null) {
@@ -333,17 +348,12 @@ private fun HomeCoursesContent(
                 )
             }
         } else {
-            itemsIndexed(
+            items(
                 items = uiState.courses.take(3),
-                key = { _, course -> course.id },
-            ) { index, course ->
+                key = { course -> course.id },
+            ) { course ->
                 RecommendedCourseCard(
                     course = course,
-                    duration = when (index) {
-                        0 -> "15 мин"
-                        1 -> "10 мин"
-                        else -> "20 мин"
-                    },
                     onClick = { onOpenCourse(course.slug) },
                 )
             }
@@ -354,9 +364,28 @@ private fun HomeCoursesContent(
 @Composable
 private fun ContinueLearningCard(
     course: CatalogCourse?,
+    playerUiState: PlayerUiState,
     onStart: () -> Unit,
 ) {
-    val title = course?.title ?: "Как пользоваться\nГосуслугами"
+    val title = course?.title ?: stringResource(Res.string.home_continue_select_course)
+    val isActiveCourse = playerUiState.bundle?.course?.id == course?.id
+    val totalScreens = playerUiState.bundle?.screens?.size ?: 0
+    val currentLesson = if (isActiveCourse && totalScreens > 0) {
+        (playerUiState.currentScreenIndex + 1).coerceAtMost(totalScreens)
+    } else {
+        0
+    }
+    val progressPercent = if (isActiveCourse && totalScreens > 0) {
+        (currentLesson.toFloat() / totalScreens.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val progressLabel = if (totalScreens > 0 && isActiveCourse) {
+        stringResource(Res.string.home_continue_progress_format, currentLesson, totalScreens)
+    } else {
+        stringResource(Res.string.home_continue_progress_empty)
+    }
+    val progressPercentLabel = "${(progressPercent * 100).toInt()}%"
 
     Card(
         shape = UiShapes.cardLg,
@@ -412,12 +441,12 @@ private fun ContinueLearningCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = stringResource(Res.string.home_continue_progress),
+                    text = progressLabel,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    text = "45%",
+                    text = progressPercentLabel,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -434,7 +463,7 @@ private fun ContinueLearningCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.45f)
+                        .fillMaxWidth(progressPercent)
                         .height(14.dp)
                         .clip(UiShapes.pill)
                         .background(MaterialTheme.colorScheme.primary),
@@ -472,9 +501,10 @@ private fun ContinueLearningCard(
 @Composable
 private fun RecommendedCourseCard(
     course: CatalogCourse,
-    duration: String,
     onClick: () -> Unit,
 ) {
+    val subtitle = course.description?.trim()?.takeIf { it.isNotEmpty() }
+
     Card(
         shape = UiShapes.cardLg,
         colors = CardDefaults.cardColors(
@@ -530,12 +560,16 @@ private fun RecommendedCourseCard(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs)) {
-                Text(
-                    text = duration,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontWeight = FontWeight.Medium,
-                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
                     text = course.title,
                     style = MaterialTheme.typography.titleMedium,

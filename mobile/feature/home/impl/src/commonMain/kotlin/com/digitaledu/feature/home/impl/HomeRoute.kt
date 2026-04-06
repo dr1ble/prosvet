@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.digitaledu.core.common.toUserMessage
+import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.ui.ObserveEffects
 import com.digitaledu.core.ui.util.BackHandler
@@ -37,6 +38,7 @@ fun HomeRoute(
     catalogUiEntry: CatalogUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
+    authRepository: AuthRepository,
     groupQrRepository: GroupQrRepository,
     modifier: Modifier = Modifier,
 ) {
@@ -47,6 +49,7 @@ fun HomeRoute(
     var selectedTab by remember { mutableStateOf(HomeTab.Courses) }
     var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
     var qrHandledToken by remember { mutableStateOf<String?>(null) }
+    var currentUserDisplayName by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val profileErrorMessage = (profileUiState.status as? ProfileStatus.Error)?.message
 
@@ -65,6 +68,12 @@ fun HomeRoute(
             message = profileErrorMessage,
             dismiss = { profileFeatureHost.processIntent(ProfileIntent.DismissError) },
         )
+    }
+
+    LaunchedEffect(Unit) {
+        currentUserDisplayName = runCatching {
+            authRepository.getCurrentUser().displayName
+        }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
     }
 
     ObserveEffects(catalogFeatureHost.effects) { effect ->
@@ -114,6 +123,7 @@ fun HomeRoute(
         catalogUiState = catalogUiState,
         playerUiState = playerUiState,
         profileUiState = profileUiState,
+        currentUserDisplayName = currentUserDisplayName,
         catalogUiEntry = catalogUiEntry,
         playerUiEntry = playerUiEntry,
         profileUiEntry = profileUiEntry,

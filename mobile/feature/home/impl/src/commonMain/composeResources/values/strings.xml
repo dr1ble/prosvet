@@ -1,5 +1,6 @@
 <resources>
-    <string name="home_title_courses">Доброе утро, Александр</string>
+    <string name="home_title_courses_default">Добро пожаловать</string>
+    <string name="home_title_courses_personalized">Здравствуйте, %1$s</string>
     <string name="home_title_lesson">Обучение</string>
     <string name="home_title_profile">Профиль</string>
     <string name="home_tab_courses">Главная</string>
@@ -7,7 +8,9 @@
     <string name="home_tab_profile">Профиль</string>
     <string name="home_search_placeholder">Спросите помощника...</string>
     <string name="home_continue_learning">Продолжить обучение</string>
-    <string name="home_continue_progress">Урок 3 из 8</string>
+    <string name="home_continue_progress_format">Урок %1$d из %2$d</string>
+    <string name="home_continue_progress_empty">Прогресс появится после старта</string>
+    <string name="home_continue_select_course">Выберите курс для продолжения</string>
     <string name="home_continue_start">Начать урок</string>
     <string name="home_recommended">Рекомендуем вам</string>
     <string name="home_recommended_all">Все уроки</string>

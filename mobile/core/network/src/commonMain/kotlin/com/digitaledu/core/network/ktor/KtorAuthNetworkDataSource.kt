@@ -1,13 +1,17 @@
 package com.digitaledu.core.network.ktor
 
 import com.digitaledu.core.model.auth.AuthTokens
+import com.digitaledu.core.model.auth.AuthMe
 import com.digitaledu.core.network.AuthNetworkDataSource
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.request.headers
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 
 class KtorAuthNetworkDataSource(
@@ -55,6 +59,17 @@ class KtorAuthNetworkDataSource(
         }
     }
 
+    override suspend fun getCurrentUser(accessToken: String): AuthMe {
+        return executeCall {
+            client.get {
+                url("api/v1/auth/me")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
+            }.body<AuthMeResponse>().toAuthMe()
+        }
+    }
+
     private suspend inline fun <reified T> postJson(path: String, payload: Any): T {
         return client.post {
             url(path)
@@ -68,5 +83,15 @@ private fun AuthResponse.toAuthTokens(): AuthTokens {
     return AuthTokens(
         accessToken = accessToken,
         refreshToken = refreshToken,
+    )
+}
+
+private fun AuthMeResponse.toAuthMe(): AuthMe {
+    return AuthMe(
+        userId = userId,
+        role = role,
+        status = status,
+        displayName = displayName,
+        permissions = permissions,
     )
 }
