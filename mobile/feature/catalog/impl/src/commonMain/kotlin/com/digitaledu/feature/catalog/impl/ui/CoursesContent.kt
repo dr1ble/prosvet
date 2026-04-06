@@ -69,6 +69,13 @@ fun CoursesContent(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            uiState.errorMessage?.takeIf { it.isNotBlank() }?.let { error ->
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
             Button(onClick = { onIntent(CatalogIntent.RefreshCourses) }) {
                 Text(text = stringResource(Res.string.catalog_refresh))
             }

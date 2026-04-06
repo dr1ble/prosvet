@@ -5,6 +5,11 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val debugBackendBaseUrl = providers
+    .gradleProperty("mobile.backend.baseUrl")
+    .orElse(providers.environmentVariable("MOBILE_BACKEND_BASE_URL"))
+    .orElse("http://10.0.2.2:8000")
+
 val composeResourceModules = listOf(
     project(":core:ui") to "digital_education_mobile.core.ui.generated.resources",
     project(":feature:auth:impl") to "digital_education_mobile.feature.auth.impl.generated.resources",
@@ -44,7 +49,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BACKEND_BASE_URL", "\"http://10.0.2.2:8000\"")
+            buildConfigField("String", "BACKEND_BASE_URL", "\"${debugBackendBaseUrl.get()}\"")
         }
         release {
             isMinifyEnabled = false

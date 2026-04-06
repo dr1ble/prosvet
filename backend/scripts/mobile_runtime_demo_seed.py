@@ -23,6 +23,7 @@ from app.modules.catalog.infra.models import (
     ReleaseStatus,
 )
 from app.modules.users.models import User, UserRole, UserStatus
+from app.shared.auth.policy_models import RbacPolicyRule
 from app.shared.db.session import SessionLocal
 from app.shared.security.passwords import hash_password
 from scripts.catalog_mock_data import (
@@ -231,6 +232,12 @@ DEMO_USERS: tuple[DemoUserBlueprint, ...] = (
         display_name="Методист демо мобайла",
         role=UserRole.METHODOLOGIST,
     ),
+    DemoUserBlueprint(
+        login="mobile_demo_user",
+        password="mobile12345",
+        display_name="Ученик демо мобайла",
+        role=UserRole.USER,
+    ),
 )
 
 
@@ -275,6 +282,33 @@ def _upsert_demo_users() -> None:
             user.status = UserStatus.ACTIVE
             user.updated_at = now
             print(f"[update] user: {blueprint.login} ({blueprint.role.value})")
+
+
+def _ensure_mobile_catalog_access_policy() -> None:
+    with SessionLocal.begin() as db:
+        rule = db.scalar(
+            select(RbacPolicyRule).where(
+                RbacPolicyRule.policy_key == "catalog.read",
+                RbacPolicyRule.role == UserRole.USER.value,
+            )
+        )
+        if rule is None:
+            db.add(
+                RbacPolicyRule(
+                    policy_key="catalog.read",
+                    role=UserRole.USER.value,
+                    enabled=True,
+                )
+            )
+            print("[create] rbac: catalog.read -> user (enabled)")
+            return
+
+        if not rule.enabled:
+            rule.enabled = True
+            print("[update] rbac: catalog.read -> user (enabled)")
+            return
+
+        print("[keep] rbac: catalog.read -> user already enabled")
 
 
 def _seed_mobile_heavy_courses() -> None:
@@ -375,6 +409,7 @@ def _assign_authors_for_mobile_courses(profile: SeedProfile) -> None:
 def seed_mobile_runtime_demo_data(profile: SeedProfile = "default") -> None:
     print("Seeding mobile runtime demo users...")
     _upsert_demo_users()
+    _ensure_mobile_catalog_access_policy()
 
     print("Seeding published catalog data for mobile Home/Player...")
     seed_mock_catalog_courses()
@@ -386,7 +421,7 @@ def seed_mobile_runtime_demo_data(profile: SeedProfile = "default") -> None:
     _assign_authors_for_mobile_courses(profile)
 
     print(f"Done. Mobile runtime demo data is ready (profile: {profile}).")
-    print("Use login: mobile_demo_method / password: mobile12345")
+    print("Use login: mobile_demo_user / password: mobile12345")
 
 
 def _cleanup_mobile_heavy_courses(dry_run: bool = False) -> None:
@@ -449,7 +484,7 @@ def verify_mobile_runtime_demo_data(profile: SeedProfile = "default") -> None:
     with TestClient(app) as client:
         login_response = client.post(
             "/api/v1/auth/login",
-            json={"login": "mobile_demo_method", "password": "mobile12345"},
+            json={"login": "mobile_demo_user", "password": "mobile12345"},
         )
         if login_response.status_code != 200:
             raise RuntimeError(f"Login verification failed: {login_response.status_code}")
@@ -466,7 +501,7 @@ def verify_mobile_runtime_demo_data(profile: SeedProfile = "default") -> None:
             raise RuntimeError(f"/auth/me verification failed: {me_response.status_code}")
 
         me_payload = me_response.json()
-        if me_payload.get("display_name") != "Методист демо мобайла":
+        if me_payload.get("display_name") != "Ученик демо мобайла":
             raise RuntimeError("/auth/me verification failed: unexpected display_name.")
 
         courses_response = client.get(

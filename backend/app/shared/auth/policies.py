@@ -6,6 +6,7 @@ POLICY_ROLE_MAP: dict[str, set[UserRole]] = {
         UserRole.METHODOLOGIST,
         UserRole.MODERATOR,
         UserRole.ASSISTANT,
+        UserRole.USER,
     },
     "catalog.write": {
         UserRole.ADMINISTRATOR,

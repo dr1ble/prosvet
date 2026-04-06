@@ -26,6 +26,7 @@ import com.digitaledu.feature.profile.api.ProfileFeatureHost
 import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiEntry
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun HomeRoute(
@@ -71,9 +72,24 @@ fun HomeRoute(
     }
 
     LaunchedEffect(Unit) {
+        catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
         currentUserDisplayName = runCatching {
             authRepository.getCurrentUser().displayName
         }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    LaunchedEffect(authRepository) {
+        authRepository.observeTokens().collectLatest { tokens ->
+            if (tokens == null) {
+                currentUserDisplayName = null
+                return@collectLatest
+            }
+
+            catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
+            currentUserDisplayName = runCatching {
+                authRepository.getCurrentUser().displayName
+            }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+        }
     }
 
     ObserveEffects(catalogFeatureHost.effects) { effect ->
