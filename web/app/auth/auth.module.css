@@ -254,6 +254,50 @@
   text-align: center;
 }
 
+.quickLogin {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.quickLoginLabel {
+  font-size: 13px;
+  color: #6b7f94;
+  font-weight: 600;
+}
+
+.quickLoginButtons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.quickLoginBtn {
+  height: 40px;
+  border: 1px solid #d5e3f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #3a5570;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quickLoginBtn:hover:not(:disabled) {
+  border-color: #1d8cff;
+  background: #f0f7ff;
+  color: #1565c0;
+}
+
+.quickLoginBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: 1fr;

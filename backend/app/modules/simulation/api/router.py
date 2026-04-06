@@ -61,7 +61,7 @@ def upsert_current_draft(
     scope_key: str = Query(default="global", min_length=1, max_length=190),
 ) -> SimulationDraftOut:
     if not isinstance(payload.payload_json, dict):
-        raise HTTPException(status_code=422, detail="payload_json must be a JSON object")
+        raise HTTPException(status_code=422, detail="Поле payload_json должно быть JSON-объектом.")
 
     draft = service.upsert_current_draft(
         owner_user_id=actor.user_id,
@@ -136,9 +136,9 @@ async def upload_media_asset(
     released_at: str | None = Query(default=None, max_length=20),
 ) -> SimulationMediaUploadOut:
     if not file.filename:
-        raise HTTPException(status_code=422, detail="File name is required.")
+        raise HTTPException(status_code=422, detail="Имя файла обязательно.")
     if not file.content_type:
-        raise HTTPException(status_code=422, detail="File content type is required.")
+        raise HTTPException(status_code=422, detail="Тип содержимого файла обязателен.")
 
     content = await file.read()
     try:
@@ -170,7 +170,7 @@ def get_media_asset_file(
         asset_id=asset_id,
     )
     if asset_data is None:
-        raise HTTPException(status_code=404, detail="Media asset not found.")
+        raise HTTPException(status_code=404, detail="Медиафайл не найден.")
 
     asset, file_path = asset_data
     return FileResponse(
@@ -196,7 +196,7 @@ def update_media_asset(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if asset is None:
-        raise HTTPException(status_code=404, detail="Media asset not found.")
+        raise HTTPException(status_code=404, detail="Медиафайл не найден.")
     return SimulationMediaAssetOut.model_validate(asset)
 
 
@@ -208,7 +208,7 @@ def delete_media_asset(
 ) -> Response:
     deleted = service.delete_media_asset(owner_user_id=actor.user_id, asset_id=asset_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Media asset not found.")
+        raise HTTPException(status_code=404, detail="Медиафайл не найден.")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -275,7 +275,7 @@ def get_library_item(
 ) -> SimulationLibraryItemOut:
     item = service.get_library_item(owner_user_id=actor.user_id, item_id=item_id)
     if item is None:
-        raise HTTPException(status_code=404, detail="Library item not found.")
+        raise HTTPException(status_code=404, detail="Элемент библиотеки не найден.")
     return SimulationLibraryItemOut.model_validate(item)
 
 
@@ -297,7 +297,7 @@ def update_library_item(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     if item is None:
-        raise HTTPException(status_code=404, detail="Library item not found.")
+        raise HTTPException(status_code=404, detail="Элемент библиотеки не найден.")
     return SimulationLibraryItemOut.model_validate(item)
 
 
@@ -309,5 +309,5 @@ def delete_library_item(
 ) -> Response:
     deleted = service.delete_library_item(owner_user_id=actor.user_id, item_id=item_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Library item not found.")
+        raise HTTPException(status_code=404, detail="Элемент библиотеки не найден.")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

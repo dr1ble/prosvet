@@ -14,6 +14,7 @@ from app.modules.groups.infra.models import (
     GroupMembership,
     LearningGroup,
 )
+from app.modules.moderation.infra.models import ReleaseReview, ReleaseStatusHistory
 from app.modules.progress.infra.models import LessonProgress
 from app.modules.simulation.infra.models import SimulationDraft, SimulationMediaAsset
 from app.modules.users.models import User
@@ -32,6 +33,8 @@ __all__ = [
     "GroupMembership",
     "GroupCourseAssignment",
     "GroupCourseAssignmentTargetUser",
+    "ReleaseReview",
+    "ReleaseStatusHistory",
     "LessonProgress",
     "SimulationDraft",
     "SimulationMediaAsset",

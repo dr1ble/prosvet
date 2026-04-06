@@ -49,6 +49,53 @@ def test_login_success_existing_user(auth_service, mock_repo, active_user):
     assert response.refresh_token is not None
 
 
+def test_register_success(auth_service, mock_repo):
+    created_user = MagicMock()
+    created_user.id = uuid.uuid4()
+    created_user.role = UserRole.USER
+    mock_repo.get_user_by_login.return_value = None
+    mock_repo.create_user.return_value = created_user
+
+    with patch.object(
+        auth_service,
+        "_issue_session_tokens",
+        return_value=AuthResponse(access_token="token", refresh_token="refresh"),
+    ):
+        response = auth_service.register(
+            full_name="Иван Иванов",
+            login="newuser",
+            password="password123",
+        )
+
+    assert isinstance(response, AuthResponse)
+    kwargs = mock_repo.create_user.call_args.kwargs
+    assert kwargs["role"] == UserRole.USER
+    assert kwargs["login"] == "newuser"
+    assert kwargs["display_name"] == "Иван Иванов"
+    assert isinstance(kwargs["password_hash"], str)
+    assert kwargs["password_hash"] != "password123"
+
+
+def test_register_fails_when_login_taken(auth_service, mock_repo):
+    mock_repo.get_user_by_login.return_value = MagicMock()
+
+    with pytest.raises(AuthError, match="Login is already taken"):
+        auth_service.register(
+            full_name="Иван Иванов",
+            login="existing-user",
+            password="password123",
+        )
+
+
+def test_register_fails_with_invalid_full_name(auth_service):
+    with pytest.raises(AuthError, match="Invalid registration data"):
+        auth_service.register(
+            full_name=" ",
+            login="validlogin",
+            password="password123",
+        )
+
+
 def test_login_bootstraps_admin_without_phone_data(auth_service, mock_repo):
     mock_repo.get_user_by_login.return_value = None
     created_admin = MagicMock()
@@ -73,6 +120,7 @@ def test_login_bootstraps_admin_without_phone_data(auth_service, mock_repo):
     assert kwargs["login"] == "admin"
     assert isinstance(kwargs["password_hash"], str)
     assert kwargs["password_hash"] != "admin12345"
+    assert kwargs.get("display_name") is None
 
 
 def test_login_fails_invalid_login(auth_service):
@@ -89,11 +137,62 @@ def test_login_fails_user_not_found(auth_service, mock_repo):
     mock_repo.get_user_by_login.return_value = None
 
     with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.environment = "production"
         mock_settings.admin_login = ""
         mock_settings.admin_password = None
 
         with pytest.raises(AuthError, match="Invalid credentials"):
             auth_service.login("testuser", "password123")
+
+
+@pytest.mark.parametrize(
+    ("login", "password", "role"),
+    [
+        ("methodologist", "method12345", UserRole.METHODOLOGIST),
+        ("methodist", "method12345", UserRole.METHODOLOGIST),
+        ("moderator", "moder12345", UserRole.MODERATOR),
+    ],
+)
+def test_login_bootstraps_demo_user_in_development(
+    auth_service, mock_repo, login, password, role
+):
+    mock_repo.get_user_by_login.return_value = None
+    created_user = MagicMock()
+    created_user.id = uuid.uuid4()
+    created_user.role = role
+    mock_repo.create_user.return_value = created_user
+
+    with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.environment = "development"
+        mock_settings.security_pepper = "pepper"
+        mock_settings.admin_login = "admin"
+        mock_settings.admin_password = "admin12345"
+
+        with patch.object(
+            auth_service,
+            "_issue_session_tokens",
+            return_value=AuthResponse(access_token="token", refresh_token="refresh"),
+        ):
+            auth_service.login(login, password)
+
+    kwargs = mock_repo.create_user.call_args.kwargs
+    assert kwargs["role"] == role
+    assert kwargs["login"] == login
+    assert isinstance(kwargs["password_hash"], str)
+    assert kwargs["password_hash"] != password
+    assert kwargs["display_name"]
+
+
+def test_login_does_not_bootstrap_demo_user_outside_development(auth_service, mock_repo):
+    mock_repo.get_user_by_login.return_value = None
+
+    with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.environment = "production"
+        mock_settings.admin_login = ""
+        mock_settings.admin_password = None
+
+        with pytest.raises(AuthError, match="Invalid credentials"):
+            auth_service.login("methodologist", "method12345")
 
 
 def test_login_fails_blocked_user(auth_service, mock_repo):

@@ -50,3 +50,10 @@ export type GroupAssignmentDto = {
   created_at: string;
   updated_at: string;
 };
+
+export type GroupQrDto = {
+  group_id: string;
+  group_name: string;
+  deep_link_url: string;
+  expires_at: string;
+};

@@ -7,11 +7,15 @@ import com.digitaledu.core.data.auth.InMemoryAuthSessionStore
 import com.digitaledu.core.data.auth.NetworkAuthRepository
 import com.digitaledu.core.data.catalog.CatalogRepository
 import com.digitaledu.core.data.catalog.NetworkCatalogRepository
+import com.digitaledu.core.data.groups.GroupQrRepository
+import com.digitaledu.core.data.groups.NetworkGroupQrRepository
 import com.digitaledu.core.network.AuthNetworkDataSource
 import com.digitaledu.core.network.CatalogNetworkDataSource
+import com.digitaledu.core.network.GroupsNetworkDataSource
 import com.digitaledu.core.network.provideHttpClient
 import com.digitaledu.core.network.ktor.KtorAuthNetworkDataSource
 import com.digitaledu.core.network.ktor.KtorCatalogNetworkDataSource
+import com.digitaledu.core.network.ktor.KtorGroupsNetworkDataSource
 import com.digitaledu.feature.auth.impl.authFeatureModule
 import com.digitaledu.feature.catalog.impl.di.catalogFeatureModule
 import com.digitaledu.feature.home.impl.homeFeatureModule
@@ -45,9 +49,11 @@ fun createMobileAppModule(
 
     single<AuthNetworkDataSource> { KtorAuthNetworkDataSource(get()) }
     single<CatalogNetworkDataSource> { KtorCatalogNetworkDataSource(get()) }
+    single<GroupsNetworkDataSource> { KtorGroupsNetworkDataSource(get()) }
 
     single<AuthSessionStore> { authSessionStore ?: InMemoryAuthSessionStore() }
 
     single<AuthRepository> { NetworkAuthRepository(get(), get()) }
     single<CatalogRepository> { NetworkCatalogRepository(get()) }
+    single<GroupQrRepository> { NetworkGroupQrRepository(get(), get()) }
 }

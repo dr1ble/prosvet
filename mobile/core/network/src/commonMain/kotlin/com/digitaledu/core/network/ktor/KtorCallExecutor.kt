@@ -10,25 +10,25 @@ internal suspend fun <T> executeCall(block: suspend () -> T): T {
         block()
     } catch (e: ClientRequestException) {
         throw NetworkException(
-            message = "Client error: ${e.response.status.value}",
+            message = "Ошибка клиента: ${e.response.status.value}",
             statusCode = e.response.status.value,
             cause = e,
         )
     } catch (e: ServerResponseException) {
         throw NetworkException(
-            message = "Server error: ${e.response.status.value}",
+            message = "Ошибка сервера: ${e.response.status.value}",
             statusCode = e.response.status.value,
             cause = e,
         )
     } catch (e: RedirectResponseException) {
         throw NetworkException(
-            message = "Redirect error: ${e.response.status.value}",
+            message = "Ошибка перенаправления: ${e.response.status.value}",
             statusCode = e.response.status.value,
             cause = e,
         )
     } catch (e: Exception) {
         throw NetworkException(
-            message = "Unknown network error",
+            message = "Ошибка сети. Проверьте подключение к интернету.",
             cause = e,
         )
     }

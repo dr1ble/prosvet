@@ -55,13 +55,14 @@ class CatalogService:
         self.db = db
         self.repo = CatalogRepository(db)
 
-    def list_courses(self, query: CourseListQuery) -> list[Course]:
+    def list_courses(self, query: CourseListQuery, author_id: UUID | None = None) -> list[Course]:
         return self.repo.list_courses(
             include_drafts=query.include_drafts,
             include_archived=query.include_archived,
+            author_id=author_id,
         )
 
-    def create_course(self, payload: CourseCreateIn) -> Course:
+    def create_course(self, payload: CourseCreateIn, author_id: UUID | None = None) -> Course:
         slug = _normalize_slug(payload.slug)
         if not slug:
             raise CatalogError("Course slug is empty after normalization.", status_code=422)
@@ -75,6 +76,7 @@ class CatalogService:
             title=payload.title.strip(),
             description=payload.description,
             status=payload.status,
+            author_id=author_id,
         )
         return course
 
@@ -667,13 +669,12 @@ class CatalogService:
         if existing is not None:
             raise CatalogError("Release version already exists.", status_code=409)
 
-        now = _utcnow()
         release = self.repo.create_release(
             course_id=course.id,
             version=version,
             changelog=changelog,
             status=ReleaseStatus.PUBLISHED.value,
-            published_at=now,
+            published_at=_utcnow(),
         )
 
         lessons = self.repo.list_lessons_by_course(course_id, include_archived=False)
@@ -761,9 +762,8 @@ class CatalogService:
             )
             restored_task_order[lesson_key] += 1
 
-        now = _utcnow()
-        source_release.status = ReleaseStatus.PUBLISHED.value
-        source_release.published_at = now
+        source_release.status = ReleaseStatus.PENDING_REVIEW.value
+        source_release.published_at = None
         self.db.flush()
 
         course.status = CourseStatus.ACTIVE.value

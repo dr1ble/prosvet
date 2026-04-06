@@ -1,6 +1,19 @@
 <resources>
-    <string name="profile_title">Профиль пользователя</string>
-    <string name="profile_subtitle">Управление сессией и выходом из приложения.</string>
+    <string name="profile_title">Ученик 2-го уровня</string>
+    <string name="profile_name">Анна Михайловна</string>
+    <string name="profile_points">1,250 баллов</string>
+    <string name="profile_progress">Ваш прогресс</string>
+    <string name="profile_settings">Настройки</string>
+    <string name="profile_accessibility">Специальные возможности</string>
+    <string name="profile_accessibility_preview">Предпросмотр</string>
+    <string name="profile_accessibility_large_text">Крупный текст</string>
+    <string name="profile_accessibility_voice">Голосовая поддержка</string>
+    <string name="profile_accessibility_tremor">Фильтр тремора</string>
+    <string name="profile_account">Настройки аккаунта</string>
+    <string name="profile_account_email">Электронная почта</string>
+    <string name="profile_account_placeholder">Адрес почты</string>
+    <string name="profile_account_bind">Привязать почту</string>
+    <string name="profile_featured">Избранное</string>
     <string name="profile_logout_loading">Выходим...</string>
     <string name="profile_logout">Выйти из аккаунта</string>
     <string name="profile_error_dismiss">Понятно</string>

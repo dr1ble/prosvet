@@ -16,7 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.digitaledu.core.ui.components.UiOpacity
+import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.model.catalog.CatalogScreen
 import com.digitaledu.core.model.content.ArticlePayload
 import com.digitaledu.core.model.content.CheatSheetPayload
@@ -114,8 +115,8 @@ fun PlayerContent(
                 modifier = modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+                    .padding(horizontal = UiSpacing.xl, vertical = UiSpacing.xxl),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.lg),
             ) {
                 Text(
                     text = screen.title,
@@ -124,12 +125,12 @@ fun PlayerContent(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(UiSpacing.xs))
                 
                 Text(
                     text = payload.raw,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.87f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = UiOpacity.textSecondaryOnScrim),
                 )
             }
         }

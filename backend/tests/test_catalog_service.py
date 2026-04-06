@@ -57,7 +57,11 @@ def test_list_courses_excludes_drafts_by_default(catalog_service, mock_repo):
     query = CourseListQuery()
     catalog_service.list_courses(query)
 
-    mock_repo.list_courses.assert_called_once_with(include_drafts=False, include_archived=False)
+    mock_repo.list_courses.assert_called_once_with(
+        include_drafts=False,
+        include_archived=False,
+        author_id=None,
+    )
 
 
 def test_list_courses_with_filters(catalog_service, mock_repo):
@@ -67,7 +71,11 @@ def test_list_courses_with_filters(catalog_service, mock_repo):
     query = CourseListQuery(include_drafts=True, include_archived=False)
     catalog_service.list_courses(query)
 
-    mock_repo.list_courses.assert_called_once_with(include_drafts=True, include_archived=False)
+    mock_repo.list_courses.assert_called_once_with(
+        include_drafts=True,
+        include_archived=False,
+        author_id=None,
+    )
 
 
 def test_create_course_success(catalog_service, mock_repo):

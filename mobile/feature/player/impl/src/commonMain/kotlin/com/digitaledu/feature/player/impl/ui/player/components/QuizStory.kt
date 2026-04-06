@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.digitaledu.core.ui.components.UiShapes
+import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.model.content.QuizPayload
 import com.digitaledu.core.model.quiz.MatchingQuestion
 import com.digitaledu.core.model.quiz.MultipleChoiceQuestion
@@ -63,7 +63,7 @@ fun QuizStory(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(UiSpacing.md)
     ) {
         if (currentQuestion != null) {
             Column(
@@ -84,7 +84,7 @@ fun QuizStory(
                     color = MaterialTheme.colorScheme.secondary
                 )
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(UiSpacing.md))
                 
                 // Question Text
                 Text(
@@ -94,7 +94,7 @@ fun QuizStory(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(UiSpacing.xl))
                 
                 // Options (Placeholder logic for now)
                 when (currentQuestion) {
@@ -105,7 +105,7 @@ fun QuizStory(
                                 isSelected = false,
                                 onClick = { }
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(UiSpacing.xs))
                         }
                     }
                     is MultipleChoiceQuestion -> {
@@ -118,7 +118,7 @@ fun QuizStory(
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(UiSpacing.xl))
                 
                 // Navigation Buttons
                 Row(
@@ -167,14 +167,14 @@ fun QuizOptionItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(UiShapes.cardMd),
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(12.dp)
+        shape = UiShapes.cardMd,
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(UiSpacing.md),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

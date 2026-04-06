@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { toDataURL } from "qrcode";
 
 import {
   archiveGroup,
   createGroup,
   createGroupAssignment,
+  generateGroupQr,
   replaceGroupMembers,
   restoreGroup,
   updateGroup,
@@ -18,6 +21,7 @@ import type {
   GroupAssignmentDto,
   GroupDto,
   GroupMemberDto,
+  GroupQrDto,
   GroupUserOptionDto,
 } from "@/features/groups/types";
 import type { CourseDto } from "@/features/catalog/types";
@@ -101,6 +105,9 @@ export function GroupsWorkspace({
     "all" | "selected" | "unselected"
   >("all");
   const [groupSavedHint, setGroupSavedHint] = useState<string | null>(null);
+  const [groupQr, setGroupQr] = useState<GroupQrDto | null>(null);
+  const [groupQrImageUrl, setGroupQrImageUrl] = useState<string | null>(null);
+  const [groupQrModalOpen, setGroupQrModalOpen] = useState(false);
 
   const selectedGroup = useMemo(
     () => groups.find((group) => group.id === selectedGroupId) ?? null,
@@ -128,6 +135,11 @@ export function GroupsWorkspace({
     saveMembers: isRu ? "Сохранить участников" : "Save members",
     assignments: isRu ? "Назначения" : "Assignments",
     createAssignment: isRu ? "Создать назначение" : "Create assignment",
+    createQr: isRu ? "QR для входа в группу" : "Group join QR",
+    regenerateQr: isRu ? "Обновить QR" : "Regenerate QR",
+    qrScansHint: isRu
+      ? "Покажите QR участникам: после сканирования они откроют обучение для своей группы."
+      : "Show this QR to members: scanning opens learning for their group.",
     selectGroup: isRu
       ? "Выберите группу в списке слева."
       : "Select a group from the list.",
@@ -564,6 +576,33 @@ export function GroupsWorkspace({
     }
   }
 
+  async function handleGenerateGroupQr() {
+    if (!selectedGroupId) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const qrPayload = await generateGroupQr(selectedGroupId);
+      const imageUrl = await toDataURL(qrPayload.deep_link_url, {
+        width: 320,
+        margin: 1,
+      });
+      setGroupQr(qrPayload);
+      setGroupQrImageUrl(imageUrl);
+      setGroupQrModalOpen(true);
+      setSuccess(isRu ? "QR-код готов" : "QR code is ready");
+    } catch (err) {
+      setError(
+        toUserErrorMessage(
+          err,
+          isRu ? "Не удалось сформировать QR" : "Failed to generate QR",
+        ),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <section className={styles.workspace}>
       <aside className={styles.panel}>
@@ -752,6 +791,14 @@ export function GroupsWorkspace({
                     {selectedGroup.status === "archived"
                       ? text.restore
                       : text.archive}
+                  </button>
+                  <button
+                    className={`${styles.btn} ${styles.btnPrimary}`}
+                    type="button"
+                    onClick={() => void handleGenerateGroupQr()}
+                    disabled={saving || selectedGroup.status !== "active"}
+                  >
+                    {groupQr ? text.regenerateQr : text.createQr}
                   </button>
                 </div>
               </div>
@@ -1271,6 +1318,65 @@ export function GroupsWorkspace({
                   {text.createGroup}
                 </button>
               </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {groupQrModalOpen && groupQr && groupQrImageUrl ? (
+        <div className={styles.modalOverlay}>
+          <section className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.sectionTitle}>{text.createQr}</h3>
+              <button
+                className={styles.modalClose}
+                type="button"
+                onClick={() => setGroupQrModalOpen(false)}
+                aria-label={isRu ? "Закрыть" : "Close"}
+              >
+                ×
+              </button>
+            </div>
+
+            <p className={styles.muted}>{text.qrScansHint}</p>
+            <div className={styles.qrImageWrap}>
+              <Image
+                src={groupQrImageUrl}
+                alt={isRu ? "QR-код входа в группу" : "Group join QR code"}
+                className={styles.qrImage}
+                width={320}
+                height={320}
+              />
+            </div>
+            <p className={styles.qrLink}>{groupQr.deep_link_url}</p>
+            <p className={styles.muted}>
+              {isRu ? "Действует до" : "Valid until"}:{" "}
+              {formatDateTime(groupQr.expires_at)}
+            </p>
+
+            <div className={styles.modalActions}>
+              <button
+                className={styles.btn}
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(groupQr.deep_link_url);
+                  setSuccess(
+                    isRu
+                      ? "Ссылка для сканирования скопирована"
+                      : "QR link copied",
+                  );
+                }}
+              >
+                {isRu ? "Скопировать ссылку" : "Copy link"}
+              </button>
+              <button
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                type="button"
+                onClick={() => void handleGenerateGroupQr()}
+                disabled={saving}
+              >
+                {text.regenerateQr}
+              </button>
             </div>
           </section>
         </div>

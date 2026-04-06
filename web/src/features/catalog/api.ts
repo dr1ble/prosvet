@@ -33,9 +33,18 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return JSON.parse(payload) as T;
 }
 
-export async function fetchCourses(): Promise<CourseDto[]> {
+function buildAuthHeaders(accessToken: string): HeadersInit {
+  return {
+    Authorization: `Bearer ${accessToken}`,
+  };
+}
+
+export async function fetchCourses(accessToken: string): Promise<CourseDto[]> {
   return fetchJson<CourseDto[]>(
     "/catalog/courses?include_drafts=true&include_archived=true",
+    {
+      headers: buildAuthHeaders(accessToken),
+    },
   );
 }
 
@@ -60,9 +69,7 @@ export async function fetchCourseReleases(
   return fetchJson<CourseReleaseDto[]>(
     `/catalog/courses/${courseId}/releases${querySuffix}`,
     {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: buildAuthHeaders(accessToken),
     },
   );
 }

@@ -18,6 +18,8 @@ import org.koin.mp.KoinPlatform
 
 @Composable
 fun RootRoute(
+    initialGroupQrToken: String?,
+    onGroupQrTokenConsumed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
@@ -60,6 +62,8 @@ fun RootRoute(
                 startDestination = HOME_ROUTE,
                 authFeatureEntry = authFeatureEntry,
                 homeFeatureEntry = homeFeatureEntry,
+                initialGroupQrToken = initialGroupQrToken,
+                onGroupQrTokenConsumed = onGroupQrTokenConsumed,
                 modifier = modifier.fillMaxSize(),
             )
         }
@@ -70,6 +74,8 @@ fun RootRoute(
                 startDestination = AUTH_ROUTE,
                 authFeatureEntry = authFeatureEntry,
                 homeFeatureEntry = homeFeatureEntry,
+                initialGroupQrToken = initialGroupQrToken,
+                onGroupQrTokenConsumed = onGroupQrTokenConsumed,
                 modifier = modifier.fillMaxSize(),
             )
         }

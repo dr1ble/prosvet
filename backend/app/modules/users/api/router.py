@@ -16,7 +16,7 @@ def users_overview(
 ) -> UsersOverviewOut:
     permissions = permissions_for_role(current_user.role)
     if "users.manage" not in permissions and "rbac.manage" not in permissions:
-        raise HTTPException(status_code=403, detail="Insufficient permissions for this operation.")
+        raise HTTPException(status_code=403, detail="Недостаточно прав для этой операции.")
     return service.get_overview()
 
 
@@ -29,7 +29,7 @@ def update_user(
 ) -> UserOverviewItemOut:
     permissions = permissions_for_role(current_user.role)
     if "users.manage" not in permissions and "rbac.manage" not in permissions:
-        raise HTTPException(status_code=403, detail="Insufficient permissions for this operation.")
+        raise HTTPException(status_code=403, detail="Недостаточно прав для этой операции.")
 
     try:
         updated = service.update_user(
@@ -42,5 +42,5 @@ def update_user(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if updated is None:
-        raise HTTPException(status_code=404, detail="User not found.")
+        raise HTTPException(status_code=404, detail="Пользователь не найден.")
     return updated

@@ -119,6 +119,10 @@ export function CatalogSidebar({
                       {course.description}
                     </p>
                   ) : null}
+                  <p className={styles.courseAuthor}>
+                    {language === "ru" ? "Автор" : "Author"}:{" "}
+                    {course.author_display_name ?? "—"}
+                  </p>
                   <p className={styles.courseUpdatedAt}>
                     {updatedPrefix}:{" "}
                     {dateTimeFormatter.format(new Date(course.updated_at))}

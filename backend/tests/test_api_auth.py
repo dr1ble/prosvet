@@ -1,5 +1,7 @@
 """Integration tests for auth API endpoints."""
 
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -37,6 +39,35 @@ class TestAuthLoginEndpoints:
             json={"login": "testuser"},
         )
         assert response.status_code == 422
+
+
+class TestAuthRegisterEndpoints:
+    def test_register_missing_fields(self, client: TestClient) -> None:
+        response = client.post(
+            "/api/v1/auth/register",
+            json={"login": "newuser"},
+        )
+        assert response.status_code == 422
+
+    def test_register_short_password(self, client: TestClient) -> None:
+        response = client.post(
+            "/api/v1/auth/register",
+            json={"full_name": "Иван Иванов", "login": "newuser", "password": "short"},
+        )
+        assert response.status_code == 422
+
+    def test_register_success(self, client: TestClient) -> None:
+        login = f"mobile_{uuid4().hex[:10]}"
+        response = client.post(
+            "/api/v1/auth/register",
+            json={"full_name": "Иван Иванов", "login": login, "password": "password123"},
+        )
+        assert response.status_code in (200, 429)
+        if response.status_code == 200:
+            payload = response.json()
+            assert payload.get("access_token")
+            assert payload.get("refresh_token")
+            assert payload.get("user_id")
 
 
 class TestAuthProtectedEndpoints:

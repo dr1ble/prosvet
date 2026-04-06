@@ -1,21 +1,57 @@
 <resources>
+    <!-- Brand -->
     <string name="auth_brand_title">Просвет</string>
-    <string name="auth_welcome_back">С возвращением</string>
-    <string name="auth_login_subtitle">Войдите в аккаунт, чтобы продолжить обучение</string>
-    <string name="auth_label_login">Логин</string>
+
+    <!-- Onboarding -->
+    <string name="auth_step_badge">Ваш проводник в мире технологий</string>
+    <string name="auth_start_title">Добро пожаловать в Просвет</string>
+    <string name="auth_start_subtitle">Мы поможем вам освоить интернет, смартфоны и цифровые сервисы. Без сложных терминов, в вашем темпе и с полной поддержкой.</string>
+    <string name="auth_start_learning">Начать обучение</string>
+    <string name="auth_start_accessibility">Настройка доступности</string>
+    <string name="auth_terms_hint">Нажимая «Начать», вы принимаете условия использования и политику конфиденциальности.</string>
+    <string name="auth_benefit_safety">Безопасность</string>
+    <string name="auth_benefit_safety_desc">Учим распознавать угрозы и защищать данные.</string>
+    <string name="auth_benefit_communication">Общение</string>
+    <string name="auth_benefit_communication_desc">Будьте на связи с близкими через мессенджеры.</string>
+
+    <!-- Login -->
+    <string name="auth_welcome_back">Добро пожаловать</string>
+    <string name="auth_login_subtitle">Введите логин и пароль для доступа к обучению</string>
+    <string name="auth_label_login">Логин или почта</string>
     <string name="auth_label_password">Пароль</string>
-    <string name="auth_label_full_name">ФИО</string>
-    <string name="auth_label_repeat_password">Повторите пароль</string>
-    <string name="auth_show_password">Показать пароль</string>
-    <string name="auth_hide_password">Скрыть пароль</string>
-    <string name="auth_password_min_length">Минимум 6 символов</string>
-    <string name="auth_login_in_progress">Входим...</string>
+    <string name="auth_forgot_password_link">Забыли пароль?</string>
     <string name="auth_login">Войти</string>
-    <string name="auth_registration">Регистрация</string>
-    <string name="auth_registration_subtitle">Оставьте данные для создания аккаунта</string>
-    <string name="auth_forgot_password_hint">Если забыли пароль, обратитесь к администратору платформы</string>
-    <string name="auth_back_to_login">Ко входу</string>
+    <string name="auth_login_in_progress">Входим…</string>
+    <string name="auth_qr_button">Вход по QR-коду</string>
+    <string name="auth_no_account">Нет аккаунта?</string>
+    <string name="auth_open_registration">Создать аккаунт</string>
+    <string name="auth_security_info">Ваши данные надежно защищены. Мы используем сквозное шифрование для обеспечения безопасности вашего процесса обучения и личной информации.</string>
+    <string name="auth_password_min_length">Минимум 6 символов</string>
+    <string name="auth_show_password">Показать пароль</string>
+
+    <!-- Registration -->
+    <string name="auth_create_account">Создание аккаунта</string>
+    <string name="auth_create_account_subtitle">Начните свой путь к новым знаниям вместе с приложением Просвет</string>
+    <string name="auth_create_account_button">Зарегистрироваться</string>
+    <string name="auth_label_full_name">Имя и фамилия</string>
+    <string name="auth_label_repeat_password">Повторите пароль</string>
     <string name="auth_password_mismatch">Пароли не совпадают</string>
-    <string name="auth_registration_info">Самостоятельная регистрация скоро появится. Передайте данные администратору платформы.</string>
-    <string name="auth_create_account">Создать аккаунт</string>
+    <string name="auth_security_info_register">Ваши данные надежно защищены и не передаются третьим лицам. Мы заботимся о вашей безопасности.</string>
+    <string name="auth_have_account">Уже есть аккаунт?</string>
+    <string name="auth_sign_in_link">Войти</string>
+    <string name="auth_registration_info">Заполните поля ниже, чтобы создать аккаунт и сразу начать обучение.</string>
+
+    <!-- QR -->
+    <string name="auth_qr_scan_title">Сканирование QR-кода</string>
+    <string name="auth_qr_instruction">Наведите камеру на QR-код, полученный у наставника или на сайте</string>
+    <string name="auth_qr_action_manual">Ввести логин вручную</string>
+
+    <!-- Recovery -->
+    <string name="auth_forgot_password">Восстановление пароля</string>
+    <string name="auth_forgot_password_input">Логин или почта</string>
+    <string name="auth_forgot_password_send">Отправить код</string>
+    <string name="auth_forgot_password_sent">Инструкция отправлена. Проверьте почту.</string>
+    <string name="auth_recovery_info">Вам придет письмо с инструкциями. Если не получается —</string>
+    <string name="auth_recovery_support">обратитесь в поддержку</string>
+    <string name="auth_back_to_login_full">Вернуться ко входу</string>
 </resources>

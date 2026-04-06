@@ -1,8 +1,15 @@
 <resources>
-    <string name="home_title_courses">Каталог курсов</string>
+    <string name="home_title_courses">Доброе утро, Александр</string>
     <string name="home_title_lesson">Обучение</string>
     <string name="home_title_profile">Профиль</string>
-    <string name="home_tab_courses">Курсы</string>
+    <string name="home_tab_courses">Главная</string>
     <string name="home_tab_lesson">Обучение</string>
     <string name="home_tab_profile">Профиль</string>
+    <string name="home_search_placeholder">Спросите помощника...</string>
+    <string name="home_continue_learning">Продолжить обучение</string>
+    <string name="home_continue_progress">Урок 3 из 8</string>
+    <string name="home_continue_start">Начать урок</string>
+    <string name="home_recommended">Рекомендуем вам</string>
+    <string name="home_recommended_all">Все уроки</string>
+    <string name="home_sos">SOS</string>
 </resources>

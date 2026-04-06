@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.ui.graphics.Color
+import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.model.content.VideoPayload
 import com.digitaledu.feature.player.api.PlayerIntent
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
@@ -50,7 +49,7 @@ fun VideoStory(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.scrim)
             // Center tap toggles playback
             .clickable { isPlaying = !isPlaying },
         contentAlignment = Alignment.Center
@@ -59,7 +58,13 @@ fun VideoStory(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(if (isPlaying) Color.DarkGray else Color.Black)
+                .background(
+                    if (isPlaying) {
+                        MaterialTheme.colorScheme.surfaceContainerHighest
+                    } else {
+                        MaterialTheme.colorScheme.scrim
+                    },
+                )
         )
         
         // Debug Text
@@ -71,7 +76,7 @@ fun VideoStory(
 
         Text(
             text = stringResource(Res.string.video_debug_text, payload.videoUrl, playbackStateText),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onPrimary,
             style = MaterialTheme.typography.bodyLarge
         )
         
@@ -80,7 +85,7 @@ fun VideoStory(
              Icon(
                  imageVector = Icons.Default.PlayArrow,
                  contentDescription = stringResource(Res.string.video_play),
-                 tint = Color.White,
+                 tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = UiOpacity.textSecondaryOnScrim),
                  modifier = Modifier.align(Alignment.Center).fillMaxSize(0.2f)
              )
         }

@@ -22,6 +22,9 @@ class CourseStatus(str, enum.Enum):
 
 class ReleaseStatus(str, enum.Enum):
     DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
     PUBLISHED = "published"
 
 
@@ -43,6 +46,12 @@ class Course(Base):
     __tablename__ = "courses"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    author_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
     slug: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

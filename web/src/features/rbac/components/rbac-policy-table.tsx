@@ -57,6 +57,7 @@ export function RbacPolicyTable({
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const [failedCells, setFailedCells] = useState<string[]>([]);
 
   const handleToggle = useCallback((policyKey: string, role: KnownRole) => {
     setMatrix((prev) => {
@@ -67,26 +68,45 @@ export function RbacPolicyTable({
       next.set(policyKey, roleMap);
       return next;
     });
+    setFailedCells((prev) =>
+      prev.filter((f) => !f.startsWith(`${policyKey}/${role}`)),
+    );
   }, []);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     setStatus(null);
+    setFailedCells([]);
 
     try {
-      const updates: Promise<unknown>[] = [];
+      const results = await Promise.allSettled(
+        Array.from(matrix.entries()).flatMap(([policyKey, roleMap]) =>
+          Array.from(roleMap.entries()).map(async ([role, cell]) => {
+            await togglePolicyRule(policyKey, role, cell.enabled);
+            return { policyKey, role };
+          }),
+        ),
+      );
 
-      for (const [policyKey, roleMap] of matrix) {
-        for (const [role, cell] of roleMap) {
-          updates.push(
-            togglePolicyRule(policyKey, role, cell.enabled).catch((err) => {
-              console.error(`Failed to update ${policyKey}/${role}:`, err);
-            }),
-          );
-        }
+      const failures = results
+        .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+        .map((r) => {
+          const reason =
+            r.reason instanceof Error ? r.reason.message : String(r.reason);
+          return reason;
+        });
+
+      if (failures.length > 0) {
+        setFailedCells(failures);
+        setStatus({
+          type: "error",
+          message:
+            language === "ru"
+              ? `Ошибка: не удалось обновить ${failures.length} политик(у)`
+              : `Error: failed to update ${failures.length} polic(ies)`,
+        });
+        return;
       }
-
-      await Promise.all(updates);
 
       const refreshed = await fetchPolicies(accessToken);
       setMatrix(buildMatrix(refreshed));

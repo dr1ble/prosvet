@@ -30,19 +30,19 @@ def _resolve_authenticated_user(
     db: Session,
 ) -> User:
     if credentials is None:
-        raise _auth_error("Authorization token is required.")
+        raise _auth_error("Требуется токен авторизации.")
     if credentials.scheme.lower() != "bearer":
-        raise _auth_error("Unsupported authorization scheme.")
+        raise _auth_error("Неподдерживаемая схема авторизации.")
 
     try:
         claims = parse_access_token(credentials.credentials, secret=settings.access_token_secret)
     except TokenError as exc:
-        raise _auth_error("Access token is invalid or expired.") from exc
+        raise _auth_error("Токен доступа недействителен или истёк.") from exc
 
     stmt = select(User).where(User.id == claims.user_id)
     user = db.scalar(stmt)
     if user is None or user.status != UserStatus.ACTIVE:
-        raise _auth_error("User is inactive or not found.")
+        raise _auth_error("Пользователь неактивен или не найден.")
 
     return user
 
@@ -67,7 +67,7 @@ def require_roles(*allowed_roles: UserRole) -> Callable[..., CurrentActor]:
         if actor.role.value not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions for this operation.",
+                detail="Недостаточно прав для этой операции.",
             )
         return actor
 
@@ -99,13 +99,13 @@ def require_policy(policy_key: str) -> Callable[..., CurrentActor]:
         if not allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Policy '{policy_key}' is not configured.",
+                detail=f"Политика '{policy_key}' не настроена.",
             )
 
         if actor.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions for this operation.",
+                detail="Недостаточно прав для этой операции.",
             )
 
         return actor

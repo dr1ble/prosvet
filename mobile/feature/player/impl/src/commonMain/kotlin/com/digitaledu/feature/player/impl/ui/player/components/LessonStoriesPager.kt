@@ -4,32 +4,29 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.dp
+import com.digitaledu.core.ui.components.UiSize
+import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.content.ArticlePayload
 import com.digitaledu.core.model.content.Hotspot
@@ -41,7 +38,6 @@ import com.digitaledu.feature.player.impl.ui.player.PlayerContent
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
 import digital_education_mobile.feature.player.`impl`.generated.resources.close
 import digital_education_mobile.feature.player.`impl`.generated.resources.theory
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -69,8 +65,6 @@ fun LessonStoriesPager(
         initialPage = currentScreenIndex,
         pageCount = { bundle.screens.size }
     )
-    val scope = rememberCoroutineScope()
-
     // Sync external state with internal pager state
     LaunchedEffect(currentScreenIndex) {
         if (pagerState.currentPage != currentScreenIndex) {
@@ -112,7 +106,7 @@ fun LessonStoriesPager(
                     Modifier
                         .fillMaxSize()
                         .systemBarsPadding() 
-                        .padding(top = 24.dp) // Space for progress bar
+                        .padding(top = UiSpacing.xl)
                 }
                 
                 PlayerContent(
@@ -175,13 +169,13 @@ fun LessonStoriesPager(
                 modifier = Modifier
                     .fillMaxSize()
                     .systemBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = UiSpacing.md, vertical = UiSpacing.xs)
             ) {
                 // Top Layer Controls
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp), // Space below progress bar
+                        .padding(top = UiSpacing.md),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -197,7 +191,7 @@ fun LessonStoriesPager(
                             )
                         }
                     } else {
-                        Spacer(modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.size(UiSize.touchTarget))
                     }
 
                     // Close Button (Right)
@@ -218,7 +212,7 @@ fun LessonStoriesPager(
                     currentStep = currentScreenIndex,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp)
+                        .padding(bottom = UiSpacing.xs)
                 )
             }
         }

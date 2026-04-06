@@ -733,6 +733,7 @@ function SimulationEditorInner({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
   const [isSidebarResizing, setIsSidebarResizing] = useState(false);
   const [propertiesWidth, setPropertiesWidth] = useState(
@@ -981,7 +982,8 @@ function SimulationEditorInner({
         }
         return insertScenarioDraft(loaded, options);
       } catch (error) {
-        console.error("Failed to insert scenario from library:", error);
+        const msg = error instanceof Error ? error.message : String(error);
+        setDraftError(`Failed to insert scenario: ${msg}`);
         return false;
       }
     },
@@ -1069,7 +1071,8 @@ function SimulationEditorInner({
           setTimeout(() => fitView({ padding: 0.2 }), 50);
         }
       } catch (error) {
-        console.error("Failed to load draft:", error);
+        const msg = error instanceof Error ? error.message : String(error);
+        setDraftError(`Failed to load draft: ${msg}`);
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -1282,7 +1285,8 @@ function SimulationEditorInner({
         setLastSavedAt(new Date().toLocaleTimeString());
       }
     } catch (error) {
-      console.error("Failed to save draft:", error);
+      const msg = error instanceof Error ? error.message : String(error);
+      setDraftError(`Failed to save draft: ${msg}`);
     } finally {
       setIsSaving(false);
     }
@@ -3044,6 +3048,14 @@ function SimulationEditorInner({
           {lastSavedAt && (
             <span className={styles.savedAt}>
               {language === "ru" ? "Сохранено" : "Saved"} {lastSavedAt}
+            </span>
+          )}
+          {draftError && (
+            <span className={styles.errorIndicator} title={draftError}>
+              ⚠{" "}
+              {draftError.length > 40
+                ? draftError.slice(0, 40) + "…"
+                : draftError}
             </span>
           )}
         </div>

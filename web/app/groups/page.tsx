@@ -49,7 +49,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const [groups, users, courses] = await Promise.all([
     fetchGroups(accessToken),
     fetchGroupUsers(accessToken),
-    fetchCourses(),
+    fetchCourses(accessToken),
   ]);
 
   const selectedGroupId =
@@ -92,10 +92,16 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                 />
               </svg>
             </Link>
-            <h1 className={styles.title}>Группы и назначения</h1>
+            <h1 className={styles.title}>
+              {language === "ru"
+                ? "Группы и назначения"
+                : "Groups & Assignments"}
+            </h1>
           </div>
           <p className={styles.subtitle}>
-            Управление учебными группами, участниками и назначением курсов.
+            {language === "ru"
+              ? "Управление учебными группами, участниками и назначением курсов."
+              : "Manage study groups, members, and course assignments."}
           </p>
         </div>
       </header>

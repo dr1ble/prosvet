@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Card
@@ -29,7 +28,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import com.digitaledu.core.ui.components.UiOpacity
+import com.digitaledu.core.ui.components.UiShapes
+import com.digitaledu.core.ui.components.UiSize
+import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.model.reference.CodeSnippet
 import com.digitaledu.core.model.reference.LessonReference
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
@@ -52,8 +54,8 @@ fun LessonCheatSheetView(
     val clipboardManager = LocalClipboardManager.current
 
     LazyColumn(
-        modifier = modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = modifier.padding(UiSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
     ) {
         // Title and Summary
         item {
@@ -63,7 +65,7 @@ fun LessonCheatSheetView(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(UiSpacing.xs))
                 Text(
                     text = reference.summaryText,
                     style = MaterialTheme.typography.bodyMedium,
@@ -83,12 +85,12 @@ fun LessonCheatSheetView(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(UiSpacing.xs))
             }
             items(reference.keyPoints) { point ->
                 Row(
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(bottom = UiSpacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(UiSpacing.xs),
                 ) {
                     Text(
                         text = stringResource(Res.string.list_bullet),
@@ -106,7 +108,7 @@ fun LessonCheatSheetView(
         if (reference.codeSnippets.isNotEmpty()) {
             item {
                 HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(UiSpacing.md))
                 Text(
                     text = stringResource(Res.string.cheat_sheet_commands_code),
                     style = MaterialTheme.typography.titleMedium,
@@ -137,9 +139,9 @@ fun CodeSnippetCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        shape = RoundedCornerShape(8.dp)
+        shape = UiShapes.cardSm,
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(UiSpacing.sm)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -152,26 +154,26 @@ fun CodeSnippetCard(
                 )
                 IconButton(
                     onClick = onCopy,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(UiSize.iconLg),
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
                         contentDescription = stringResource(Res.string.cheat_sheet_copy_code),
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(UiSpacing.md),
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(UiSpacing.xxs))
             
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                        RoundedCornerShape(4.dp)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = UiOpacity.subtle),
+                        UiShapes.chip,
                     )
-                    .padding(8.dp)
+                    .padding(UiSpacing.xs),
             ) {
                 Text(
                     text = snippet.code,

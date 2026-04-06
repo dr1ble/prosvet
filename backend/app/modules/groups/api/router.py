@@ -10,12 +10,14 @@ from app.modules.groups.api.schemas import (
     GroupMemberOut,
     GroupMembersUpdateIn,
     GroupOut,
+    GroupQrCodeOut,
+    GroupQrResolveOut,
     GroupUpdateIn,
     GroupUserOptionOut,
 )
 from app.modules.groups.domain.errors import GroupsError
 from app.modules.groups.infra.models import GroupCourseAssignment, LearningGroup
-from app.shared.auth.deps import require_policy
+from app.shared.auth.deps import get_current_actor, require_policy
 from app.shared.auth.schemas import CurrentActor
 from app.shared.di.services import GroupsServiceDep
 
@@ -196,3 +198,40 @@ def update_group_assignment(
     except GroupsError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return _to_assignment_out(service, assignment)
+
+
+@router.post("/{group_id}/qr", response_model=GroupQrCodeOut)
+def create_group_qr(
+    group_id: UUID,
+    service: GroupsServiceDep,
+    actor: CurrentActor = Depends(require_policy("groups.manage")),
+) -> GroupQrCodeOut:
+    try:
+        result = service.create_group_qr_link(group_id=group_id, actor_user_id=actor.user_id)
+    except GroupsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    return GroupQrCodeOut(
+        group_id=result.group_id,
+        group_name=result.group_name,
+        deep_link_url=result.deep_link_url,
+        expires_at=result.expires_at,
+    )
+
+
+@router.get("/qr/{token}", response_model=GroupQrResolveOut)
+def resolve_group_qr(
+    token: str,
+    service: GroupsServiceDep,
+    actor: CurrentActor = Depends(get_current_actor),
+) -> GroupQrResolveOut:
+    try:
+        result = service.resolve_group_qr_link(token=token, actor_user_id=actor.user_id)
+    except GroupsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+    return GroupQrResolveOut(
+        group_id=result.group_id,
+        group_name=result.group_name,
+        course_slug=result.course_slug,
+    )

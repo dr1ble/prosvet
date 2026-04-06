@@ -43,6 +43,7 @@ EOF
 
 need_web_checks=0
 need_backend_checks=0
+need_mobile_theme_checks=0
 
 while IFS= read -r path; do
   case "$path" in
@@ -51,6 +52,9 @@ while IFS= read -r path; do
       ;;
     backend/*)
       need_backend_checks=1
+      ;;
+    mobile/*)
+      need_mobile_theme_checks=1
       ;;
   esac
 done <<EOF
@@ -142,6 +146,15 @@ if [ "$need_backend_checks" -eq 1 ]; then
       echo "pre-commit: skipping pytest ($pytest_reason)."
       echo "pre-commit: tip: use PRECOMMIT_PYTEST_MODE=always git commit ... to force full tests."
     fi
+  fi
+fi
+
+if [ "$need_mobile_theme_checks" -eq 1 ]; then
+  mobile_ui_files="$(printf "%s\n" "$staged_files" | grep -E '^mobile/' || true)"
+  if [ -n "$mobile_ui_files" ]; then
+    echo "pre-commit: running mobile theme token guard..."
+    # shellcheck disable=SC2086
+    "$ROOT_DIR/scripts/check-mobile-theme-tokens.sh" $mobile_ui_files
   fi
 fi
 

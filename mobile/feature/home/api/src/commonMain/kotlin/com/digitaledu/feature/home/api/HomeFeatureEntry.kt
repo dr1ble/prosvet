@@ -6,5 +6,7 @@ interface HomeFeatureEntry {
     fun register(
         navGraphBuilder: NavGraphBuilder,
         onLoggedOut: () -> Unit,
+        initialGroupQrToken: String?,
+        onGroupQrTokenConsumed: () -> Unit,
     )
 }

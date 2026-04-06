@@ -75,4 +75,31 @@ def _seed_admin_on_startup() -> None:
         pass
 
 
+def _seed_default_users_on_startup() -> None:
+    """Create default demo users for each role so QA can quickly switch accounts."""
+    demo_users = [
+        # (login, password, role, display_name)
+        ("admin", "admin12345", UserRole.ADMINISTRATOR, "Администратор"),
+        ("methodologist", "method12345", UserRole.METHODOLOGIST, "Методист"),
+        ("moderator", "moder12345", UserRole.MODERATOR, "Модератор"),
+        ("user", "user12345", UserRole.USER, "Пользователь"),
+    ]
+    try:
+        with SessionLocal() as db:
+            repo = AuthRepository(db)
+            for login, password, role, display_name in demo_users:
+                existing = repo.get_user_by_login(login)
+                if existing is None:
+                    repo.create_user(
+                        role=role,
+                        login=login,
+                        password_hash=hash_password(password),
+                        display_name=display_name,
+                    )
+            db.commit()
+    except Exception:
+        pass
+
+
 _seed_admin_on_startup()
+_seed_default_users_on_startup()

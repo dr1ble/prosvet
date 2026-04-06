@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.digitaledu.core.common.toUserMessage
+import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.ui.ObserveEffects
 import com.digitaledu.feature.catalog.api.CatalogEffect
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
@@ -26,12 +28,15 @@ import com.digitaledu.feature.profile.api.ProfileUiEntry
 @Composable
 fun HomeRoute(
     onLoggedOut: () -> Unit,
+    initialGroupQrToken: String?,
+    onGroupQrTokenConsumed: () -> Unit,
     catalogFeatureHost: CatalogFeatureHost,
     playerFeatureHost: PlayerFeatureHost,
     profileFeatureHost: ProfileFeatureHost,
     catalogUiEntry: CatalogUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
+    groupQrRepository: GroupQrRepository,
     modifier: Modifier = Modifier,
 ) {
     val catalogUiState by catalogFeatureHost.uiState.collectAsState()
@@ -39,8 +44,16 @@ fun HomeRoute(
     val profileUiState by profileFeatureHost.uiState.collectAsState()
 
     var selectedTab by remember { mutableStateOf(HomeTab.Courses) }
+    var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
+    var qrHandledToken by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val profileErrorMessage = (profileUiState.status as? ProfileStatus.Error)?.message
+
+    LaunchedEffect(initialGroupQrToken) {
+        if (initialGroupQrToken.isNullOrBlank()) return@LaunchedEffect
+        if (initialGroupQrToken == qrHandledToken) return@LaunchedEffect
+        pendingGroupQrToken = initialGroupQrToken
+    }
 
     LaunchedEffect(catalogUiState.errorMessage, profileErrorMessage) {
         snackbarHostState.showAndDismissIfNeeded(
@@ -70,6 +83,24 @@ fun HomeRoute(
         if (effect is ProfileEffect.LoggedOut) {
             onLoggedOut()
         }
+    }
+
+    LaunchedEffect(pendingGroupQrToken) {
+        val token = pendingGroupQrToken ?: return@LaunchedEffect
+        if (token == qrHandledToken) return@LaunchedEffect
+
+        runCatching {
+            groupQrRepository.resolveGroupQr(token)
+        }.onSuccess { resolution ->
+            catalogFeatureHost.processIntent(CatalogIntent.OpenCourse(resolution.courseSlug))
+            snackbarHostState.showSnackbar("${resolution.groupName}: course opened")
+        }.onFailure { throwable ->
+            snackbarHostState.showSnackbar(throwable.toUserMessage())
+        }
+
+        qrHandledToken = token
+        pendingGroupQrToken = null
+        onGroupQrTokenConsumed()
     }
 
     HomeScreen(

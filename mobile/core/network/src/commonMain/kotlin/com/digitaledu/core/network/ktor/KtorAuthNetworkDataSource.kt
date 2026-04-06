@@ -14,6 +14,19 @@ class KtorAuthNetworkDataSource(
     private val client: HttpClient,
 ) : AuthNetworkDataSource {
 
+    override suspend fun register(fullName: String, login: String, password: String): AuthTokens {
+        return executeCall {
+            postJson<AuthResponse>(
+                path = "api/v1/auth/register",
+                payload = RegisterPayload(
+                    fullName = fullName,
+                    login = login,
+                    password = password,
+                ),
+            ).toAuthTokens()
+        }
+    }
+
     override suspend fun login(login: String, password: String): AuthTokens {
         return executeCall {
             postJson<AuthResponse>(

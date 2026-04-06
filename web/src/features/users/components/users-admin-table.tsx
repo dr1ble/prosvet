@@ -20,6 +20,7 @@ function roleLabel(role: string, language: "ru" | "en"): string {
     administrator: { ru: "Администратор", en: "Administrator" },
     methodologist: { ru: "Методолог", en: "Methodologist" },
     moderator: { ru: "Модератор", en: "Moderator" },
+    assistant: { ru: "Ассистент", en: "Assistant" },
     user: { ru: "Пользователь", en: "User" },
   };
   return language === "ru"
@@ -142,6 +143,9 @@ export function UsersAdminTable({
                           </option>
                           <option value="moderator">
                             {roleLabel("moderator", language)}
+                          </option>
+                          <option value="assistant">
+                            {roleLabel("assistant", language)}
                           </option>
                           <option value="user">
                             {roleLabel("user", language)}

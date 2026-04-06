@@ -17,6 +17,7 @@ class UserRole(str, enum.Enum):
     ADMINISTRATOR = "administrator"
     METHODOLOGIST = "methodologist"
     MODERATOR = "moderator"
+    ASSISTANT = "assistant"
     USER = "user"
 
 

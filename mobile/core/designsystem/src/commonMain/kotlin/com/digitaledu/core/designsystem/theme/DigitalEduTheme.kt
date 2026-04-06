@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 @Composable
 fun DigitalEduTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = colorScheme(darkTheme, dynamicColor)

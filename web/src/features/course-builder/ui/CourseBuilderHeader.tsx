@@ -319,7 +319,7 @@ export function CourseBuilderHeader() {
                   useCourseBuilderStore.getState().openPublishDialog()
                 }
               >
-                Опубликовать
+                На проверку
               </button>
             </div>
           </div>

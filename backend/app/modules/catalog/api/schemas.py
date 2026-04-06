@@ -68,6 +68,8 @@ class CourseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    author_id: UUID | None
+    author_display_name: str | None = None
     slug: str
     title: str
     description: str | None

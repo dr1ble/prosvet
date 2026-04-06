@@ -118,11 +118,33 @@ type CatalogMessages = {
   statusArchived: string;
 };
 
+type ModerationMessages = {
+  moderationTitle: string;
+  pendingReview: string;
+  approved: string;
+  rejected: string;
+  queueEmpty: string;
+  approveAction: string;
+  rejectAction: string;
+  rejectCommentLabel: string;
+  historyTitle: string;
+  noHistory: string;
+  submitForReview: string;
+  resubmitForReview: string;
+  versionLabel: string;
+  courseLabel: string;
+  reviewerLabel: string;
+  dateLabel: string;
+  reasonLabel: string;
+  decisionLabel: string;
+};
+
 export type UiMessages = {
   languageLabel: string;
   home: HomeMessages;
   auth: AuthMessages;
   catalog: CatalogMessages;
+  moderation: ModerationMessages;
   writePanel: WritePanelMessages;
 };
 
@@ -189,6 +211,26 @@ const ru: UiMessages = {
     statusPublished: "опубликован",
     statusActive: "активный",
     statusArchived: "архивный",
+  },
+  moderation: {
+    moderationTitle: "Модерация версий",
+    pendingReview: "На проверке",
+    approved: "Одобрен",
+    rejected: "Отклонён",
+    queueEmpty: "Очередь пуста",
+    approveAction: "Одобрить",
+    rejectAction: "Отклонить",
+    rejectCommentLabel: "Комментарий к отклонению",
+    historyTitle: "История изменений",
+    noHistory: "Нет записей",
+    submitForReview: "Отправить на проверку",
+    resubmitForReview: "Повторно отправить",
+    versionLabel: "Версия",
+    courseLabel: "Курс",
+    reviewerLabel: "Рецензент",
+    dateLabel: "Дата",
+    reasonLabel: "Причина",
+    decisionLabel: "Решение",
   },
   writePanel: {
     title: "Операции редактирования",
@@ -316,6 +358,26 @@ const en: UiMessages = {
     statusPublished: "published",
     statusActive: "active",
     statusArchived: "archived",
+  },
+  moderation: {
+    moderationTitle: "Version Moderation",
+    pendingReview: "Pending Review",
+    approved: "Approved",
+    rejected: "Rejected",
+    queueEmpty: "Queue is empty",
+    approveAction: "Approve",
+    rejectAction: "Reject",
+    rejectCommentLabel: "Rejection Comment",
+    historyTitle: "Change History",
+    noHistory: "No entries",
+    submitForReview: "Submit for Review",
+    resubmitForReview: "Resubmit",
+    versionLabel: "Version",
+    courseLabel: "Course",
+    reviewerLabel: "Reviewer",
+    dateLabel: "Date",
+    reasonLabel: "Reason",
+    decisionLabel: "Decision",
   },
   writePanel: {
     title: "Write Operations",

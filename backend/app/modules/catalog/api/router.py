@@ -5,6 +5,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.modules.catalog.api.schemas import (
@@ -39,8 +41,10 @@ from app.modules.catalog.infra.models import (
     CourseReleaseScreen,
     LessonTask,
 )
+from app.modules.users.models import User, UserRole
 from app.shared.auth.deps import require_policy
 from app.shared.auth.schemas import CurrentActor
+from app.shared.db.deps import get_db
 from app.shared.di.services import CatalogServiceDep
 
 router = APIRouter()
@@ -73,7 +77,7 @@ def _save_course_cover(course_slug: str, filename: str, content_base64: str) -> 
     normalized = course_slug.strip().lower()
     suffix = Path(filename).suffix.lower()
     if suffix not in COVER_MEDIA_TYPES:
-        raise HTTPException(status_code=422, detail="Unsupported cover format.")
+        raise HTTPException(status_code=422, detail="Неподдерживаемый формат обложки.")
 
     covers_dir = _catalog_covers_dir()
     covers_dir.mkdir(parents=True, exist_ok=True)
@@ -86,7 +90,7 @@ def _save_course_cover(course_slug: str, filename: str, content_base64: str) -> 
     destination = covers_dir / f"{normalized}{suffix}"
     content = base64.b64decode(content_base64)
     if not content:
-        raise HTTPException(status_code=422, detail="Cover file is empty.")
+        raise HTTPException(status_code=422, detail="Файл обложки пустой.")
     destination.write_bytes(content)
     return destination
 
@@ -99,13 +103,15 @@ def _delete_course_cover(course_slug: str) -> bool:
     return True
 
 
-def _to_course_out(course: Course, request: Request) -> CourseOut:
+def _to_course_out(course: Course, request: Request, author_display_name: str | None = None) -> CourseOut:
     cover_url = None
     if _resolve_course_cover_path(course.slug) is not None:
         cover_url = str(request.url_for("catalog_course_cover", course_slug=course.slug))
 
     return CourseOut(
         id=course.id,
+        author_id=getattr(course, "author_id", None),
+        author_display_name=author_display_name,
         slug=course.slug,
         title=course.title,
         description=course.description,
@@ -169,23 +175,102 @@ def _to_task_out(task: LessonTask) -> LessonTaskOut:
     )
 
 
+def _ensure_methodologist_course_access(
+    service: CatalogServiceDep,
+    actor: CurrentActor,
+    course_id: UUID,
+) -> None:
+    if actor.role != UserRole.METHODOLOGIST:
+        return
+    course = service.repo.get_course_by_id(course_id)
+    if course is None:
+        raise HTTPException(status_code=404, detail="Курс не найден.")
+    if course.author_id != actor.user_id:
+        raise HTTPException(status_code=403, detail="Недостаточно прав для доступа к курсу.")
+
+
+def _ensure_methodologist_release_access(
+    service: CatalogServiceDep,
+    actor: CurrentActor,
+    release_id: UUID,
+) -> None:
+    if actor.role != UserRole.METHODOLOGIST:
+        return
+    release = service.repo.get_release_by_id(release_id)
+    if release is None:
+        raise HTTPException(status_code=404, detail="Релиз не найден.")
+    course = service.repo.get_course_by_id(release.course_id)
+    if course is None:
+        raise HTTPException(status_code=404, detail="Курс не найден.")
+    if course.author_id != actor.user_id:
+        raise HTTPException(status_code=403, detail="Недостаточно прав для доступа к версии.")
+
+
+def _ensure_methodologist_lesson_access(
+    service: CatalogServiceDep,
+    actor: CurrentActor,
+    lesson_id: UUID,
+) -> None:
+    if actor.role != UserRole.METHODOLOGIST:
+        return
+    lesson = service.repo.get_lesson_by_id(lesson_id)
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Урок не найден.")
+    _ensure_methodologist_course_access(service, actor, lesson.course_id)
+
+
+def _ensure_methodologist_task_access(
+    service: CatalogServiceDep,
+    actor: CurrentActor,
+    task_id: UUID,
+) -> None:
+    if actor.role != UserRole.METHODOLOGIST:
+        return
+    task = service.repo.get_task_by_id(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Задание не найдено.")
+    lesson = service.repo.get_lesson_by_id(task.lesson_id)
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Урок не найден.")
+    _ensure_methodologist_course_access(service, actor, lesson.course_id)
+
+
 @router.get("/courses", response_model=list[CourseOut])
 def list_courses(
     request: Request,
     service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
+    db: Session = Depends(get_db),
     include_drafts: bool = Query(default=False),
     include_archived: bool = Query(default=False),
 ) -> list[CourseOut]:
     query = CourseListQuery(include_drafts=include_drafts, include_archived=include_archived)
-    courses = service.list_courses(query)
-    return [_to_course_out(course, request) for course in courses]
+    author_id_filter: UUID | None = None
+    if actor.role == UserRole.METHODOLOGIST:
+        author_id_filter = actor.user_id
+    courses = service.list_courses(query, author_id=author_id_filter)
+
+    author_ids = {c.author_id for c in courses if c.author_id}
+    author_names: dict[UUID, str] = {}
+    if author_ids:
+        users = db.scalars(select(User).where(User.id.in_(author_ids))).all()
+        author_names = {u.id: u.display_name or u.login or str(u.id) for u in users}
+
+    return [
+        _to_course_out(
+            course,
+            request,
+            author_names.get(course.author_id) if course.author_id is not None else None,
+        )
+        for course in courses
+    ]
 
 
 @router.get("/courses/{course_slug}/cover", include_in_schema=False, name="catalog_course_cover")
 def get_course_cover_file(course_slug: str) -> FileResponse:
     cover_path = _resolve_course_cover_path(course_slug)
     if cover_path is None:
-        raise HTTPException(status_code=404, detail="Course cover not found.")
+        raise HTTPException(status_code=404, detail="Обложка курса не найдена.")
 
     media_type = COVER_MEDIA_TYPES.get(cover_path.suffix.lower(), "application/octet-stream")
     return FileResponse(path=cover_path, media_type=media_type)
@@ -197,11 +282,12 @@ def upload_course_cover(
     request: Request,
     payload: CourseCoverUploadIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
     course = service.repo.get_course_by_id(course_id)
     if course is None:
-        raise HTTPException(status_code=404, detail="Course not found.")
+        raise HTTPException(status_code=404, detail="Курс не найден.")
     _save_course_cover(course.slug, payload.filename, payload.content_base64)
     return _to_course_out(course, request)
 
@@ -211,11 +297,12 @@ def delete_course_cover(
     course_id: UUID,
     request: Request,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
     course = service.repo.get_course_by_id(course_id)
     if course is None:
-        raise HTTPException(status_code=404, detail="Course not found.")
+        raise HTTPException(status_code=404, detail="Курс не найден.")
     _delete_course_cover(course.slug)
     return _to_course_out(course, request)
 
@@ -225,13 +312,20 @@ def create_course(
     request: Request,
     payload: CourseCreateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseOut:
     try:
-        course = service.create_course(payload)
+        course = service.create_course(payload, author_id=actor.user_id)
     except CatalogError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    return _to_course_out(course, request)
+    from app.modules.users.models import User
+
+    author = db.scalar(select(User).where(User.id == actor.user_id))
+    author_name = author.display_name if author else None
+    if not author_name and author:
+        author_name = author.login
+    return _to_course_out(course, request, author_name)
 
 
 @router.patch("/courses/{course_id}", response_model=CourseOut)
@@ -240,8 +334,9 @@ def update_course(
     request: Request,
     payload: CourseUpdateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         course = service.update_course(course_id=course_id, payload=payload)
     except CatalogError as exc:
@@ -253,8 +348,9 @@ def update_course(
 def delete_course(
     course_id: UUID,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> None:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         course = service.repo.get_course_by_id(course_id)
         service.delete_course(course_id=course_id)
@@ -273,8 +369,9 @@ def create_course_release(
     course_id: UUID,
     payload: CourseReleaseCreateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseReleaseOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         release, screens, _ = service.create_release(course_id=course_id, payload=payload)
     except CatalogError as exc:
@@ -289,8 +386,9 @@ def list_course_releases(
     release_status: Literal["draft", "published"] | None = Query(default=None, alias="status"),
     version_query: str | None = Query(default=None, max_length=32),
     limit: int = Query(default=50, ge=1, le=200),
-    _actor: CurrentActor = Depends(require_policy("catalog.releases.read")),
+    actor: CurrentActor = Depends(require_policy("catalog.releases.read")),
 ) -> list[CourseReleaseOut]:
+    _ensure_methodologist_course_access(service, actor, course_id)
     query = ReleaseListQuery(
         status=release_status,
         version_query=version_query,
@@ -328,8 +426,9 @@ def list_course_lessons(
     course_id: UUID,
     service: CatalogServiceDep,
     include_archived: bool = Query(default=False),
-    _actor: CurrentActor = Depends(require_policy("catalog.read")),
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
 ) -> list[CourseLessonOut]:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         lessons = service.list_course_lessons(course_id, include_archived=include_archived)
     except CatalogError as exc:
@@ -346,8 +445,9 @@ def create_course_lesson(
     course_id: UUID,
     payload: CourseLessonCreateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseLessonOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         lesson = service.create_course_lesson(
             course_id=course_id,
@@ -364,8 +464,9 @@ def update_course_lesson(
     lesson_id: UUID,
     payload: CourseLessonUpdateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseLessonOut:
+    _ensure_methodologist_lesson_access(service, actor, lesson_id)
     try:
         lesson = service.update_course_lesson(
             lesson_id=lesson_id,
@@ -382,8 +483,9 @@ def update_course_lesson(
 def archive_course_lesson(
     lesson_id: UUID,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseLessonOut:
+    _ensure_methodologist_lesson_access(service, actor, lesson_id)
     try:
         lesson = service.archive_course_lesson(lesson_id)
     except CatalogError as exc:
@@ -395,8 +497,9 @@ def archive_course_lesson(
 def restore_course_lesson(
     lesson_id: UUID,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseLessonOut:
+    _ensure_methodologist_lesson_access(service, actor, lesson_id)
     try:
         lesson = service.restore_course_lesson(lesson_id)
     except CatalogError as exc:
@@ -412,8 +515,9 @@ def reorder_course_lesson(
     lesson_id: UUID,
     payload: CourseLessonReorderIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> None:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         service.reorder_course_lesson(course_id, lesson_id, payload.order_index)
     except CatalogError as exc:
@@ -424,8 +528,9 @@ def reorder_course_lesson(
 def list_lesson_tasks(
     lesson_id: UUID,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.read")),
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
 ) -> list[LessonTaskOut]:
+    _ensure_methodologist_lesson_access(service, actor, lesson_id)
     try:
         tasks = service.list_lesson_tasks(lesson_id)
     except CatalogError as exc:
@@ -440,8 +545,9 @@ def create_lesson_task(
     lesson_id: UUID,
     payload: LessonTaskCreateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> LessonTaskOut:
+    _ensure_methodologist_lesson_access(service, actor, lesson_id)
     try:
         task = service.create_lesson_task(
             lesson_id=lesson_id,
@@ -460,8 +566,9 @@ def update_lesson_task(
     task_id: UUID,
     payload: LessonTaskUpdateIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> LessonTaskOut:
+    _ensure_methodologist_task_access(service, actor, task_id)
     try:
         task = service.update_lesson_task(
             task_id=task_id,
@@ -478,8 +585,9 @@ def update_lesson_task(
 def archive_lesson_task(
     task_id: UUID,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> None:
+    _ensure_methodologist_task_access(service, actor, task_id)
     try:
         service.archive_lesson_task(task_id)
     except CatalogError as exc:
@@ -492,8 +600,10 @@ def reorder_lesson_task(
     task_id: UUID,
     payload: LessonTaskReorderIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> None:
+    _ensure_methodologist_lesson_access(service, actor, lesson_id)
+    _ensure_methodologist_task_access(service, actor, task_id)
     try:
         service.reorder_lesson_task(lesson_id, task_id, payload.order_index)
     except CatalogError as exc:
@@ -506,8 +616,9 @@ def reorder_lesson_task(
 def duplicate_lesson_task(
     task_id: UUID,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> LessonTaskOut:
+    _ensure_methodologist_task_access(service, actor, task_id)
     try:
         task = service.duplicate_lesson_task(task_id)
     except CatalogError as exc:
@@ -519,8 +630,9 @@ def duplicate_lesson_task(
 def get_course_structure(
     course_id: UUID,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.read")),
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
 ) -> dict[str, Any]:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         return service.get_course_structure(course_id)
     except CatalogError as exc:
@@ -532,8 +644,9 @@ def update_course_structure_bulk(
     course_id: UUID,
     payload: BulkCourseStructureIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> BulkCourseStructureOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         result = service.update_course_structure_bulk(course_id, payload)
         return BulkCourseStructureOut(**result)
@@ -545,8 +658,9 @@ def update_course_structure_bulk(
 def validate_course(
     course_id: UUID,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> dict[str, Any]:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         return service.validate_course(course_id)
     except CatalogError as exc:
@@ -562,8 +676,9 @@ def publish_course(
     course_id: UUID,
     payload: CoursePublishIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseReleaseOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         release = service.publish_course(
             course_id=course_id,
@@ -583,8 +698,9 @@ def rollback_course_release(
     course_id: UUID,
     payload: CourseRollbackIn,
     service: CatalogServiceDep,
-    _actor: CurrentActor = Depends(require_policy("catalog.write")),
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
 ) -> CourseReleaseOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
     try:
         release = service.rollback_course(
             course_id=course_id,
@@ -596,3 +712,48 @@ def rollback_course_release(
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     screens = service.repo.list_release_screens(release.id)
     return _to_release_out(release, screen_count=len(screens))
+
+
+@router.get("/releases/{release_id}/screens", response_model=list[ReleaseScreenOut])
+def get_release_screens(
+    release_id: UUID,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.releases.read")),
+) -> list[ReleaseScreenOut]:
+    _ensure_methodologist_release_access(service, actor, release_id)
+    screens = service.repo.list_release_screens(release_id)
+    if not screens:
+        raise HTTPException(status_code=404, detail="Экраны релиза не найдены.")
+    return [_to_screen_out(screen) for screen in screens]
+
+
+@router.get("/releases/{release_id}/diff")
+def get_release_diff(
+    release_id: UUID,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.releases.read")),
+) -> dict[str, Any]:
+    _ensure_methodologist_release_access(service, actor, release_id)
+    current_screens = service.repo.list_release_screens(release_id)
+    if not current_screens:
+        raise HTTPException(status_code=404, detail="Экраны релиза не найдены.")
+
+    release = service.repo.get_release_by_id(release_id)
+    if release is None:
+        raise HTTPException(status_code=404, detail="Релиз не найден.")
+
+    prev_release = service.repo.get_previous_release(release.course_id, release_id)
+
+    prev_screens: list[dict[str, Any]] = []
+    if prev_release is not None:
+        prev_screens_list = service.repo.list_release_screens(prev_release.id)
+        prev_screens = [_to_screen_out(s).model_dump() for s in prev_screens_list]
+
+    current_screens_out = [_to_screen_out(s).model_dump() for s in current_screens]
+
+    return {
+        "current_version": release.version,
+        "previous_version": prev_release.version if prev_release else None,
+        "current_screens": current_screens_out,
+        "previous_screens": prev_screens,
+    }

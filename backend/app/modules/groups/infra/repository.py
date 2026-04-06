@@ -9,6 +9,7 @@ from app.modules.catalog.infra.models import Course, CourseStatus
 from app.modules.groups.infra.models import (
     GroupCourseAssignment,
     GroupCourseAssignmentTargetUser,
+    GroupJoinQrToken,
     GroupMembership,
     LearningGroup,
 )
@@ -32,6 +33,40 @@ class GroupsRepository:
 
     def get_group_by_name(self, name: str) -> LearningGroup | None:
         stmt = select(LearningGroup).where(func.lower(LearningGroup.name) == name.lower())
+        return self.db.scalar(stmt)
+
+    def create_group_join_qr_token(
+        self,
+        group_id: UUID,
+        created_by_user_id: UUID,
+        token_hash: str,
+        expires_at: datetime,
+    ) -> GroupJoinQrToken:
+        token = GroupJoinQrToken(
+            group_id=group_id,
+            created_by_user_id=created_by_user_id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+        self.db.add(token)
+        self.db.flush()
+        return token
+
+    def delete_group_join_qr_tokens(self, group_id: UUID) -> None:
+        self.db.execute(
+            delete(GroupJoinQrToken).where(GroupJoinQrToken.group_id == group_id)
+        )
+        self.db.flush()
+
+    def get_active_group_join_qr_token(
+        self,
+        token_hash: str,
+        now: datetime,
+    ) -> GroupJoinQrToken | None:
+        stmt = select(GroupJoinQrToken).where(
+            GroupJoinQrToken.token_hash == token_hash,
+            GroupJoinQrToken.expires_at > now,
+        )
         return self.db.scalar(stmt)
 
     def create_group(self, name: str, description: str | None, status: str) -> LearningGroup:
@@ -63,6 +98,24 @@ class GroupsRepository:
             .order_by(GroupMembership.joined_at.asc())
         )
         return list(self.db.scalars(stmt).all())
+
+    def is_user_group_member(self, group_id: UUID, user_id: UUID) -> bool:
+        stmt = (
+            select(GroupMembership.id)
+            .where(
+                GroupMembership.group_id == group_id,
+                GroupMembership.user_id == user_id,
+            )
+            .limit(1)
+        )
+        return self.db.scalar(stmt) is not None
+
+    def add_group_member_if_missing(self, group_id: UUID, user_id: UUID) -> None:
+        if self.is_user_group_member(group_id=group_id, user_id=user_id):
+            return
+
+        self.db.add(GroupMembership(group_id=group_id, user_id=user_id))
+        self.db.flush()
 
     def list_users_by_ids(self, user_ids: Iterable[UUID]) -> list[User]:
         ids = list(user_ids)

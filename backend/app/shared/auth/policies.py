@@ -5,6 +5,7 @@ POLICY_ROLE_MAP: dict[str, set[UserRole]] = {
         UserRole.ADMINISTRATOR,
         UserRole.METHODOLOGIST,
         UserRole.MODERATOR,
+        UserRole.ASSISTANT,
     },
     "catalog.write": {
         UserRole.ADMINISTRATOR,
@@ -23,12 +24,27 @@ POLICY_ROLE_MAP: dict[str, set[UserRole]] = {
     "groups.view": {
         UserRole.ADMINISTRATOR,
         UserRole.MODERATOR,
+        UserRole.ASSISTANT,
     },
     "groups.manage": {
         UserRole.ADMINISTRATOR,
         UserRole.MODERATOR,
+        UserRole.ASSISTANT,
     },
     "progress.view": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
+    "catalog.release.submit_review": {
+        UserRole.ADMINISTRATOR,
+        UserRole.METHODOLOGIST,
+    },
+    "catalog.release.approve": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+    },
+    "moderation.review": {
         UserRole.ADMINISTRATOR,
         UserRole.MODERATOR,
     },

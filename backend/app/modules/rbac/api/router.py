@@ -148,4 +148,4 @@ def delete_policy_rule(
     validate_role(role)
     deleted = _repo(db).delete_rule(policy_key, role)
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy rule not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Правило политики не найдено")

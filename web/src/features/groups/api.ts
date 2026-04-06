@@ -7,6 +7,7 @@ import type {
   GroupAssignmentDto,
   GroupDto,
   GroupMemberDto,
+  GroupQrDto,
   GroupStatus,
   GroupUserOptionDto,
 } from "./types";
@@ -187,4 +188,12 @@ export function updateGroupAssignment(
       body: JSON.stringify(payload),
     },
   );
+}
+
+export function generateGroupQr(groupId: string): Promise<GroupQrDto> {
+  return fetchAdminJson<GroupQrDto>(`/api/admin/groups/${groupId}/qr`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
 }

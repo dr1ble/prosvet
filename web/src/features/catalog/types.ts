@@ -1,8 +1,15 @@
 export type CourseStatus = "draft" | "active" | "archived";
-export type ReleaseStatus = "draft" | "published";
+export type ReleaseStatus =
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "published";
 
 export interface CourseDto {
   id: string;
+  author_id: string | null;
+  author_display_name: string | null;
   slug: string;
   title: string;
   description: string | null;
@@ -152,4 +159,33 @@ export interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
   warnings: ValidationWarning[];
+}
+
+export interface ModerationReviewDto {
+  id: string;
+  release_id: string;
+  reviewer_user_id: string;
+  decision: string;
+  comment: string | null;
+  decided_at: string;
+  created_at: string;
+}
+
+export interface ModerationHistoryDto {
+  id: string;
+  release_id: string;
+  from_status: string;
+  to_status: string;
+  actor_user_id: string;
+  reason: string | null;
+  changed_at: string;
+}
+
+export interface PendingReleaseDto {
+  release_id: string;
+  course_id: string;
+  version: string;
+  status: string;
+  submitted_at: string;
+  author_id: string | null;
 }

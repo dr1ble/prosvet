@@ -135,6 +135,12 @@
   color: var(--text-tertiary, #999);
 }
 
+.errorIndicator {
+  font-size: 11px;
+  color: #e53e3e;
+  font-weight: 600;
+}
+
 .main {
   display: flex;
   flex: 1;

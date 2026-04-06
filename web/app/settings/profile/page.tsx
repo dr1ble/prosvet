@@ -109,12 +109,6 @@ export default async function ProfileSettingsPage({
               label={isRu ? "Выйти" : "Logout"}
               pendingLabel={isRu ? "Выход..." : "Logging out..."}
             />
-            <Link
-              href={`/auth?lang=${language}`}
-              className={styles.actionButton}
-            >
-              {isRu ? "Войти в другой аккаунт" : "Sign in with another account"}
-            </Link>
           </div>
         </section>
       </section>

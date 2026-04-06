@@ -93,7 +93,7 @@ export default async function ProgressPage({
   const [groups, users, courses, rows] = await Promise.all([
     fetchGroups(accessToken),
     fetchGroupUsers(accessToken),
-    fetchCourses(),
+    fetchCourses(accessToken),
     fetchProgressOverview(accessToken, {
       groupId: params.groupId,
       courseId: params.courseId,

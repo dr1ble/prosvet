@@ -233,6 +233,13 @@
   overflow: hidden;
 }
 
+.courseAuthor {
+  margin: 0;
+  font-size: 11px;
+  color: #5f7891;
+  font-weight: 700;
+}
+
 .courseUpdatedAt {
   margin: 0;
   font-size: 11px;

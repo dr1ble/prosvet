@@ -16,7 +16,7 @@ from uuid import uuid4
 import pytest
 
 from app.main import app
-from app.modules.users.models import UserRole
+from app.modules.users.models import User, UserRole, UserStatus
 from app.shared.auth.deps import get_current_actor, require_policy
 from app.shared.auth.schemas import CurrentActor
 from app.shared.db.deps import get_db
@@ -39,8 +39,8 @@ class _RealCatalogServiceStub:
     def list_courses(self, query):
         return self._service.list_courses(query)
 
-    def create_course(self, payload):
-        return self._service.create_course(payload)
+    def create_course(self, payload, author_id=None):
+        return self._service.create_course(payload, author_id=author_id)
 
     def update_course(self, course_id, payload):
         return self._service.update_course(course_id, payload)
@@ -112,9 +112,15 @@ class _RealCatalogServiceStub:
 
 
 @pytest.fixture()
-def admin_actor():
-    """Return an admin CurrentActor."""
-    return CurrentActor(user_id=uuid4(), role=UserRole.ADMINISTRATOR)
+def admin_actor(db_session):
+    user = User(
+        login=f"builder-admin-{uuid4().hex[:8]}",
+        role=UserRole.ADMINISTRATOR,
+        status=UserStatus.ACTIVE,
+    )
+    db_session.add(user)
+    db_session.flush()
+    return CurrentActor(user_id=user.id, role=UserRole.ADMINISTRATOR)
 
 
 @pytest.fixture()

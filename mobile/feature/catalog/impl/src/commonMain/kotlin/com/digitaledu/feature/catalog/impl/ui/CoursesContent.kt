@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
 import com.digitaledu.core.model.catalog.CatalogCourse
 import com.digitaledu.core.ui.CenteredLoadingIndicator
+import com.digitaledu.core.ui.components.UiOpacity
+import com.digitaledu.core.ui.components.UiShapes
+import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.feature.catalog.api.CatalogIntent
 import com.digitaledu.feature.catalog.api.CatalogUiState
 import digital_education_mobile.feature.catalog.impl.generated.resources.Res
@@ -54,8 +57,8 @@ fun CoursesContent(
     if (uiState.courses.isEmpty()) {
         Column(
             modifier = modifier
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = UiSpacing.lg, vertical = UiSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
         ) {
             Text(
                 text = stringResource(Res.string.catalog_empty_title),
@@ -75,9 +78,9 @@ fun CoursesContent(
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(UiSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
         modifier = modifier,
     ) {
         items(
@@ -100,9 +103,9 @@ private fun CourseTile(
     modifier: Modifier = Modifier,
 ) {
     ElevatedCard(
-        shape = RoundedCornerShape(20.dp),
+        shape = UiShapes.cardXl,
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = UiOpacity.strong),
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -147,7 +150,7 @@ private fun CourseTile(
                         brush = Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.75f),
+                                MaterialTheme.colorScheme.scrim.copy(alpha = UiOpacity.scrimOverlay),
                             ),
                         ),
                     ),
@@ -155,13 +158,13 @@ private fun CourseTile(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                    .padding(UiSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
             ) {
                 Text(
                     text = course.title,
                     style = MaterialTheme.typography.titleSmall,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -169,7 +172,7 @@ private fun CourseTile(
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.92f),
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = UiOpacity.textSecondaryOnScrim),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -184,7 +187,7 @@ private fun CoursePreviewPlaceholder(
     course: CatalogCourse,
     modifier: Modifier = Modifier,
 ) {
-    val colors = course.placeholderPalette()
+    val colors = course.placeholderPalette(MaterialTheme.colorScheme)
 
     Box(
         modifier = modifier
@@ -195,10 +198,10 @@ private fun CoursePreviewPlaceholder(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(UiSpacing.md)
                 .background(
-                    color = Color.White.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = UiOpacity.subtle),
+                    shape = UiShapes.cardLg,
                 ),
         )
     }
@@ -225,13 +228,13 @@ private fun CatalogCourse.coverUrlOrNull(): String? {
     }
 }
 
-private fun CatalogCourse.placeholderPalette(): List<Color> {
+private fun CatalogCourse.placeholderPalette(colorScheme: ColorScheme): List<Color> {
     val variants = listOf(
-        listOf(Color(0xFF5D7FA3), Color(0xFF2D3A4A)),
-        listOf(Color(0xFF7C6FA8), Color(0xFF2D2F45)),
-        listOf(Color(0xFF5B9A8B), Color(0xFF26423F)),
-        listOf(Color(0xFF8A7A66), Color(0xFF3F362D)),
-        listOf(Color(0xFF6D7A92), Color(0xFF2A3140)),
+        listOf(colorScheme.primaryContainer, colorScheme.primary),
+        listOf(colorScheme.secondaryContainer, colorScheme.secondary),
+        listOf(colorScheme.tertiaryContainer, colorScheme.tertiary),
+        listOf(colorScheme.surfaceContainerHighest, colorScheme.surfaceContainerLow),
+        listOf(colorScheme.inversePrimary, colorScheme.primaryContainer),
     )
     val key = if (slug.isNotBlank()) slug else id
     val index = abs(key.hashCode()) % variants.size

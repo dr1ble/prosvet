@@ -364,6 +364,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ? "Проверка качества, комментарии и решения по публикации."
           : "Quality review, moderation comments, and publication decisions.",
       requiredPermissions: ["moderation.review", "catalog.release.approve"],
+      href: `/moderation?lang=${language}`,
     },
     {
       id: "groups",
@@ -437,7 +438,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const [coursesCount, groupsCount, usersCount, progressRows] =
     await Promise.all([
       hasCatalogAccess
-        ? fetchCourses()
+        ? fetchCourses(accessToken)
             .then((items) => items.length)
             .catch(() => null)
         : Promise.resolve<number | null>(null),
@@ -469,10 +470,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   ).length;
 
   const profileTitle = language === "ru" ? "Профиль" : "Profile";
-  const switchAccountLabel =
-    language === "ru"
-      ? "Войти в другой аккаунт"
-      : "Sign in with another account";
   const logoutLabel = language === "ru" ? "Выйти" : "Logout";
   const logoutPendingLabel = language === "ru" ? "Выход..." : "Logging out...";
   const profileSettingsLabel =
@@ -603,20 +600,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   >
                     {profileSettingsLabel}
                   </Link>
-                  <div className={styles.profileActionsRow}>
-                    <LogoutActionButton
-                      language={language}
-                      className={styles.profileButton}
-                      label={logoutLabel}
-                      pendingLabel={logoutPendingLabel}
-                    />
-                    <Link
-                      href={`/auth?lang=${language}`}
-                      className={`${styles.profileLink} ${styles.profileLinkMuted}`}
-                    >
-                      {switchAccountLabel}
-                    </Link>
-                  </div>
+                  <LogoutActionButton
+                    language={language}
+                    className={styles.profileButton}
+                    label={logoutLabel}
+                    pendingLabel={logoutPendingLabel}
+                  />
                 </div>
               </details>
             </div>

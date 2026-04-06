@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -21,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.digitaledu.core.ui.components.UiShapes
+import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.model.content.ArticlePayload
 import com.digitaledu.core.model.content.CheatSheetPayload
 import com.digitaledu.core.model.content.QuizPayload
@@ -73,8 +74,8 @@ fun LessonContent(
     if (bundle == null) {
         Column(
             modifier = modifier
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = UiSpacing.lg, vertical = UiSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
         ) {
             Text(
                 text = stringResource(Res.string.lesson_choose_course_title),
@@ -99,20 +100,20 @@ fun LessonContent(
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = UiSpacing.md, vertical = UiSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
     ) {
         // Single unified card with all information
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = UiShapes.cardXl,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(UiSpacing.lg),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
             ) {
                 // Course title
                 Text(
@@ -124,14 +125,14 @@ fun LessonContent(
                 
                 // Progress bar
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
                 ) {
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(100)),
+                            .height(UiSpacing.xs)
+                            .clip(UiShapes.pill),
                     )
                     Text(
                         text = stringResource(
@@ -144,11 +145,11 @@ fun LessonContent(
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(UiSpacing.xxs))
                 
                 // Current screen preview
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
                 ) {
                     Text(
                         text = currentScreen?.title
@@ -172,11 +173,11 @@ fun LessonContent(
         Button(
             onClick = { onIntent(PlayerIntent.EnterFullscreen) },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = UiShapes.cardMd,
         ) {
             Text(
                 text = stringResource(Res.string.lesson_continue_learning),
-                modifier = Modifier.padding(vertical = 4.dp),
+                modifier = Modifier.padding(vertical = UiSpacing.xxs),
             )
         }
 
@@ -184,11 +185,11 @@ fun LessonContent(
         OutlinedButton(
             onClick = { onIntent(PlayerIntent.Close) },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
+            shape = UiShapes.cardMd,
         ) {
             Text(
                 text = stringResource(Res.string.lesson_choose_other_course),
-                modifier = Modifier.padding(vertical = 4.dp),
+                modifier = Modifier.padding(vertical = UiSpacing.xxs),
             )
         }
     }

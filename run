@@ -26,6 +26,9 @@ Environment overrides:
 - KG_MEMORY_SYNC_MODE (default: auto, values: auto|force)
 - KG_MEMORY_FILE (default: .context/operations/kg_memory.jsonl)
 - AUTO_INSTALL_BACKEND_DEPS (default: 1, set 0 to disable auto pip install)
+- AUTO_FIX_BROKEN_DB_SCHEMA (default: 0, set 1 to allow auto-repair flow)
+- ALLOW_DB_SCHEMA_RESET (default: 0, MUST be 1 to allow DROP SCHEMA public)
+- CONFIRM_DB_RESET (required for destructive reset: YES_I_UNDERSTAND_DATA_LOSS)
 USAGE
   exit 0
 fi
@@ -60,7 +63,9 @@ KG_MEMORY_SYNC_MODE="${KG_MEMORY_SYNC_MODE:-auto}"
 KG_MEMORY_FILE="${KG_MEMORY_FILE:-$ROOT_DIR/.context/operations/kg_memory.jsonl}"
 KG_SEED_SCRIPT="$ROOT_DIR/scripts/seed_kg_memory.py"
 AUTO_INSTALL_BACKEND_DEPS="${AUTO_INSTALL_BACKEND_DEPS:-1}"
-AUTO_FIX_BROKEN_DB_SCHEMA="${AUTO_FIX_BROKEN_DB_SCHEMA:-1}"
+AUTO_FIX_BROKEN_DB_SCHEMA="${AUTO_FIX_BROKEN_DB_SCHEMA:-0}"
+ALLOW_DB_SCHEMA_RESET="${ALLOW_DB_SCHEMA_RESET:-0}"
+CONFIRM_DB_RESET="${CONFIRM_DB_RESET:-}"
 HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-60}"
 
 if [[ "$CGC_WATCH_PATH" != /* ]]; then
@@ -80,6 +85,11 @@ mkdir -p "$STATE_DIR"
 install_backend_requirements() {
   echo "[run] Installing backend dependencies from requirements-dev.txt..."
   python3 -m pip install -r "$BACKEND_DIR/requirements-dev.txt"
+}
+
+ensure_docker_daemon() {
+  DOCKER_ENSURE_PREFIX="[run]" DOCKER_STARTUP_TIMEOUT="${DOCKER_STARTUP_TIMEOUT:-90}" \
+    "$ROOT_DIR/scripts/ensure-docker.sh"
 }
 
 require_cmd() {
@@ -313,6 +323,19 @@ PY
 }
 
 reset_db_public_schema() {
+  if [[ "$ALLOW_DB_SCHEMA_RESET" != "1" ]]; then
+    echo "[run] Refusing destructive DB reset (DROP SCHEMA public)."
+    echo "[run] To force reset set ALL THREE variables:"
+    echo "[run]   AUTO_FIX_BROKEN_DB_SCHEMA=1 ALLOW_DB_SCHEMA_RESET=1 CONFIRM_DB_RESET=YES_I_UNDERSTAND_DATA_LOSS ./run"
+    return 1
+  fi
+
+  if [[ "$CONFIRM_DB_RESET" != "YES_I_UNDERSTAND_DATA_LOSS" ]]; then
+    echo "[run] Destructive DB reset requires explicit confirmation."
+    echo "[run] Set CONFIRM_DB_RESET=YES_I_UNDERSTAND_DATA_LOSS to proceed."
+    return 1
+  fi
+
   (
     cd "$BACKEND_DIR"
     PYTHONPATH=. python3 - <<'PY'
@@ -345,8 +368,15 @@ ensure_backend_schema() {
     exit 1
   fi
 
-  echo "[run] Auto-fix enabled: recreating public schema and re-running migrations..."
-  reset_db_public_schema
+  echo "[run] Auto-fix requested for inconsistent schema."
+  echo "[run] WARNING: destructive reset is blocked by default."
+  if ! reset_db_public_schema; then
+    echo "[run] Automatic repair aborted to protect data."
+    echo "[run] Non-destructive options:"
+    echo "[run]   cd backend && python3 -m alembic current"
+    echo "[run]   cd backend && python3 -m alembic upgrade head"
+    exit 1
+  fi
   (cd "$BACKEND_DIR" && python3 -m alembic upgrade head)
 
   if db_has_required_tables >/dev/null 2>&1; then
@@ -379,8 +409,7 @@ wait_for_http_ready() {
   return 1
 }
 
-if ! docker info >/dev/null 2>&1; then
-  echo "[run] Docker daemon is not running. Start Docker Desktop and retry."
+if ! ensure_docker_daemon; then
   exit 1
 fi
 

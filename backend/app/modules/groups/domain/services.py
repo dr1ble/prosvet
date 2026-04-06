@@ -1,7 +1,10 @@
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.modules.groups.api.schemas import (
     GroupAssignmentCreateIn,
     GroupAssignmentUpdateIn,
@@ -15,6 +18,27 @@ from app.modules.groups.domain.errors import GroupsError
 from app.modules.groups.infra.models import GroupStatus, LearningGroup
 from app.modules.groups.infra.repository import GroupsRepository
 from app.modules.users.models import UserStatus
+from app.shared.security.hashing import stable_hash
+from app.shared.security.tokens import generate_token
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+@dataclass(frozen=True)
+class GroupQrIssueResult:
+    group_id: UUID
+    group_name: str
+    deep_link_url: str
+    expires_at: datetime
+
+
+@dataclass(frozen=True)
+class GroupQrResolveResult:
+    group_id: UUID
+    group_name: str
+    course_slug: str
 
 
 class GroupsService:
@@ -193,3 +217,87 @@ class GroupsService:
             target_user_ids = self._validate_active_user_ids(set(payload.target_user_ids))
             self.repo.replace_assignment_target_users(assignment.id, target_user_ids)
         return updated
+
+    def create_group_qr_link(self, group_id: UUID, actor_user_id: UUID) -> GroupQrIssueResult:
+        group = self.repo.get_group_by_id(group_id)
+        if group is None:
+            raise GroupsError("Group not found.", status_code=404)
+        if group.status != GroupStatus.ACTIVE.value:
+            raise GroupsError("QR is available only for active groups.", status_code=409)
+
+        token = generate_token(24)
+        now = _utcnow()
+        expires_at = now + timedelta(hours=max(1, settings.qr_ttl_hours))
+        self.repo.delete_group_join_qr_tokens(group_id=group_id)
+        self.repo.create_group_join_qr_token(
+            group_id=group_id,
+            created_by_user_id=actor_user_id,
+            token_hash=stable_hash(token, settings.security_pepper),
+            expires_at=expires_at,
+        )
+
+        return GroupQrIssueResult(
+            group_id=group.id,
+            group_name=group.name,
+            deep_link_url=f"digitaledu://group/join/{token}",
+            expires_at=expires_at,
+        )
+
+    def resolve_group_qr_link(self, token: str, actor_user_id: UUID) -> GroupQrResolveResult:
+        now = _utcnow()
+        qr_token = self.repo.get_active_group_join_qr_token(
+            token_hash=stable_hash(token, settings.security_pepper),
+            now=now,
+        )
+        if qr_token is None:
+            raise GroupsError("QR token is invalid or expired.", status_code=404)
+
+        group = self.repo.get_group_by_id(qr_token.group_id)
+        if group is None or group.status != GroupStatus.ACTIVE.value:
+            raise GroupsError("Group is unavailable.", status_code=404)
+
+        assignments = self.repo.list_group_assignments(group.id)
+        eligible: list[GroupQrResolveResult] = []
+        for assignment in assignments:
+            if assignment.status not in {"active", "scheduled"}:
+                continue
+            if assignment.starts_at is not None and assignment.starts_at > now:
+                continue
+            if assignment.ends_at is not None and assignment.ends_at <= now:
+                continue
+
+            target_user_ids = set(self.repo.list_assignment_target_user_ids(assignment.id))
+            if target_user_ids and actor_user_id not in target_user_ids:
+                continue
+
+            course = self.repo.get_course_by_id(assignment.course_id)
+            if course is None:
+                continue
+            if not self.repo.is_course_assignable(course):
+                continue
+
+            eligible.append(
+                GroupQrResolveResult(
+                    group_id=group.id,
+                    group_name=group.name,
+                    course_slug=course.slug,
+                )
+            )
+
+        if not eligible:
+            raise GroupsError("No active assignment is available for this group.", status_code=404)
+
+        if len(eligible) > 1:
+            raise GroupsError(
+                "More than one assignment is available. Open a specific assignment manually.",
+                status_code=409,
+            )
+
+        resolved = eligible[0]
+        self.repo.add_group_member_if_missing(group_id=group.id, user_id=actor_user_id)
+
+        return GroupQrResolveResult(
+            group_id=resolved.group_id,
+            group_name=resolved.group_name,
+            course_slug=resolved.course_slug,
+        )

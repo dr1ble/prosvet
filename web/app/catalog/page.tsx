@@ -82,11 +82,33 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const messages = getUiMessages(language);
   const locale = formatLocale(language);
 
+  const releaseStatus = parseReleaseStatus(params.releaseStatus);
+  const releaseVersion = params.releaseVersion?.trim() ?? "";
+  const releaseLimit = parseReleaseLimit(params.releaseLimit);
+  const workspaceTab: CatalogWorkspaceTab = "versions";
+
+  const cookieStore = await cookies();
+  const adminAccessToken = cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ?? "";
+  if (!adminAccessToken) {
+    redirect(refreshRedirectHref);
+  }
+  let profile: Awaited<ReturnType<typeof fetchAdminAuthMeServer>>;
+  try {
+    profile = await fetchAdminAuthMeServer(adminAccessToken);
+  } catch {
+    redirect(refreshRedirectHref);
+  }
+
   let courses: CourseDto[] = [];
   let coursesError: string | null = null;
 
   try {
-    courses = await fetchCourses();
+    courses = await fetchCourses(adminAccessToken);
+    if (profile.role === "methodologist") {
+      courses = courses.filter(
+        (course) => course.author_id === profile.user_id,
+      );
+    }
   } catch (error) {
     coursesError =
       error instanceof Error
@@ -98,22 +120,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     courses.find((course) => course.id === params.courseId) ??
     courses.at(0) ??
     null;
-
-  const releaseStatus = parseReleaseStatus(params.releaseStatus);
-  const releaseVersion = params.releaseVersion?.trim() ?? "";
-  const releaseLimit = parseReleaseLimit(params.releaseLimit);
-  const workspaceTab: CatalogWorkspaceTab = "versions";
-
-  const cookieStore = await cookies();
-  const adminAccessToken = cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ?? "";
-  if (!adminAccessToken) {
-    redirect(refreshRedirectHref);
-  }
-  try {
-    await fetchAdminAuthMeServer(adminAccessToken);
-  } catch {
-    redirect(refreshRedirectHref);
-  }
 
   let releases: CourseReleaseDto[] = [];
   let releaseError: string | null = null;

@@ -1,10 +1,13 @@
 """Integration tests for catalog API endpoints."""
 
 from app.core.config import settings
+from app.modules.users.models import UserRole
+from app.shared.auth.deps import get_current_actor
 
 
-def test_list_courses_public(api_client) -> None:
-    response = api_client.get("/api/v1/catalog/courses")
+def test_list_courses_public(api_client, dependency_overrider, actor_factory) -> None:
+    with dependency_overrider({get_current_actor: lambda: actor_factory(UserRole.ADMINISTRATOR)}):
+        response = api_client.get("/api/v1/catalog/courses")
     assert response.status_code == 200
     payload = response.json()
     assert isinstance(payload, list)
@@ -16,11 +19,12 @@ def test_list_courses_public(api_client) -> None:
         assert "status" in sample
 
 
-def test_list_courses_with_flags(api_client) -> None:
-    response = api_client.get(
-        "/api/v1/catalog/courses",
-        params={"include_drafts": "true", "include_archived": "false"},
-    )
+def test_list_courses_with_flags(api_client, dependency_overrider, actor_factory) -> None:
+    with dependency_overrider({get_current_actor: lambda: actor_factory(UserRole.ADMINISTRATOR)}):
+        response = api_client.get(
+            "/api/v1/catalog/courses",
+            params={"include_drafts": "true", "include_archived": "false"},
+        )
     assert response.status_code == 200
 
 
@@ -50,7 +54,7 @@ def test_get_course_cover_file_returns_404_when_missing(api_client, tmp_path, mo
 
     response = api_client.get("/api/v1/catalog/courses/missing-course/cover")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Course cover not found."
+    assert response.json()["detail"] == "Обложка курса не найдена."
 
 
 def test_get_latest_release_not_found(api_client) -> None:

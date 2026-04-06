@@ -38,6 +38,8 @@ class AuthService:
         if user is None:
             user = self._bootstrap_admin_if_needed(normalized_login, password)
             if user is None:
+                user = self._bootstrap_demo_user_if_needed(normalized_login, password)
+            if user is None:
                 raise AuthError("Invalid credentials.", status_code=401)
         else:
             if user.status != UserStatus.ACTIVE:
@@ -47,6 +49,35 @@ class AuthService:
 
         auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
         return auth_response
+
+    def register(self, full_name: str, login: str, password: str) -> AuthResponse:
+        now = _utcnow()
+        normalized_login = _normalize_login(login)
+        normalized_full_name = full_name.strip()
+
+        if len(normalized_full_name) < 2:
+            raise AuthError("Invalid registration data.", status_code=400)
+        if len(normalized_login) < 3:
+            raise AuthError("Invalid registration data.", status_code=400)
+        if len(password) < 8:
+            raise AuthError("Invalid registration data.", status_code=400)
+
+        existing_user = self.repo.get_user_by_login(normalized_login)
+        if existing_user is not None:
+            raise AuthError("Login is already taken.", status_code=409)
+
+        created_user = self.repo.create_user(
+            role=UserRole.USER,
+            login=normalized_login,
+            password_hash=hash_password(password),
+            display_name=normalized_full_name,
+        )
+
+        return self._issue_session_tokens(
+            user_id=created_user.id,
+            role=created_user.role.value,
+            now=now,
+        )
 
     def activate_qr(self, token: str) -> AuthResponse:
         now = _utcnow()
@@ -140,4 +171,31 @@ class AuthService:
             role=UserRole.ADMINISTRATOR,
             login=admin_login,
             password_hash=hash_password(admin_password),
+        )
+
+    def _bootstrap_demo_user_if_needed(self, login: str, password: str) -> User | None:
+        environment = str(getattr(settings, "environment", "development") or "development").lower()
+        if environment != "development":
+            return None
+
+        demo_users: dict[str, tuple[UserRole, str, str]] = {
+            "methodologist": (UserRole.METHODOLOGIST, "method12345", "Методист"),
+            "methodist": (UserRole.METHODOLOGIST, "method12345", "Методист"),
+            "moderator": (UserRole.MODERATOR, "moder12345", "Модератор"),
+            "user": (UserRole.USER, "user12345", "Пользователь"),
+        }
+
+        demo_user = demo_users.get(login)
+        if demo_user is None:
+            return None
+
+        role, expected_password, display_name = demo_user
+        if password != expected_password:
+            return None
+
+        return self.repo.create_user(
+            role=role,
+            login=login,
+            password_hash=hash_password(expected_password),
+            display_name=display_name,
         )

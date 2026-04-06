@@ -1,6 +1,5 @@
 package com.digitaledu.feature.player.impl.ui.player.components
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.digitaledu.core.model.content.ArticlePayload
@@ -97,10 +95,8 @@ fun ArticleStory(
             
             Text(
                 text = payload.markdownContent,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4
-                ),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

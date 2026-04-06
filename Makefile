@@ -1,6 +1,12 @@
-.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check kg-sync kg-sync-force init-test-db builder-mocks builder-mocks-clean builder-mocks-reset progress-mocks progress-mocks-clean progress-mocks-reset literacy-demo-seed literacy-demo-clean literacy-demo-reset literacy-demo-realistic-seed literacy-demo-realistic-reset
+.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check mobile-theme-guard kg-sync kg-sync-force init-test-db builder-mocks builder-mocks-clean builder-mocks-reset progress-mocks progress-mocks-clean progress-mocks-reset literacy-demo-seed literacy-demo-clean literacy-demo-reset literacy-demo-realistic-seed literacy-demo-realistic-reset
 PROJECT_ROOT := $(CURDIR)
 MOCK_DB_URL ?= postgresql+psycopg://app:app@127.0.0.1:5432/app
+
+# Safety guard for destructive seed reset targets.
+# Usage:
+#   ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make builder-mocks-reset
+ALLOW_DATA_RESET ?= 0
+CONFIRM_DATA_RESET ?=
 
 up:
 	docker compose up -d --build
@@ -31,6 +37,7 @@ dev-logs:
 
 doctor:
 	@echo "== local stack doctor =="
+	@DOCKER_ENSURE_PREFIX='[doctor]' DOCKER_STARTUP_TIMEOUT=$${DOCKER_STARTUP_TIMEOUT:-90} ./scripts/ensure-docker.sh
 	@echo "[1/5] postgres container"
 	@docker compose ps postgres || true
 	@echo ""
@@ -53,16 +60,13 @@ builder-mocks-clean:
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/course_builder_mocks.py cleanup
 
 builder-mocks-reset:
+	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make builder-mocks-reset"; exit 1; fi
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/course_builder_mocks.py reset
 
-progress-mocks:
-	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/progress_mocks.py seed
-
-progress-mocks-clean:
-	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/progress_mocks.py cleanup
-
 progress-mocks-reset:
+	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make progress-mocks-reset"; exit 1; fi
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/progress_mocks.py reset
+
 
 literacy-demo-seed:
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/digital_literacy_demo_seed.py seed
@@ -71,12 +75,14 @@ literacy-demo-clean:
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/digital_literacy_demo_seed.py cleanup
 
 literacy-demo-reset:
+	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make literacy-demo-reset"; exit 1; fi
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/digital_literacy_demo_seed.py reset
 
 literacy-demo-realistic-seed:
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/digital_literacy_demo_seed.py seed --profile realistic
 
 literacy-demo-realistic-reset:
+	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make literacy-demo-realistic-reset"; exit 1; fi
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/digital_literacy_demo_seed.py reset --profile realistic
 
 install-hooks:
@@ -90,6 +96,9 @@ deps-check:
 	@python3 -m pip install --dry-run --upgrade -r backend/requirements-dev.txt || true
 	@echo ""
 	@echo "== mobile: managed by Dependabot (gradle) + manual Gradle checks =="
+
+mobile-theme-guard:
+	@./scripts/check-mobile-theme-tokens.sh $$(git ls-files 'mobile/**/*.kt')
 
 kg-sync:
 	@python3 scripts/seed_kg_memory.py --project-root "$(PROJECT_ROOT)" --memory-file .context/operations/kg_memory.jsonl --replace

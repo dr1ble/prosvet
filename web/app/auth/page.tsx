@@ -1,7 +1,6 @@
 import { AuthForm } from "@/features/auth/components/auth-form";
 import { resolveLanguage } from "@/shared/i18n/lang";
 import { getUiMessages } from "@/shared/i18n/messages";
-import { LanguageSwitch } from "@/shared/ui/language-switch";
 
 import styles from "./auth.module.css";
 
@@ -23,14 +22,6 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
         <div className={`${styles.blob} ${styles.blobAccent}`} />
         <div className={styles.grid} />
       </div>
-      <section className={styles.topBar}>
-        <LanguageSwitch
-          currentLanguage={language}
-          ruHref="/auth?lang=ru"
-          enHref="/auth?lang=en"
-          label={messages.languageLabel}
-        />
-      </section>
 
       <section className={styles.formShell}>
         <section className={styles.card}>

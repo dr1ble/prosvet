@@ -2,11 +2,13 @@ export type KnownRole =
   | "administrator"
   | "methodologist"
   | "moderator"
+  | "assistant"
   | "user";
 export const KNOWN_ROLES: KnownRole[] = [
   "administrator",
   "methodologist",
   "moderator",
+  "assistant",
   "user",
 ];
 
@@ -49,5 +51,6 @@ export const ROLE_LABELS: Record<KnownRole, { ru: string; en: string }> = {
   administrator: { ru: "Администратор", en: "Administrator" },
   methodologist: { ru: "Методист", en: "Methodologist" },
   moderator: { ru: "Модератор", en: "Moderator" },
+  assistant: { ru: "Ассистент", en: "Assistant" },
   user: { ru: "Пользователь", en: "User" },
 };

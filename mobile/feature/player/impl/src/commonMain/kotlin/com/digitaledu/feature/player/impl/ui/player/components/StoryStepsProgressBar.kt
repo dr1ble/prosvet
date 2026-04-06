@@ -7,14 +7,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.digitaledu.core.ui.components.UiOpacity
+import com.digitaledu.core.ui.components.UiShapes
+import com.digitaledu.core.ui.components.UiSpacing
 
 /**
  * Segmented progress bar resembling Instagram Stories.
@@ -32,10 +33,10 @@ fun StoryStepsProgressBar(
     stepsCount: Int,
     currentStep: Int,
     modifier: Modifier = Modifier,
-    spacing: Dp = 4.dp,
-    stepHeight: Dp = 4.dp,
+    spacing: Dp = UiSpacing.xxs,
+    stepHeight: Dp = UiSpacing.xxs,
     activeColor: Color = MaterialTheme.colorScheme.onSurface,
-    inactiveColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+    inactiveColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = UiOpacity.medium)
 ) {
     Row(
         modifier = modifier
@@ -48,12 +49,12 @@ fun StoryStepsProgressBar(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(stepHeight / 2)) // Pill shape
+                    .clip(UiShapes.pill)
                     .background(
                         when {
-                            index < currentStep -> activeColor // Completed
-                            index == currentStep -> activeColor // Current (Active)
-                            else -> inactiveColor // Future
+                            index < currentStep -> activeColor
+                            index == currentStep -> activeColor
+                            else -> inactiveColor
                         }
                     )
             )

@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -35,6 +34,9 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
+import com.digitaledu.core.ui.components.UiOpacity
+import com.digitaledu.core.ui.components.UiShapes
+import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.model.content.Hotspot
 import com.digitaledu.core.model.content.SimulationPayload
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
@@ -182,12 +184,12 @@ private fun HotspotOverlay(
                 width = with(density) { widthPx.toDp() },
                 height = with(density) { heightPx.toDp() },
             )
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.Blue.copy(alpha = 0.2f))
+            .clip(UiShapes.cardSm)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = UiOpacity.medium))
             .border(
                 width = 2.dp,
-                color = Color.Blue.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = UiOpacity.strong),
+                shape = UiShapes.cardSm,
             )
             .clickable(
                 onClick = onClick,
@@ -200,14 +202,15 @@ private fun HotspotOverlay(
         if (hotspot.label.isNotBlank()) {
             Text(
                 text = hotspot.label,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier
                     .background(
-                        color = Color.Black.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.scrim.copy(alpha = UiOpacity.strong),
+                        shape = UiShapes.chip,
                     )
-                    .clip(RoundedCornerShape(4.dp)),
+                    .clip(UiShapes.chip)
+                    .padding(horizontal = UiSpacing.xs, vertical = UiSpacing.xxs),
             )
         }
     }

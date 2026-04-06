@@ -10,6 +10,16 @@ class NetworkAuthRepository(
     private val networkDataSource: AuthNetworkDataSource,
     private val authSessionStore: AuthSessionStore,
 ) : AuthRepository {
+    override suspend fun register(fullName: String, login: String, password: String): AuthTokens {
+        val tokens = networkDataSource.register(
+            fullName = fullName,
+            login = login,
+            password = password,
+        )
+        authSessionStore.update(tokens)
+        return tokens
+    }
+
     override suspend fun login(login: String, password: String): AuthTokens {
         val tokens = networkDataSource.login(
             login = login,

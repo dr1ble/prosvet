@@ -261,7 +261,7 @@ export function PublishDialog({
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2>Публикация курса</h2>
+          <h2>Отправить на проверку</h2>
           <button className={styles.closeBtn} onClick={onClose}>
             Закрыть
           </button>
@@ -410,7 +410,7 @@ export function PublishDialog({
             disabled={!canPublish || publishing}
             onClick={handlePublish}
           >
-            {publishing ? "Публикация..." : "Опубликовать"}
+            {publishing ? "Отправка..." : "Отправить на проверку"}
           </button>
         </div>
       </div>

@@ -21,8 +21,15 @@ class CatalogRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list_courses(self, include_drafts: bool, include_archived: bool) -> list[Course]:
+    def list_courses(
+        self,
+        include_drafts: bool,
+        include_archived: bool,
+        author_id: UUID | None = None,
+    ) -> list[Course]:
         stmt = select(Course)
+        if author_id is not None:
+            stmt = stmt.where(Course.author_id == author_id)
         if not include_drafts:
             stmt = stmt.where(Course.status != CourseStatus.DRAFT.value)
         if not include_archived:
@@ -38,8 +45,14 @@ class CatalogRepository:
         stmt = select(Course).where(Course.slug == slug)
         return self.db.scalar(stmt)
 
-    def create_course(self, slug: str, title: str, description: str | None, status: str) -> Course:
-        course = Course(slug=slug, title=title, description=description, status=status)
+    def create_course(
+        self, slug: str, title: str, description: str | None, status: str,
+        author_id: UUID | None = None,
+    ) -> Course:
+        course = Course(
+            slug=slug, title=title, description=description, status=status,
+            author_id=author_id,
+        )
         self.db.add(course)
         self.db.flush()
         return course
@@ -131,6 +144,21 @@ class CatalogRepository:
                 CourseRelease.status == ReleaseStatus.PUBLISHED.value,
             )
             .order_by(desc(CourseRelease.published_at).nulls_last(), desc(CourseRelease.created_at))
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
+
+    def get_previous_release(self, course_id: UUID, exclude_id: UUID) -> CourseRelease | None:
+        stmt = (
+            select(CourseRelease)
+            .where(
+                CourseRelease.course_id == course_id,
+                CourseRelease.id != exclude_id,
+                CourseRelease.status.in_(
+                    [ReleaseStatus.PUBLISHED.value, ReleaseStatus.PENDING_REVIEW.value]
+                ),
+            )
+            .order_by(desc(CourseRelease.created_at))
             .limit(1)
         )
         return self.db.scalar(stmt)

@@ -42,12 +42,14 @@ class AuthRepository:
         role: UserRole = UserRole.USER,
         login: str | None = None,
         password_hash: str | None = None,
+        display_name: str | None = None,
     ) -> User:
         user = User(
             role=role,
             status=UserStatus.ACTIVE,
             login=login,
             password_hash=password_hash,
+            display_name=display_name,
         )
         self.db.add(user)
         self.db.flush()

@@ -119,3 +119,16 @@ class GroupAssignmentOut(_BaseSchema):
     target_users_count: int = 0
     created_at: datetime
     updated_at: datetime
+
+
+class GroupQrCodeOut(_BaseSchema):
+    group_id: UUID
+    group_name: str
+    deep_link_url: str
+    expires_at: datetime
+
+
+class GroupQrResolveOut(_BaseSchema):
+    group_id: UUID
+    group_name: str
+    course_slug: str

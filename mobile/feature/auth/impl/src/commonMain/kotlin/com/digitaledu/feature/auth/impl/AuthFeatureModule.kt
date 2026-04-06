@@ -12,4 +12,11 @@ fun authFeatureModule(): Module = module {
             authRepository = get(),
         )
     }
+
+    factory {
+        RegistrationViewModel(
+            authRepository = get(),
+        )
+    }
+    factory { RecoveryViewModel() }
 }
