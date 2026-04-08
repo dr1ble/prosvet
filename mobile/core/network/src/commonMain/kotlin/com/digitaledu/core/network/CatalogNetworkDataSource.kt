@@ -6,13 +6,14 @@ import com.digitaledu.core.model.reference.LessonReference
 
 interface CatalogNetworkDataSource {
     suspend fun listCourses(
+        accessToken: String,
         includeDrafts: Boolean = false,
         includeArchived: Boolean = false,
     ): List<CatalogCourse>
 
-    suspend fun getLatestCourseBundle(courseSlug: String): CatalogBundle
+    suspend fun getLatestCourseBundle(courseSlug: String, accessToken: String): CatalogBundle
 
-    suspend fun getLessonReference(referenceId: String): LessonReference
+    suspend fun getLessonReference(referenceId: String, accessToken: String): LessonReference
     
-    suspend fun getLessonReferencesByLesson(lessonId: String): List<LessonReference>
+    suspend fun getLessonReferencesByLesson(lessonId: String, accessToken: String): List<LessonReference>
 }

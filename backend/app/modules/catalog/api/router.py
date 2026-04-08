@@ -245,10 +245,7 @@ def list_courses(
     include_archived: bool = Query(default=False),
 ) -> list[CourseOut]:
     query = CourseListQuery(include_drafts=include_drafts, include_archived=include_archived)
-    author_id_filter: UUID | None = None
-    if actor.role == UserRole.METHODOLOGIST:
-        author_id_filter = actor.user_id
-    courses = service.list_courses(query, author_id=author_id_filter)
+    courses = service.list_courses(query)
 
     author_ids = {c.author_id for c in courses if c.author_id}
     author_names: dict[UUID, str] = {}

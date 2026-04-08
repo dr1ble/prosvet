@@ -9,30 +9,39 @@ import com.digitaledu.core.network.CatalogNetworkDataSource
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.request.headers
 import io.ktor.client.request.parameter
 import io.ktor.client.request.url
+import io.ktor.http.HttpHeaders
 
 class KtorCatalogNetworkDataSource(
     private val client: HttpClient,
 ) : CatalogNetworkDataSource {
 
     override suspend fun listCourses(
+        accessToken: String,
         includeDrafts: Boolean,
         includeArchived: Boolean,
     ): List<CatalogCourse> {
         return executeCall {
             client.get {
                 url("api/v1/catalog/courses")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
                 parameter("include_drafts", includeDrafts)
                 parameter("include_archived", includeArchived)
             }.body<List<CourseResponse>>().map(CourseResponse::toCatalogCourse)
         }
     }
 
-    override suspend fun getLatestCourseBundle(courseSlug: String): CatalogBundle {
+    override suspend fun getLatestCourseBundle(courseSlug: String, accessToken: String): CatalogBundle {
         return executeCall {
             val response = client.get {
                 url("api/v1/catalog/courses/$courseSlug/releases/latest")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
             }.body<CourseBundleResponse>()
             
             CatalogBundle(
@@ -45,18 +54,27 @@ class KtorCatalogNetworkDataSource(
         }
     }
 
-    override suspend fun getLessonReference(referenceId: String): LessonReference {
+    override suspend fun getLessonReference(referenceId: String, accessToken: String): LessonReference {
         return executeCall {
             client.get {
                 url("api/v1/catalog/references/$referenceId")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
             }.body()
         }
     }
 
-    override suspend fun getLessonReferencesByLesson(lessonId: String): List<LessonReference> {
+    override suspend fun getLessonReferencesByLesson(
+        lessonId: String,
+        accessToken: String,
+    ): List<LessonReference> {
         return executeCall {
             client.get {
                 url("api/v1/catalog/courses/lessons/$lessonId/references")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
             }.body()
         }
     }

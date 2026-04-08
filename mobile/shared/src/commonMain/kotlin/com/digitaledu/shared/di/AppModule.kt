@@ -54,6 +54,6 @@ fun createMobileAppModule(
     single<AuthSessionStore> { authSessionStore ?: InMemoryAuthSessionStore() }
 
     single<AuthRepository> { NetworkAuthRepository(get(), get()) }
-    single<CatalogRepository> { NetworkCatalogRepository(get()) }
+    single<CatalogRepository> { NetworkCatalogRepository(get(), get()) }
     single<GroupQrRepository> { NetworkGroupQrRepository(get(), get()) }
 }
