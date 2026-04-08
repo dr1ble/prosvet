@@ -108,6 +108,8 @@ class ProgressRepository:
         self,
         course_ids: set[UUID],
         user_ids: set[UUID],
+        completed_from: datetime | None = None,
+        completed_to: datetime | None = None,
     ) -> dict[tuple[UUID, UUID], int]:
         if not course_ids or not user_ids:
             return {}
@@ -121,6 +123,10 @@ class ProgressRepository:
             )
             .group_by(CourseLesson.course_id, LessonProgress.user_id)
         )
+        if completed_from is not None:
+            stmt = stmt.where(LessonProgress.completed_at >= completed_from)
+        if completed_to is not None:
+            stmt = stmt.where(LessonProgress.completed_at <= completed_to)
         rows = self.db.execute(stmt).all()
         return {(course_id, user_id): int(count) for course_id, user_id, count in rows}
 

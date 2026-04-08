@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -17,7 +19,16 @@ class ProgressService:
         group_id: UUID | None,
         course_id: UUID | None,
         user_id: UUID | None,
+        period: Literal["all", "7d", "14d", "30d", "90d", "custom"] = "all",
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
     ) -> list[ProgressOverviewRowOut]:
+        completed_from, completed_to = self._resolve_time_window(
+            period=period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+
         assignments = self.repo.list_assignments(group_id=group_id, course_id=course_id)
         assignment_targets = self.repo.get_assignment_targets(assignments)
 
@@ -38,7 +49,10 @@ class ProgressService:
 
         total_lessons_map = self.repo.get_course_lessons_count(course_ids)
         completed_map = self.repo.get_completed_lessons_count(
-            course_ids=course_ids, user_ids=user_ids
+            course_ids=course_ids,
+            user_ids=user_ids,
+            completed_from=completed_from,
+            completed_to=completed_to,
         )
 
         rows: list[ProgressOverviewRowOut] = []
@@ -89,6 +103,35 @@ class ProgressService:
             )
         )
         return rows
+
+    def _resolve_time_window(
+        self,
+        *,
+        period: Literal["all", "7d", "14d", "30d", "90d", "custom"],
+        date_from: datetime | None,
+        date_to: datetime | None,
+    ) -> tuple[datetime | None, datetime | None]:
+        if period == "all":
+            return None, None
+
+        now = datetime.now(timezone.utc)
+        rolling_days: dict[str, int] = {
+            "7d": 7,
+            "14d": 14,
+            "30d": 30,
+            "90d": 90,
+        }
+        if period in rolling_days:
+            return now - timedelta(days=rolling_days[period]), now
+
+        if date_from is None or date_to is None:
+            raise ProgressError(
+                "date_from and date_to are required when period=custom.",
+                status_code=422,
+            )
+        if date_from > date_to:
+            raise ProgressError("date_from must be less than or equal to date_to.", status_code=422)
+        return date_from, date_to
 
     def upsert_lesson_progress(self, user_id: UUID, lesson_id: UUID, status: str):
         if status not in {"in_progress", "completed"}:

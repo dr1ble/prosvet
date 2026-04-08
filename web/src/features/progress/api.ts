@@ -9,12 +9,18 @@ export async function fetchProgressOverview(
     groupId?: string;
     courseId?: string;
     userId?: string;
+    period?: "all" | "7d" | "14d" | "30d" | "90d" | "custom";
+    dateFrom?: string;
+    dateTo?: string;
   },
 ): Promise<ProgressOverviewRowDto[]> {
   const params = new URLSearchParams();
   if (filters.groupId) params.set("group_id", filters.groupId);
   if (filters.courseId) params.set("course_id", filters.courseId);
   if (filters.userId) params.set("user_id", filters.userId);
+  if (filters.period) params.set("period", filters.period);
+  if (filters.dateFrom) params.set("date_from", filters.dateFrom);
+  if (filters.dateTo) params.set("date_to", filters.dateTo);
 
   const path = params.toString()
     ? `/progress/overview?${params.toString()}`

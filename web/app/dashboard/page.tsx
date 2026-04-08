@@ -22,17 +22,36 @@ type HomePageProps = {
   searchParams: Promise<{
     lang?: string;
     modal?: string;
+    period?: string;
   }>;
 };
+
+type DashboardPeriod = "all" | "7d" | "14d" | "30d" | "90d";
+
+const DASHBOARD_PERIODS: readonly DashboardPeriod[] = [
+  "7d",
+  "14d",
+  "30d",
+  "90d",
+  "all",
+];
+
+function resolveDashboardPeriod(value?: string): DashboardPeriod {
+  if (!value) {
+    return "7d";
+  }
+  return DASHBOARD_PERIODS.includes(value as DashboardPeriod)
+    ? (value as DashboardPeriod)
+    : "7d";
+}
 
 type DashboardTile = {
   id: string;
   title: string;
   description: string;
-  href?: string;
+  href: string;
   requiredPermissions: string[];
 };
-
 function TileIcon({ id, className }: { id: string; className?: string }) {
   if (id === "catalog") {
     return (
@@ -302,12 +321,60 @@ function metricValue(value: number | null): string {
   return String(value);
 }
 
+function buildProgressSeriesPoints(
+  rows: { completion_rate: number }[],
+  options: { baselinePercent: number },
+): string {
+  const { baselinePercent } = options;
+  const width = 560;
+  const height = 180;
+  const bottomPadding = 20;
+  const topPadding = 20;
+  const usableHeight = height - bottomPadding - topPadding;
+
+  const values =
+    rows.length > 0
+      ? rows
+          .slice(0, 10)
+          .map((item) => Math.max(0, Math.min(100, item.completion_rate * 100)))
+      : [baselinePercent];
+
+  if (values.length === 1) {
+    const y = topPadding + ((100 - values[0]) / 100) * usableHeight;
+    return `0,${y.toFixed(1)} ${width},${y.toFixed(1)}`;
+  }
+
+  return values
+    .map((value, index) => {
+      const x = (index / (values.length - 1)) * width;
+      const y = topPadding + ((100 - value) / 100) * usableHeight;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const language = resolveLanguage(params.lang);
+  const period = resolveDashboardPeriod(params.period);
   const messages = getUiMessages(language);
+
+  const withDashboardState = (basePath: string): string => {
+    const [path, query = ""] = basePath.split("?");
+    const qs = new URLSearchParams(query);
+    qs.set("period", period);
+    return `${path}?${qs.toString()}`;
+  };
+
+  const periodLabelByValue: Record<DashboardPeriod, string> = {
+    all: language === "ru" ? "За всё время" : "All time",
+    "7d": language === "ru" ? "За 7 дней" : "Last 7 days",
+    "14d": language === "ru" ? "За 14 дней" : "Last 14 days",
+    "30d": language === "ru" ? "За 30 дней" : "Last 30 days",
+    "90d": language === "ru" ? "За 90 дней" : "Last 90 days",
+  };
   const refreshRedirectHref = buildRefreshRedirectHref(
-    `/dashboard?lang=${language}`,
+    withDashboardState(`/dashboard?lang=${language}`),
     language,
   );
   const cookieStore = await cookies();
@@ -323,13 +390,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     redirect(refreshRedirectHref);
   }
 
-  const comingSoonLabel = language === "ru" ? "Скоро" : "Soon";
   const dashboardBlockTitle = language === "ru" ? "Дашборд" : "Dashboard";
   const greetingTitle =
     language === "ru"
       ? `Доброе утро, ${profile.display_name ?? "коллега"}`
       : `Good morning, ${profile.display_name ?? "there"}`;
-  const periodLabel = language === "ru" ? "За 7 дней" : "Last 7 days";
+  const periodLabel = periodLabelByValue[period];
+  const periodSelectorLabel = language === "ru" ? "Период" : "Period";
   const chartTitle = language === "ru" ? "Пульс обучения" : "Learning pulse";
   const completionLabel = language === "ru" ? "Завершение" : "Completion";
   const engagementLabel = language === "ru" ? "Активность" : "Engagement";
@@ -342,17 +409,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const isSettingsModalOpen = params.modal === "settings";
   const isProfileModalOpen = params.modal === "profile";
   const isAnyModalOpen = isSettingsModalOpen || isProfileModalOpen;
-  const closeModalHref = `/dashboard?lang=${language}`;
+  const closeModalHref = withDashboardState(`/dashboard?lang=${language}`);
 
   const settingsTitle = language === "ru" ? "Настройки" : "Settings";
   const profileSettingsTitle =
     language === "ru" ? "Настройки профиля" : "Profile settings";
   const interfaceLanguageTitle =
     language === "ru" ? "Язык интерфейса" : "Interface language";
+  const workspaceSectionTitle =
+    language === "ru" ? "Рабочее пространство" : "Workspace";
   const currentLabel = language === "ru" ? "Сейчас выбран" : "Current";
 
-  const catalogHref = `/catalog?lang=${language}`;
-  const simulationHref = `/simulation-v2?lang=${language}`;
+  const catalogHref = withDashboardState(`/catalog?lang=${language}`);
+  const simulationHref = withDashboardState(`/simulation-v2?lang=${language}`);
   const tiles: DashboardTile[] = [
     {
       id: "catalog",
@@ -383,7 +452,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           ? "Проверка качества, комментарии и решения по публикации."
           : "Quality review, moderation comments, and publication decisions.",
       requiredPermissions: ["moderation.review", "catalog.release.approve"],
-      href: `/moderation?lang=${language}`,
+      href: withDashboardState(`/moderation?lang=${language}`),
     },
     {
       id: "groups",
@@ -393,7 +462,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         language === "ru"
           ? "Управление учебными группами и назначением курсов."
           : "Manage learning groups and assign courses.",
-      href: `/groups?lang=${language}`,
+      href: withDashboardState(`/groups?lang=${language}`),
       requiredPermissions: ["groups.manage"],
     },
     {
@@ -403,7 +472,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         language === "ru"
           ? "Роли, разрешения и доступ к административным действиям."
           : "Roles, permissions, and access control for admin actions.",
-      href: `/users?lang=${language}`,
+      href: withDashboardState(`/users?lang=${language}`),
       requiredPermissions: ["users.manage", "rbac.manage"],
     },
     {
@@ -413,7 +482,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         language === "ru"
           ? "Поиск по курсам, пользователям и учебным группам."
           : "Search across courses, users, and learning groups.",
-      href: `/search?lang=${language}`,
+      href: withDashboardState(`/search?lang=${language}`),
       requiredPermissions: ["search.view"],
     },
     {
@@ -423,7 +492,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         language === "ru"
           ? "Обзор прогресса обучения по пользователям, группам и курсам."
           : "Operational completion overview by users, groups, and courses.",
-      href: `/progress?lang=${language}`,
+      href: withDashboardState(`/progress?lang=${language}`),
       requiredPermissions: ["progress.view"],
     },
     {
@@ -431,9 +500,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       title: language === "ru" ? "Настройки" : "Settings",
       description:
         language === "ru"
-          ? "Язык интерфейса и параметры рабочего пространства."
-          : "Interface language and workspace preferences.",
-      href: `/dashboard?lang=${language}&modal=settings`,
+          ? "Язык интерфейса и быстрый доступ к ключевым разделам."
+          : "Interface language and quick access to core sections.",
+      href: withDashboardState(`/dashboard?lang=${language}&modal=settings`),
       requiredPermissions: ["dashboard.view"],
     },
     {
@@ -443,14 +512,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         language === "ru"
           ? "Настройка ролей и политик доступа к функциям системы."
           : "Configure roles and access policies for system features.",
-      href: `/rbac?lang=${language}`,
+      href: withDashboardState(`/rbac?lang=${language}`),
       requiredPermissions: ["rbac.manage"],
     },
   ];
   const visibleTiles = tiles.filter((tile) =>
     hasAnyPermission(profile.permissions, tile.requiredPermissions),
   );
-  const actionableTiles = visibleTiles.filter((tile) => Boolean(tile.href));
+  const workspaceTiles = visibleTiles.filter((tile) => tile.id !== "settings");
+  const actionableTiles = visibleTiles;
   const accessCoverage =
     tiles.length > 0
       ? Math.round((visibleTiles.length / tiles.length) * 100)
@@ -464,27 +534,40 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const hasGroupsAccess = profile.permissions.includes("groups.view");
   const hasProgressAccess = profile.permissions.includes("progress.view");
 
-  const [coursesCount, groupsCount, usersCount, progressRows] =
+  const [coursesMetric, groupsMetric, usersMetric, progressMetric] =
     await Promise.all([
       hasCatalogAccess
         ? fetchCourses(accessToken)
-            .then((items) => items.length)
-            .catch(() => null)
-        : Promise.resolve<number | null>(null),
+            .then((items) => ({ value: items.length, failed: false }))
+            .catch(() => ({ value: null as number | null, failed: true }))
+        : Promise.resolve({ value: null as number | null, failed: false }),
       hasGroupsAccess
         ? fetchGroups(accessToken)
-            .then((items) => items.length)
-            .catch(() => null)
-        : Promise.resolve<number | null>(null),
+            .then((items) => ({ value: items.length, failed: false }))
+            .catch(() => ({ value: null as number | null, failed: true }))
+        : Promise.resolve({ value: null as number | null, failed: false }),
       hasGroupsAccess
         ? fetchGroupUsers(accessToken)
-            .then((items) => items.length)
-            .catch(() => null)
-        : Promise.resolve<number | null>(null),
+            .then((items) => ({ value: items.length, failed: false }))
+            .catch(() => ({ value: null as number | null, failed: true }))
+        : Promise.resolve({ value: null as number | null, failed: false }),
       hasProgressAccess
-        ? fetchProgressOverview(accessToken, {}).catch(() => [])
-        : Promise.resolve([]),
+        ? fetchProgressOverview(accessToken, { period })
+            .then((rows) => ({ rows, failed: false }))
+            .catch(() => ({
+              rows: [] as Awaited<ReturnType<typeof fetchProgressOverview>>,
+              failed: true,
+            }))
+        : Promise.resolve({
+            rows: [] as Awaited<ReturnType<typeof fetchProgressOverview>>,
+            failed: false,
+          }),
     ]);
+
+  const coursesCount = coursesMetric.value;
+  const groupsCount = groupsMetric.value;
+  const usersCount = usersMetric.value;
+  const progressRows = progressMetric.rows;
 
   const avgProgress =
     progressRows.length > 0
@@ -497,6 +580,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const laggingUsers = progressRows.filter(
     (row) => row.completion_rate < 0.5,
   ).length;
+  const effectiveAvgProgress = avgProgress ?? 0;
+  const chartPrimaryPoints = buildProgressSeriesPoints(progressRows, {
+    baselinePercent: effectiveAvgProgress,
+  });
+  const chartSecondaryPoints = buildProgressSeriesPoints(
+    progressRows.map((row) => ({
+      completion_rate: Math.max(0, row.completion_rate - 0.1),
+    })),
+    {
+      baselinePercent: Math.max(0, effectiveAvgProgress - 10),
+    },
+  );
 
   const profileTitle = language === "ru" ? "Профиль" : "Profile";
   const logoutLabel = language === "ru" ? "Выйти" : "Logout";
@@ -512,6 +607,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+
+  const hasDataWarning =
+    coursesMetric.failed ||
+    groupsMetric.failed ||
+    usersMetric.failed ||
+    progressMetric.failed;
+  const dataWarningText =
+    language === "ru"
+      ? "Часть метрик сейчас недоступна. Обновите страницу позже."
+      : "Some metrics are temporarily unavailable. Please refresh later.";
 
   const statCards = [
     {
@@ -571,26 +676,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <ul className={styles.sidebarList}>
               {visibleTiles.map((tile) => (
                 <li key={tile.id}>
-                  {tile.href ? (
-                    <Link className={styles.sidebarLink} href={tile.href}>
-                      <span className={styles.sidebarLead}>
-                        <TileIcon id={tile.id} className={styles.sidebarIcon} />
-                      </span>
-                      <span className={styles.sidebarTitle}>{tile.title}</span>
-                    </Link>
-                  ) : (
-                    <div
-                      className={`${styles.sidebarLink} ${styles.sidebarLinkDisabled}`}
-                    >
-                      <span className={styles.sidebarLead}>
-                        <TileIcon id={tile.id} className={styles.sidebarIcon} />
-                      </span>
-                      <span className={styles.sidebarTitle}>{tile.title}</span>
-                      <span className={styles.sidebarMeta}>
-                        {comingSoonLabel}
-                      </span>
-                    </div>
-                  )}
+                  <Link className={styles.sidebarLink} href={tile.href}>
+                    <span className={styles.sidebarLead}>
+                      <TileIcon id={tile.id} className={styles.sidebarIcon} />
+                    </span>
+                    <span className={styles.sidebarTitle}>{tile.title}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -624,7 +715,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </summary>
                 <div className={styles.profileActions}>
                   <Link
-                    href={`/dashboard?lang=${language}&modal=profile`}
+                    href={withDashboardState(
+                      `/dashboard?lang=${language}&modal=profile`,
+                    )}
                     className={styles.profileLink}
                   >
                     {profileSettingsLabel}
@@ -646,13 +739,36 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <div className={styles.dashboardTopBar}>
                   <h3 className={styles.dashboardTitle}>{greetingTitle}</h3>
                   <div className={styles.dashboardTopActions}>
-                    <span className={styles.periodBadge}>{periodLabel}</span>
+                    <span className={styles.periodSelectorLabel}>
+                      {periodSelectorLabel}
+                    </span>
+                    <div className={styles.periodSelector}>
+                      {DASHBOARD_PERIODS.map((value) => {
+                        const isActive = value === period;
+                        return (
+                          <Link
+                            key={value}
+                            href={withDashboardState(
+                              `/dashboard?lang=${language}&period=${value}`,
+                            )}
+                            className={`${styles.periodOption} ${isActive ? styles.periodOptionActive : ""}`}
+                            aria-current={isActive ? "page" : undefined}
+                          >
+                            {periodLabelByValue[value]}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
                 <h3 className={styles.dashboardSectionTitle}>
                   {dashboardBlockTitle}
                 </h3>
+
+                {hasDataWarning ? (
+                  <p className={styles.dataWarning}>{dataWarningText}</p>
+                ) : null}
 
                 <div className={styles.statGrid}>
                   {statCards.map((card) => (
@@ -684,11 +800,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     aria-hidden="true"
                   >
                     <polyline
-                      points="0,130 60,118 120,126 180,98 240,104 300,78 360,90 420,70 480,86 560,74"
+                      points={chartPrimaryPoints}
                       className={styles.chartLinePrimary}
                     />
                     <polyline
-                      points="0,142 60,136 120,120 180,128 240,110 300,116 360,96 420,112 480,104 560,98"
+                      points={chartSecondaryPoints}
                       className={styles.chartLineSecondary}
                     />
                   </svg>
@@ -731,13 +847,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </h3>
                 <div className={styles.langRow}>
                   <Link
-                    href={`/dashboard?lang=ru&modal=settings`}
+                    href={withDashboardState(
+                      `/dashboard?lang=ru&modal=settings`,
+                    )}
                     className={`${styles.langOption} ${language === "ru" ? styles.langOptionActive : ""}`}
                   >
                     <strong>Русский</strong>
                   </Link>
                   <Link
-                    href={`/dashboard?lang=en&modal=settings`}
+                    href={withDashboardState(
+                      `/dashboard?lang=en&modal=settings`,
+                    )}
                     className={`${styles.langOption} ${language === "en" ? styles.langOptionActive : ""}`}
                   >
                     <strong>English</strong>
@@ -746,6 +866,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <p className={styles.modalText}>
                   {currentLabel}: <strong>{language.toUpperCase()}</strong>
                 </p>
+
+                <h3 className={styles.modalSectionTitle}>
+                  {workspaceSectionTitle}
+                </h3>
+                <div className={styles.workspaceQuickLinks}>
+                  {workspaceTiles.map((tile) => (
+                    <Link
+                      key={tile.id}
+                      href={tile.href}
+                      className={styles.workspaceQuickLink}
+                    >
+                      {tile.title}
+                    </Link>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className={styles.modalBody}>
