@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -39,3 +41,13 @@ class BulkPolicyRuleUpdateIn(_BaseSchema):
 
 class EffectivePoliciesOut(_BaseSchema):
     policies: dict[str, list[str]]
+
+
+class AdminAuditLogOut(_BaseSchema):
+    id: UUID
+    actor_user_id: UUID
+    action_key: str
+    entity_type: str | None
+    entity_id: str | None
+    details: dict[str, Any]
+    created_at: datetime

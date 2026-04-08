@@ -29,6 +29,8 @@ Environment overrides:
 - AUTO_FIX_BROKEN_DB_SCHEMA (default: 0, set 1 to allow auto-repair flow)
 - ALLOW_DB_SCHEMA_RESET (default: 0, MUST be 1 to allow DROP SCHEMA public)
 - CONFIRM_DB_RESET (required for destructive reset: YES_I_UNDERSTAND_DATA_LOSS)
+- DB_BACKUP_BEFORE_DESTRUCTIVE (default: 1, set 0 to skip backup before destructive reset)
+- DB_BACKUP_DIR (default: .backups/db)
 USAGE
   exit 0
 fi
@@ -62,6 +64,8 @@ KG_MEMORY_SYNC="${KG_MEMORY_SYNC:-1}"
 KG_MEMORY_SYNC_MODE="${KG_MEMORY_SYNC_MODE:-auto}"
 KG_MEMORY_FILE="${KG_MEMORY_FILE:-$ROOT_DIR/.context/operations/kg_memory.jsonl}"
 KG_SEED_SCRIPT="$ROOT_DIR/scripts/seed_kg_memory.py"
+DB_BACKUP_BEFORE_DESTRUCTIVE="${DB_BACKUP_BEFORE_DESTRUCTIVE:-1}"
+DB_BACKUP_DIR="${DB_BACKUP_DIR:-$ROOT_DIR/.backups/db}"
 AUTO_INSTALL_BACKEND_DEPS="${AUTO_INSTALL_BACKEND_DEPS:-1}"
 AUTO_FIX_BROKEN_DB_SCHEMA="${AUTO_FIX_BROKEN_DB_SCHEMA:-0}"
 ALLOW_DB_SCHEMA_RESET="${ALLOW_DB_SCHEMA_RESET:-0}"
@@ -334,6 +338,14 @@ reset_db_public_schema() {
     echo "[run] Destructive DB reset requires explicit confirmation."
     echo "[run] Set CONFIRM_DB_RESET=YES_I_UNDERSTAND_DATA_LOSS to proceed."
     return 1
+  fi
+
+  if [[ "$DB_BACKUP_BEFORE_DESTRUCTIVE" == "1" ]]; then
+    echo "[run] Creating DB backup before DROP SCHEMA..."
+    DB_BACKUP_DIR="$DB_BACKUP_DIR" APP_DATABASE_URL="${APP_DATABASE_URL:-}" \
+      bash "$ROOT_DIR/scripts/db-backup.sh" --reason "run-auto-fix-before-drop-schema"
+  else
+    echo "[run] DB backup policy disabled (DB_BACKUP_BEFORE_DESTRUCTIVE=0)."
   fi
 
   (

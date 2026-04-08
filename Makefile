@@ -1,4 +1,4 @@
-.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check mobile-theme-guard kg-sync kg-sync-force init-test-db builder-mocks builder-mocks-clean builder-mocks-reset progress-mocks progress-mocks-clean progress-mocks-reset literacy-demo-seed literacy-demo-clean literacy-demo-reset literacy-demo-realistic-seed literacy-demo-realistic-reset mobile-runtime-seed mobile-runtime-clean mobile-runtime-reset mobile-runtime-verify mobile-runtime-heavy-seed mobile-runtime-heavy-reset mobile-runtime-heavy-verify
+.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check mobile-theme-guard kg-sync kg-sync-force init-test-db db-backup builder-mocks builder-mocks-clean builder-mocks-reset progress-mocks progress-mocks-clean progress-mocks-reset literacy-demo-seed literacy-demo-clean literacy-demo-reset literacy-demo-realistic-seed literacy-demo-realistic-reset mobile-runtime-seed mobile-runtime-clean mobile-runtime-reset mobile-runtime-verify mobile-runtime-heavy-seed mobile-runtime-heavy-reset mobile-runtime-heavy-verify
 PROJECT_ROOT := $(CURDIR)
 MOCK_DB_URL ?= postgresql+psycopg://app:app@127.0.0.1:5432/app
 
@@ -53,6 +53,9 @@ backend-lint:
 init-test-db:
 	cd backend && ./scripts/init-test-db.sh
 
+db-backup:
+	@bash ./scripts/db-backup.sh --reason "$${BACKUP_REASON:-manual-make-db-backup}" --db-url "$(MOCK_DB_URL)"
+
 builder-mocks:
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/course_builder_mocks.py seed
 
@@ -61,10 +64,12 @@ builder-mocks-clean:
 
 builder-mocks-reset:
 	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make builder-mocks-reset"; exit 1; fi
+	@bash ./scripts/db-backup.sh --reason "builder-mocks-reset" --db-url "$(MOCK_DB_URL)"
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/course_builder_mocks.py reset
 
 progress-mocks-reset:
 	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make progress-mocks-reset"; exit 1; fi
+	@bash ./scripts/db-backup.sh --reason "progress-mocks-reset" --db-url "$(MOCK_DB_URL)"
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/progress_mocks.py reset
 
 
@@ -76,6 +81,7 @@ literacy-demo-clean:
 
 literacy-demo-reset:
 	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make literacy-demo-reset"; exit 1; fi
+	@bash ./scripts/db-backup.sh --reason "literacy-demo-reset" --db-url "$(MOCK_DB_URL)"
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/digital_literacy_demo_seed.py reset
 
 literacy-demo-realistic-seed:
@@ -83,6 +89,7 @@ literacy-demo-realistic-seed:
 
 literacy-demo-realistic-reset:
 	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make literacy-demo-realistic-reset"; exit 1; fi
+	@bash ./scripts/db-backup.sh --reason "literacy-demo-realistic-reset" --db-url "$(MOCK_DB_URL)"
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/digital_literacy_demo_seed.py reset --profile realistic
 
 mobile-runtime-seed:
@@ -93,6 +100,7 @@ mobile-runtime-clean:
 
 mobile-runtime-reset:
 	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make mobile-runtime-reset"; exit 1; fi
+	@bash ./scripts/db-backup.sh --reason "mobile-runtime-reset" --db-url "$(MOCK_DB_URL)"
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py reset
 
 mobile-runtime-verify:
@@ -103,6 +111,7 @@ mobile-runtime-heavy-seed:
 
 mobile-runtime-heavy-reset:
 	@if [ "$(ALLOW_DATA_RESET)" != "1" ] || [ "$(CONFIRM_DATA_RESET)" != "YES_I_UNDERSTAND_DATA_LOSS" ]; then echo "[protect] Destructive reset blocked. Use: ALLOW_DATA_RESET=1 CONFIRM_DATA_RESET=YES_I_UNDERSTAND_DATA_LOSS make mobile-runtime-heavy-reset"; exit 1; fi
+	@bash ./scripts/db-backup.sh --reason "mobile-runtime-heavy-reset" --db-url "$(MOCK_DB_URL)"
 	cd backend && APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=. python3 scripts/mobile_runtime_demo_seed.py reset --profile mobile-heavy
 
 mobile-runtime-heavy-verify:

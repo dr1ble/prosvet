@@ -18,4 +18,5 @@ class SearchRequest(BaseModel):
 
 class SearchResponse(BaseModel):
     results: list[SearchResult]
+    next_cursor: str | None = None
     total_by_type: dict[str, int] = Field(default_factory=dict)

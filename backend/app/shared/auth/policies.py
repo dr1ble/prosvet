@@ -37,6 +37,12 @@ POLICY_ROLE_MAP: dict[str, set[UserRole]] = {
         UserRole.MODERATOR,
         UserRole.ASSISTANT,
     },
+    "search.view": {
+        UserRole.ADMINISTRATOR,
+        UserRole.METHODOLOGIST,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
     "catalog.release.submit_review": {
         UserRole.ADMINISTRATOR,
         UserRole.METHODOLOGIST,

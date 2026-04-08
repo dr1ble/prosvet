@@ -164,7 +164,10 @@ export function SearchResults({
             <button
               key={filter.type}
               type="button"
-              className={styles.filterButton}
+              className={`${styles.filterButton} ${
+                activeFilter === filter.type ? styles.active : ""
+              }`}
+              aria-pressed={activeFilter === filter.type}
               onClick={() => onFilterChange(filter.type)}
             >
               {filter.label}

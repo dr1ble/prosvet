@@ -28,4 +28,4 @@ class SearchService:
             results.extend(entity_results)
 
         results.sort(key=lambda r: -r.relevance_score)
-        return SearchResponse(results=results[:limit], total_by_type=total_by_type)
+        return SearchResponse(results=results[:limit], next_cursor=None, total_by_type=total_by_type)

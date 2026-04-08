@@ -161,6 +161,25 @@ function TileIcon({ id, className }: { id: string; className?: string }) {
     );
   }
 
+  if (id === "search") {
+    return (
+      <svg
+        className={className}
+        viewBox="0 0 20 20"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle cx="9" cy="9" r="4.5" stroke="currentColor" strokeWidth="1.4" />
+        <path
+          d="m12.4 12.4 3.1 3.1"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
   if (id === "progress") {
     return (
       <svg
@@ -386,6 +405,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           : "Roles, permissions, and access control for admin actions.",
       href: `/users?lang=${language}`,
       requiredPermissions: ["users.manage", "rbac.manage"],
+    },
+    {
+      id: "search",
+      title: language === "ru" ? "Глобальный поиск" : "Global Search",
+      description:
+        language === "ru"
+          ? "Поиск по курсам, пользователям и учебным группам."
+          : "Search across courses, users, and learning groups.",
+      href: `/search?lang=${language}`,
+      requiredPermissions: ["search.view"],
     },
     {
       id: "progress",
