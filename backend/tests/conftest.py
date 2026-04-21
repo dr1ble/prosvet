@@ -14,12 +14,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.main import app
-from app.modules.auth.infra.models import Base as AuthBase
-from app.modules.catalog.infra.models import Base as CatalogBase
 from app.modules.catalog.infra.models import Course, CourseRelease
-from app.modules.simulation.infra.models import Base as SimulationBase
 from app.modules.users.models import UserRole
 from app.shared.auth.schemas import CurrentActor
+from app.shared.db.base import Base
 
 # Use main database (test database needs pg_hba config for external creation)
 # For isolated tests, use mock repositories instead of real DB
@@ -33,17 +31,13 @@ def test_engine():
     """Create test database engine for# entire test session."""
     engine = create_engine(TEST_DATABASE_URL, echo=False)
 
-    # Create all tables
-    AuthBase.metadata.create_all(bind=engine)
-    CatalogBase.metadata.create_all(bind=engine)
-    SimulationBase.metadata.create_all(bind=engine)
+    # Create full test schema for all registered models.
+    Base.metadata.create_all(bind=engine)
 
     yield engine
 
     # Drop all tables after session
-    SimulationBase.metadata.drop_all(bind=engine)
-    CatalogBase.metadata.drop_all(bind=engine)
-    AuthBase.metadata.drop_all(bind=engine)
+    Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
