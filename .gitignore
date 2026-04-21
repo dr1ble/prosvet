@@ -38,3 +38,6 @@ mobile/iosApp/**/xcuserdata/
 mobile/iosApp/**/xcuserdata/**
 mobile/iosApp/**/*.xcuserstate
 mobile/iosApp/**/*.xcscmblueprint
+
+# Local run/process PID files
+.run/*.pid

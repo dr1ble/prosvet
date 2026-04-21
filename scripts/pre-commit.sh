@@ -5,6 +5,7 @@ set -eu
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 allow_missing_tools="${PRECOMMIT_ALLOW_MISSING_TOOLS:-0}"
+pytest_mode="${PRECOMMIT_PYTEST_MODE:-smart}"
 
 require_or_skip() {
   message="$1"
@@ -42,14 +43,18 @@ EOF
 
 need_web_checks=0
 need_backend_checks=0
+need_mobile_theme_checks=0
 
 while IFS= read -r path; do
   case "$path" in
-    web-admin/*)
+    web/*)
       need_web_checks=1
       ;;
     backend/*)
       need_backend_checks=1
+      ;;
+    mobile/*)
+      need_mobile_theme_checks=1
       ;;
   esac
 done <<EOF
@@ -57,16 +62,16 @@ $staged_files
 EOF
 
 if [ "$need_web_checks" -eq 1 ]; then
-  if [ ! -d "$ROOT_DIR/web-admin/node_modules" ]; then
-    if ! require_or_skip "web-admin/node_modules not found. Run: cd web-admin && npm install"; then
+  if [ ! -d "$ROOT_DIR/web/node_modules" ]; then
+    if ! require_or_skip "web/node_modules not found. Run: cd web && npm install"; then
       need_web_checks=0
     fi
   fi
 
   if [ "$need_web_checks" -eq 1 ]; then
-    echo "pre-commit: running lint-staged (prettier) for web-admin..."
+    echo "pre-commit: running lint-staged (prettier) for web..."
     (
-      cd "$ROOT_DIR/web-admin"
+      cd "$ROOT_DIR/web"
       npm exec lint-staged
     )
   fi
@@ -74,6 +79,37 @@ fi
 
 if [ "$need_backend_checks" -eq 1 ]; then
   backend_python_files="$(printf "%s\n" "$staged_files" | grep -E '^backend/.*\.py$' || true)"
+  backend_python_count="$(printf "%s\n" "$backend_python_files" | grep -c . || true)"
+  run_pytest=0
+  pytest_reason=""
+
+  case "$pytest_mode" in
+    always)
+      run_pytest=1
+      pytest_reason="forced by PRECOMMIT_PYTEST_MODE=always"
+      ;;
+    never)
+      run_pytest=0
+      pytest_reason="disabled by PRECOMMIT_PYTEST_MODE=never"
+      ;;
+    smart)
+      critical_backend_change="$(printf "%s\n" "$staged_files" | grep -E '^(backend/migrations/|backend/app/modules/auth/|backend/app/modules/catalog/domain/|backend/app/shared/db/)' || true)"
+      if [ -n "$critical_backend_change" ]; then
+        run_pytest=1
+        pytest_reason="critical backend paths changed"
+      elif [ "$backend_python_count" -ge 8 ]; then
+        run_pytest=1
+        pytest_reason="large backend change set (${backend_python_count} files)"
+      else
+        run_pytest=0
+        pytest_reason="smart mode: non-critical/small backend change"
+      fi
+      ;;
+    *)
+      echo "pre-commit: unknown PRECOMMIT_PYTEST_MODE='$pytest_mode' (expected: smart|always|never)" >&2
+      exit 1
+      ;;
+  esac
 
   if ! python3 -m ruff --version >/dev/null 2>&1; then
     if ! require_or_skip "ruff is not available. Run: python3 -m pip install -r backend/requirements-dev.txt"; then
@@ -81,7 +117,7 @@ if [ "$need_backend_checks" -eq 1 ]; then
     fi
   fi
 
-  if [ "$need_backend_checks" -eq 1 ] && ! python3 -m pytest --version >/dev/null 2>&1; then
+  if [ "$need_backend_checks" -eq 1 ] && [ "$run_pytest" -eq 1 ] && ! python3 -m pytest --version >/dev/null 2>&1; then
     if ! require_or_skip "pytest is not available. Run: python3 -m pip install -r backend/requirements-dev.txt"; then
       need_backend_checks=0
     fi
@@ -100,11 +136,25 @@ if [ "$need_backend_checks" -eq 1 ]; then
       echo "pre-commit: no staged backend Python files, skipping ruff."
     fi
 
-    echo "pre-commit: running pytest..."
-    (
-      cd "$ROOT_DIR/backend"
-      python3 -m pytest
-    )
+    if [ "$run_pytest" -eq 1 ]; then
+      echo "pre-commit: running pytest ($pytest_reason)..."
+      (
+        cd "$ROOT_DIR/backend"
+        python3 -m pytest
+      )
+    else
+      echo "pre-commit: skipping pytest ($pytest_reason)."
+      echo "pre-commit: tip: use PRECOMMIT_PYTEST_MODE=always git commit ... to force full tests."
+    fi
+  fi
+fi
+
+if [ "$need_mobile_theme_checks" -eq 1 ]; then
+  mobile_ui_files="$(printf "%s\n" "$staged_files" | grep -E '^mobile/' || true)"
+  if [ -n "$mobile_ui_files" ]; then
+    echo "pre-commit: running mobile theme token guard..."
+    # shellcheck disable=SC2086
+    "$ROOT_DIR/scripts/check-mobile-theme-tokens.sh" $mobile_ui_files
   fi
 fi
 

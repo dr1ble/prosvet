@@ -1,0 +1,130 @@
+.card {
+  border: 1px solid rgba(42, 70, 96, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+  animation: cardFadeIn 0.3s ease;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cardHeader {
+  display: grid;
+  gap: 4px;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #5e758b;
+  font-weight: 700;
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  color: #1f2e3c;
+}
+
+.cardSubtitle {
+  margin: 0;
+  color: #516679;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 5px;
+}
+
+.label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #3d5468;
+}
+
+.input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid rgba(42, 70, 96, 0.18);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #1f2e3c;
+  background: #fff;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgba(37, 129, 227, 0.5);
+  box-shadow: 0 0 0 3px rgba(27, 119, 217, 0.1);
+}
+
+.inputError {
+  border-color: rgba(220, 38, 38, 0.5);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
+}
+
+.fieldHint {
+  font-size: 0.75rem;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.input::placeholder {
+  color: #8a9baa;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.buttonPrimary {
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #1d7be9;
+  color: #f2f8ff;
+  border: 1px solid rgba(27, 119, 217, 0.3);
+  transition: background 0.15s ease;
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  background: #1567cc;
+}
+
+.buttonPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,7 +1,34 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kotlin.compose)
+}
+
+val debugBackendBaseUrl = providers
+    .gradleProperty("mobile.backend.baseUrl")
+    .orElse(providers.environmentVariable("MOBILE_BACKEND_BASE_URL"))
+    .orElse("http://10.0.2.2:8000")
+
+val composeResourceModules = listOf(
+    project(":core:ui") to "digital_education_mobile.core.ui.generated.resources",
+    project(":feature:auth:impl") to "digital_education_mobile.feature.auth.impl.generated.resources",
+    project(":feature:catalog:impl") to "digital_education_mobile.feature.catalog.impl.generated.resources",
+    project(":feature:home:impl") to "digital_education_mobile.feature.home.impl.generated.resources",
+    project(":feature:player:impl") to "digital_education_mobile.feature.player.impl.generated.resources",
+    project(":feature:profile:impl") to "digital_education_mobile.feature.profile.impl.generated.resources",
+)
+
+val syncComposeResourceAssets = tasks.register<Sync>("syncComposeResourceAssets") {
+    val destination = layout.buildDirectory.dir("generated/composeResourceAssets/composeResources")
+    into(destination)
+
+    composeResourceModules.forEach { (moduleProject, packageDir) ->
+        from(moduleProject.layout.buildDirectory.dir("generated/compose/resourceGenerator/preparedResources/commonMain/composeResources")) {
+            into(packageDir)
+        }
+        dependsOn("${moduleProject.path}:prepareComposeResourcesTaskForCommonMain")
+    }
 }
 
 android {
@@ -22,7 +49,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BACKEND_BASE_URL", "\"http://10.0.2.2:8000\"")
+            buildConfigField("String", "BACKEND_BASE_URL", "\"${debugBackendBaseUrl.get()}\"")
         }
         release {
             isMinifyEnabled = false
@@ -58,11 +85,18 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    sourceSets["main"].assets.srcDir("$buildDir/generated/composeResourceAssets")
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(syncComposeResourceAssets)
 }
 
 dependencies {
     implementation(projects.core.data)
     implementation(projects.core.designsystem)
+    implementation(libs.androidx.datastore.preferences)
     implementation(projects.core.model)
     implementation(project(":shared"))
 
@@ -78,6 +112,7 @@ dependencies {
     implementation(libs.coil3.compose)
     implementation(libs.coil3.network.okhttp)
     implementation(libs.koin.core)
+    implementation(compose.components.resources)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

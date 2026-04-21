@@ -10,6 +10,15 @@ fun authFeatureModule(): Module = module {
     factory {
         AuthViewModel(
             authRepository = get(),
+            accessibilityPreferencesRepository = get(),
+            debugQuickLoginConfig = get(),
         )
     }
+
+    factory {
+        RegistrationViewModel(
+            authRepository = get(),
+        )
+    }
+    factory { RecoveryViewModel() }
 }

@@ -19,6 +19,7 @@ ROLE_PERMISSION_TEMPLATES: dict[UserRole, tuple[str, ...]] = {
         "users.manage",
         "rbac.manage",
         "progress.view",
+        "search.view",
     ),
     UserRole.METHODOLOGIST: (
         "dashboard.view",
@@ -28,6 +29,7 @@ ROLE_PERMISSION_TEMPLATES: dict[UserRole, tuple[str, ...]] = {
         "catalog.release.create",
         "catalog.release.submit_review",
         "simulation.builder",
+        "search.view",
     ),
     UserRole.MODERATOR: (
         "dashboard.view",
@@ -38,6 +40,15 @@ ROLE_PERMISSION_TEMPLATES: dict[UserRole, tuple[str, ...]] = {
         "groups.view",
         "groups.manage",
         "progress.view",
+        "search.view",
+    ),
+    UserRole.ASSISTANT: (
+        "dashboard.view",
+        "catalog.view",
+        "groups.view",
+        "groups.manage",
+        "progress.view",
+        "search.view",
     ),
     UserRole.USER: (
         "dashboard.view",

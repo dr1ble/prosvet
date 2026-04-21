@@ -3,10 +3,13 @@ from collections.abc import Callable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.modules.users.models import User, UserRole, UserStatus
+from app.shared.auth.policies import POLICY_ROLE_MAP
+from app.shared.auth.policy_models import RbacPolicyRule
 from app.shared.auth.schemas import CurrentActor
 from app.shared.db.deps import get_db
 from app.shared.security.tokens import TokenError, parse_access_token
@@ -27,19 +30,19 @@ def _resolve_authenticated_user(
     db: Session,
 ) -> User:
     if credentials is None:
-        raise _auth_error("Authorization token is required.")
+        raise _auth_error("Требуется токен авторизации.")
     if credentials.scheme.lower() != "bearer":
-        raise _auth_error("Unsupported authorization scheme.")
+        raise _auth_error("Неподдерживаемая схема авторизации.")
 
     try:
         claims = parse_access_token(credentials.credentials, secret=settings.access_token_secret)
     except TokenError as exc:
-        raise _auth_error("Access token is invalid or expired.") from exc
+        raise _auth_error("Токен доступа недействителен или истёк.") from exc
 
     stmt = select(User).where(User.id == claims.user_id)
     user = db.scalar(stmt)
     if user is None or user.status != UserStatus.ACTIVE:
-        raise _auth_error("User is inactive or not found.")
+        raise _auth_error("Пользователь неактивен или не найден.")
 
     return user
 
@@ -57,15 +60,54 @@ def get_current_actor(
     return CurrentActor(user_id=user.id, role=user.role)
 
 
-def require_roles(*allowed_roles: UserRole) -> Callable[[CurrentActor], CurrentActor]:
+def require_roles(*allowed_roles: UserRole) -> Callable[..., CurrentActor]:
     allowed = {role.value for role in allowed_roles}
 
     def _dependency(actor: CurrentActor = Depends(get_current_actor)) -> CurrentActor:
         if actor.role.value not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions for this operation.",
+                detail="Недостаточно прав для этой операции.",
             )
+        return actor
+
+    return _dependency
+
+
+def require_policy(policy_key: str) -> Callable[..., CurrentActor]:
+    def _dependency(
+        actor: CurrentActor = Depends(get_current_actor),
+        db: Session = Depends(get_db),
+    ) -> CurrentActor:
+        db_roles: set[UserRole] = set()
+        try:
+            rows = db.scalars(
+                select(RbacPolicyRule.role).where(
+                    RbacPolicyRule.policy_key == policy_key,
+                    RbacPolicyRule.enabled.is_(True),
+                )
+            ).all()
+            for role in rows:
+                try:
+                    db_roles.add(UserRole(role))
+                except ValueError:
+                    continue
+        except SQLAlchemyError:
+            db_roles = set()
+
+        allowed_roles = db_roles or POLICY_ROLE_MAP.get(policy_key, set())
+        if not allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Политика '{policy_key}' не настроена.",
+            )
+
+        if actor.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Недостаточно прав для этой операции.",
+            )
+
         return actor
 
     return _dependency

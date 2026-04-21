@@ -1,0 +1,94 @@
+.action {
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.actionPrimary {
+  border-color: color-mix(in srgb, var(--interactive-primary) 42%, transparent);
+  background: linear-gradient(
+    126deg,
+    color-mix(in srgb, var(--interactive-primary) 86%, #ffffff),
+    color-mix(in srgb, var(--interactive-primary) 72%, #0f4280)
+  );
+  color: #eff7ff;
+}
+
+.actionSecondary {
+  border-color: var(--border-default);
+  background: #fff;
+  color: color-mix(in srgb, var(--text-primary) 72%, #1d73e2);
+}
+
+.actionGhost {
+  border-color: color-mix(in srgb, var(--border-default) 80%, transparent);
+  background: var(--surface-card-default);
+  color: var(--text-secondary);
+}
+
+.actionDanger {
+  border-color: color-mix(in srgb, var(--feedback-danger) 48%, transparent);
+  background: color-mix(in srgb, var(--feedback-danger) 10%, #fff);
+  color: color-mix(in srgb, var(--feedback-danger) 74%, #2b0f0f);
+}
+
+.action:disabled,
+.actionDisabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.surfaceCard {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card-default);
+  box-shadow: var(--shadow-raised);
+}
+
+.surfaceCardMuted {
+  background: var(--surface-card-muted);
+}
+
+.stepSwitcher {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.stepItem {
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border-default);
+  background: #fff;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 var(--space-3);
+  cursor: pointer;
+}
+
+.stepItemActive {
+  border-color: color-mix(in srgb, var(--interactive-primary) 44%, transparent);
+  background: color-mix(in srgb, var(--interactive-primary) 11%, #fff);
+  color: color-mix(in srgb, var(--interactive-primary) 70%, #15395b);
+}
+
+.stepItem:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,0 +1,6 @@
+<resources>
+    <string name="catalog_empty_title">Курсы пока не найдены</string>
+    <string name="catalog_empty_subtitle">Проверьте подключение или обновите каталог.</string>
+    <string name="catalog_refresh">Обновить</string>
+    <string name="catalog_cover_description">Обложка курса %1$s</string>
+</resources>

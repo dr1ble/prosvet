@@ -1,0 +1,68 @@
+import logging
+import time
+from collections.abc import Callable
+from uuid import uuid4
+
+from fastapi import Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.shared.metrics.store import metrics_store
+
+logger = logging.getLogger("access")
+
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    """Middleware for logging HTTP requests and responses."""
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        start_time = time.perf_counter()
+        request_id = request.headers.get("X-Request-ID") or uuid4().hex
+        request.state.request_id = request_id
+
+        logger.info(
+            "request_started",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "client_ip": request.client.host if request.client else None,
+                "user_agent": request.headers.get("user-agent"),
+            },
+        )
+
+        try:
+            response = await call_next(request)
+            process_time = time.perf_counter() - start_time
+
+            logger.info(
+                "request_completed",
+                extra={
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "status_code": response.status_code,
+                    "process_time_ms": round(process_time * 1000, 2),
+                },
+            )
+
+            metrics_store.record(duration_ms=process_time * 1000, is_error=False)
+            response.headers["X-Process-Time"] = str(round(process_time * 1000, 2))
+            response.headers["X-Request-ID"] = request_id
+            return response
+
+        except Exception as exc:
+            process_time = time.perf_counter() - start_time
+
+            logger.error(
+                "request_failed",
+                extra={
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "error": str(exc),
+                    "process_time_ms": round(process_time * 1000, 2),
+                },
+                exc_info=True,
+            )
+            metrics_store.record(duration_ms=process_time * 1000, is_error=True)
+            raise

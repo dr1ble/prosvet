@@ -1,12 +1,12 @@
 package com.digitaledu.core.network
 
-import com.digitaledu.core.model.AuthTokens
-import com.digitaledu.core.model.OtpChallenge
+import com.digitaledu.core.model.auth.AuthTokens
+import com.digitaledu.core.model.auth.AuthMe
 
 interface AuthNetworkDataSource {
-    suspend fun requestOtp(phoneNumber: String): OtpChallenge
-    suspend fun verifyOtp(phoneNumber: String, code: String): AuthTokens
+    suspend fun register(fullName: String, login: String, password: String): AuthTokens
     suspend fun login(login: String, password: String): AuthTokens
     suspend fun refreshSession(refreshToken: String): AuthTokens
     suspend fun logout(refreshToken: String)
+    suspend fun getCurrentUser(accessToken: String): AuthMe
 }

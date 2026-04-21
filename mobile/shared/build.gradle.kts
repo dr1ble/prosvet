@@ -28,12 +28,18 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.feature.catalog.impl)
+            implementation(projects.feature.player.impl)
+            implementation(projects.feature.profile.impl)
             implementation(projects.feature.root.impl)
             implementation(projects.feature.auth.impl)
             implementation(projects.feature.home.impl)
             implementation(projects.core.common)
             implementation(projects.core.data)
+            implementation(projects.core.designsystem)
+            implementation(projects.core.model)
             implementation(projects.core.network)
+            implementation(projects.core.ui)
 
             implementation(compose.runtime)
             implementation(compose.ui)

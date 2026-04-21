@@ -15,7 +15,7 @@ kotlin {
             implementation(projects.core.network)
             implementation(libs.kotlinx.coroutines.core)
         }
-        
+
         jvmTest.dependencies {
             implementation(libs.junit4)
         }

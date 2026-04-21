@@ -1,0 +1,15 @@
+{
+  "childCount": 1,
+  "text": "Группы и назначения\n\nУправление учебными группами, участниками и назначением курсов.",
+  "html": "<header class=\"groups-module__A_Xlla__header\"><div class=\"groups-module__A_Xlla__headerMain\"><div class=\"groups-module__A_Xlla__titleRow\"><a class=\"groups-module__A_Xlla__backIconLink\" aria-label=\"Назад к рабочему столу\" href=\"/dashboard?lang=ru\"><svg viewBox=\"0 0 20 20\" fill=\"none\" role=\"presentation\" aria-hidden=\"true\"><path d=\"M11.8 4.6 6.4 10l5.4 5.4\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path></svg></a><h1 class=\"groups-module__A_Xlla__title\">Группы и назначения</h1></div><p class=\"groups-module__A_Xlla__subtitle\">Управление учебными группами, участниками и назначением курсов.</p></div></header>",
+  "styles": {
+    "display": "flex",
+    "alignItems": "flex-start",
+    "justifyContent": "space-between",
+    "minHeight": "auto",
+    "height": "276.25px",
+    "marginBottom": "0px",
+    "paddingTop": "0px",
+    "paddingBottom": "0px"
+  }
+}

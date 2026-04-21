@@ -17,6 +17,7 @@ class UserRole(str, enum.Enum):
     ADMINISTRATOR = "administrator"
     METHODOLOGIST = "methodologist"
     MODERATOR = "moderator"
+    ASSISTANT = "assistant"
     USER = "user"
 
 
@@ -39,12 +40,13 @@ class User(Base):
         default=UserStatus.ACTIVE,
         nullable=False,
     )
-    phone_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     login: Mapped[str | None] = mapped_column(String(120), unique=True, index=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=_utcnow,

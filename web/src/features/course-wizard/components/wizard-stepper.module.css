@@ -1,0 +1,140 @@
+.stepperWrapper {
+  display: grid;
+  gap: 10px;
+}
+
+.tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #d1d9e6;
+  border-radius: 14px;
+  background: #fff;
+  padding: 5px;
+  width: fit-content;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.tab {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 0 14px;
+  text-decoration: none;
+  color: #4a5568;
+  font-size: 13px;
+  font-weight: 600;
+  border: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  background: #edf2f7;
+  border-color: #cbd5e0;
+}
+
+.tabActive {
+  background: #1a73e8;
+  color: #fff;
+  border-color: #1557b0;
+  box-shadow: 0 3px 10px rgba(26, 115, 232, 0.35);
+}
+
+.tabActive:hover {
+  background: #1557b0;
+  border-color: #10458a;
+}
+
+.tabDone {
+  color: #fff;
+  background: #0d7c5f;
+  border-color: #096b50;
+}
+
+.tabDone:hover {
+  background: #096b50;
+  border-color: #075a43;
+}
+
+.tabIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #4a5568;
+  transition: all 0.2s ease;
+}
+
+.tabActive .tabIcon {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.tabDone .tabIcon {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.tabLabel {
+  white-space: nowrap;
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #1a73e8, #0d7c5f);
+  transition: width 0.4s ease;
+}
+
+.progressText {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #4a5568;
+  white-space: nowrap;
+}
+
+.statusRow {
+  min-height: 18px;
+}
+
+.statusError {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.statusSaving {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #718096;
+}
+
+.statusOk {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #0d7c5f;
+}

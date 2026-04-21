@@ -5,6 +5,7 @@ data class AuthUiState(
     val password: String = "",
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
+    val debugQuickLoginConfig: DebugQuickLoginConfig = DebugQuickLoginConfig(),
 ) {
     val isLoginEnabled: Boolean
         get() = login.isNotBlank() && password.length >= 6 && !isSubmitting

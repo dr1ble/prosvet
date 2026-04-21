@@ -1,0 +1,57 @@
+.page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.topBar {
+  margin-bottom: 2rem;
+}
+
+.headerMain {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.backIconLink {
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #5d7590;
+  text-decoration: none;
+}
+
+.backIconLink svg {
+  width: 14px;
+  height: 14px;
+}
+
+.backIconLink:hover {
+  color: #2a4e6e;
+}
+
+.pageTitle {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+  color: #111827;
+}
+
+.pageDescription {
+  font-size: 0.9375rem;
+  color: #6b7280;
+  margin: 0;
+  max-width: 640px;
+  line-height: 1.5;
+}

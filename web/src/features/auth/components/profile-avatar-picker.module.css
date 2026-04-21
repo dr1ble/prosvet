@@ -1,0 +1,47 @@
+.wrap {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 12px;
+  color: #5a748f;
+}
+
+.mainAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid rgba(40, 69, 95, 0.16);
+  background: linear-gradient(145deg, #f7fbff, #e8f0fa);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #274764;
+  font-weight: 700;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.option {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(40, 69, 95, 0.16);
+  background: #fff;
+  cursor: pointer;
+  font-size: 17px;
+}
+
+.optionActive {
+  border-color: rgba(29, 115, 226, 0.42);
+  background: #eff6ff;
+}

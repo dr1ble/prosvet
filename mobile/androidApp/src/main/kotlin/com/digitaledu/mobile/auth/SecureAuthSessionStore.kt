@@ -5,13 +5,15 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import com.digitaledu.core.data.auth.AuthSessionStore
-import com.digitaledu.core.model.AuthTokens
+import com.digitaledu.core.model.auth.AuthTokens
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONObject
 
 class SecureAuthSessionStore(
@@ -20,11 +22,11 @@ class SecureAuthSessionStore(
     private val appContext = context.applicationContext
     private val sharedPreferences = appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    private val state = kotlinx.coroutines.flow.MutableStateFlow(readFromStorage())
+    private val state = MutableStateFlow(readFromStorage())
 
     override fun current(): AuthTokens? = state.value
 
-    override fun observe(): kotlinx.coroutines.flow.Flow<AuthTokens?> = state
+    override fun observe(): Flow<AuthTokens?> = state
 
     override fun update(tokens: AuthTokens) {
         val payload = JSONObject()

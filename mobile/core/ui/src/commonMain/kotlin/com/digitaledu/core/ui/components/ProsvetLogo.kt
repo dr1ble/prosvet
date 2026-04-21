@@ -20,6 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import digital_education_mobile.core.ui.generated.resources.Res
+import digital_education_mobile.core.ui.generated.resources.prosvet_brand
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProsvetLogo(
@@ -29,6 +32,9 @@ fun ProsvetLogo(
     textColor: Color = MaterialTheme.colorScheme.onSurface,
     showText: Boolean = true,
 ) {
+    val colorPrimary = MaterialTheme.colorScheme.primary
+    val colorAccent = MaterialTheme.colorScheme.secondary
+
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -36,9 +42,6 @@ fun ProsvetLogo(
         // Logo Icon
         Box(modifier = Modifier.size(iconSize)) {
             Canvas(modifier = Modifier.matchParentSize()) {
-                val colorPrimary = Color(0xFF4F46E5) // Indigo 600
-                val colorAccent = Color(0xFF10B981) // Emerald 500
-                
                 // Draw "P" shape using two blocks
                 // 1. Vertical bar (Digital block)
                 drawRect(
@@ -59,7 +62,7 @@ fun ProsvetLogo(
                 
                  // 3. Small pixel dot
                 drawRect(
-                    color = colorAccent.copy(alpha=0.6f),
+                    color = colorAccent.copy(alpha = UiOpacity.strong),
                     topLeft = Offset(size.width * 0.5f, size.height * 0.65f),
                     size = Size(size.width * 0.2f, size.width * 0.2f)
                 )
@@ -69,12 +72,12 @@ fun ProsvetLogo(
         if (showText) {
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Prosvet",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = textSize.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1).sp
-                ),
+                text = stringResource(Res.string.prosvet_brand),
+                style = when {
+                    textSize >= 36 -> MaterialTheme.typography.displaySmall
+                    textSize >= 30 -> MaterialTheme.typography.headlineMedium
+                    else -> MaterialTheme.typography.titleLarge
+                }.copy(fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
                 color = textColor
             )
         }

@@ -1,181 +1,113 @@
 package com.digitaledu.core.network.ktor
 
-import com.digitaledu.core.model.CatalogBundle
-import com.digitaledu.core.model.CatalogCourse
-import com.digitaledu.core.model.CatalogRelease
-import com.digitaledu.core.model.CatalogScreen
-import com.digitaledu.core.model.Hotspot
-import com.digitaledu.core.model.LessonReference
-import com.digitaledu.core.model.ScreenPayload
+import com.digitaledu.core.model.catalog.CatalogBundle
+import com.digitaledu.core.model.catalog.CatalogCourse
+import com.digitaledu.core.model.catalog.CatalogRelease
+import com.digitaledu.core.model.catalog.CatalogScreen
+import com.digitaledu.core.model.reference.LessonReference
 import com.digitaledu.core.network.CatalogNetworkDataSource
-import com.digitaledu.core.network.NetworkException
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.plugins.ClientRequestException
-import io.ktor.client.plugins.RedirectResponseException
-import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.request.get
+import io.ktor.client.request.headers
 import io.ktor.client.request.parameter
 import io.ktor.client.request.url
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
+import io.ktor.http.HttpHeaders
 
 class KtorCatalogNetworkDataSource(
     private val client: HttpClient,
 ) : CatalogNetworkDataSource {
 
     override suspend fun listCourses(
+        accessToken: String,
         includeDrafts: Boolean,
         includeArchived: Boolean,
     ): List<CatalogCourse> {
         return executeCall {
             client.get {
                 url("api/v1/catalog/courses")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
                 parameter("include_drafts", includeDrafts)
                 parameter("include_archived", includeArchived)
-            }.body<List<CourseResponse>>().map { response ->
-                CatalogCourse(
-                    id = response.id,
-                    slug = response.slug,
-                    title = response.title,
-                    description = response.description,
-                    coverImageUrl = response.pickCoverImageUrl(),
-                    category = response.category,
-                    lessonCount = response.lessonCount,
-                    durationMinutes = response.durationMinutes,
-                )
-            }
+            }.body<List<CourseResponse>>().map(CourseResponse::toCatalogCourse)
         }
     }
 
-    override suspend fun getLatestCourseBundle(courseSlug: String): CatalogBundle {
+    override suspend fun getLatestCourseBundle(courseSlug: String, accessToken: String): CatalogBundle {
         return executeCall {
             val response = client.get {
                 url("api/v1/catalog/courses/$courseSlug/releases/latest")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
             }.body<CourseBundleResponse>()
             
             CatalogBundle(
-                course = CatalogCourse(
-                    id = response.course.id,
-                    slug = response.course.slug,
-                    title = response.course.title,
-                    description = response.course.description,
-                    coverImageUrl = response.course.pickCoverImageUrl(),
-                    category = response.course.category,
-                    lessonCount = response.course.lessonCount,
-                    durationMinutes = response.course.durationMinutes,
-                ),
-                release = CatalogRelease(
-                    id = response.release.id,
-                    version = response.release.version,
-                    changelog = response.release.changelog,
-                    screenCount = response.release.screenCount,
-                ),
+                course = response.course.toCatalogCourse(),
+                release = response.release.toCatalogRelease(),
                 screens = response.screens
-                    .map { screen ->
-                        CatalogScreen(
-                            id = screen.id,
-                            screenKey = screen.screenKey,
-                            title = screen.title,
-                            orderIndex = screen.orderIndex,
-                            payload = screen.payload,
-                        )
-                    }
-                    .sortedBy { it.orderIndex },
+                    .map(ScreenResponse::toCatalogScreen)
+                    .sortedBy(CatalogScreen::orderIndex),
             )
         }
     }
 
-    override suspend fun getLessonReference(referenceId: String): LessonReference {
+    override suspend fun getLessonReference(referenceId: String, accessToken: String): LessonReference {
         return executeCall {
             client.get {
                 url("api/v1/catalog/references/$referenceId")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
             }.body()
         }
     }
 
-    override suspend fun getLessonReferencesByLesson(lessonId: String): List<LessonReference> {
+    override suspend fun getLessonReferencesByLesson(
+        lessonId: String,
+        accessToken: String,
+    ): List<LessonReference> {
         return executeCall {
             client.get {
                 url("api/v1/catalog/courses/lessons/$lessonId/references")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
             }.body()
         }
     }
 
-    private suspend fun <T> executeCall(block: suspend () -> T): T {
-        return try {
-            block()
-        } catch (e: ClientRequestException) {
-            throw NetworkException(
-                message = "Client error: ${e.response.status.value}",
-                statusCode = e.response.status.value,
-                cause = e
-            )
-        } catch (e: ServerResponseException) {
-            throw NetworkException(
-                message = "Server error: ${e.response.status.value}",
-                statusCode = e.response.status.value,
-                cause = e
-            )
-        } catch (e: RedirectResponseException) {
-            throw NetworkException(
-                message = "Redirect error: ${e.response.status.value}",
-                statusCode = e.response.status.value,
-                cause = e
-            )
-        } catch (e: Exception) {
-            throw NetworkException(
-                message = "Unknown network error",
-                cause = e
-            )
-        }
-    }
-
-    companion object {
-        private const val PAYLOAD_PREVIEW_LIMIT = 140
-    }
+}
+private fun CourseResponse.toCatalogCourse(): CatalogCourse {
+    return CatalogCourse(
+        id = id,
+        slug = slug,
+        title = title,
+        description = description,
+        coverImageUrl = pickCoverImageUrl(),
+    )
 }
 
-@Serializable
-private data class CourseResponse(
-    val id: String,
-    val slug: String,
-    val title: String,
-    val description: String? = null,
-    @SerialName("cover_url") val coverUrl: String? = null,
-    @SerialName("photo_url") val photoUrl: String? = null,
-    @SerialName("image_url") val imageUrl: String? = null,
-    val category: String? = null,
-    @SerialName("lesson_count") val lessonCount: Int? = null,
-    @SerialName("duration_minutes") val durationMinutes: Int? = null,
-)
+private fun ReleaseResponse.toCatalogRelease(): CatalogRelease {
+    return CatalogRelease(
+        id = id,
+        version = version,
+        changelog = changelog,
+        screenCount = screenCount,
+    )
+}
 
-@Serializable
-private data class ReleaseResponse(
-    val id: String,
-    val version: String,
-    val changelog: String? = null,
-    @SerialName("screen_count") val screenCount: Int,
-)
-
-@Serializable
-private data class ScreenResponse(
-    val id: String,
-    @SerialName("screen_key") val screenKey: String,
-    val title: String,
-    @SerialName("order_index") val orderIndex: Int,
-    val payload: ScreenPayload,
-)
-
-@Serializable
-private data class CourseBundleResponse(
-    val course: CourseResponse,
-    val release: ReleaseResponse,
-    val screens: List<ScreenResponse>,
-)
+private fun ScreenResponse.toCatalogScreen(): CatalogScreen {
+    return CatalogScreen(
+        id = id,
+        screenKey = screenKey,
+        title = title,
+        orderIndex = orderIndex,
+        payload = payload,
+    )
+}
 
 private fun CourseResponse.pickCoverImageUrl(): String? {
     return listOf(coverUrl, photoUrl, imageUrl).firstOrNull { !it.isNullOrBlank() }

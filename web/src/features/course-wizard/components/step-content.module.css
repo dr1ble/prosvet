@@ -1,0 +1,28 @@
+.container {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.stepBody {
+  display: grid;
+  gap: 10px;
+}
+
+.autoSaveError {
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.autoSaveSaving {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.autoSaveOk {
+  color: #059669;
+  font-size: 0.75rem;
+  font-weight: 500;
+}

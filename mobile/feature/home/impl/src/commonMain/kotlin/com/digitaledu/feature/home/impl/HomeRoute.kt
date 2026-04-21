@@ -9,87 +9,129 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.digitaledu.core.common.toUserMessage
 import com.digitaledu.core.data.auth.AuthRepository
+import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.ui.ObserveEffects
-import com.digitaledu.feature.home.impl.catalog.CatalogEffect
-import com.digitaledu.feature.home.impl.catalog.CatalogIntent
-import com.digitaledu.feature.home.impl.catalog.CatalogViewModel
-import com.digitaledu.feature.home.impl.player.PlayerEffect
-import com.digitaledu.feature.home.impl.player.PlayerViewModel
-import com.digitaledu.feature.home.impl.profile.ProfileEffect
-import com.digitaledu.feature.home.impl.profile.ProfileIntent
-import com.digitaledu.feature.home.impl.profile.ProfileViewModel
-import org.koin.mp.KoinPlatform
+import com.digitaledu.core.ui.util.BackHandler
+import com.digitaledu.feature.catalog.api.CatalogEffect
+import com.digitaledu.feature.catalog.api.CatalogFeatureHost
+import com.digitaledu.feature.catalog.api.CatalogIntent
+import com.digitaledu.feature.catalog.api.CatalogUiEntry
+import com.digitaledu.feature.player.api.PlayerEffect
+import com.digitaledu.feature.player.api.PlayerFeatureHost
+import com.digitaledu.feature.player.api.PlayerUiEntry
+import com.digitaledu.feature.profile.api.ProfileEffect
+import com.digitaledu.feature.profile.api.ProfileFeatureHost
+import com.digitaledu.feature.profile.api.ProfileIntent
+import com.digitaledu.feature.profile.api.ProfileStatus
+import com.digitaledu.feature.profile.api.ProfileUiEntry
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun HomeRoute(
     onLoggedOut: () -> Unit,
+    initialGroupQrToken: String?,
+    onGroupQrTokenConsumed: () -> Unit,
+    catalogFeatureHost: CatalogFeatureHost,
+    playerFeatureHost: PlayerFeatureHost,
+    profileFeatureHost: ProfileFeatureHost,
+    catalogUiEntry: CatalogUiEntry,
+    playerUiEntry: PlayerUiEntry,
+    profileUiEntry: ProfileUiEntry,
+    authRepository: AuthRepository,
+    groupQrRepository: GroupQrRepository,
     modifier: Modifier = Modifier,
 ) {
-    val koin = remember { KoinPlatform.getKoin() }
-    val catalogViewModel = remember { koin.get<CatalogViewModel>() }
-    val playerViewModel = remember { koin.get<PlayerViewModel>() }
-    val profileViewModel = remember { koin.get<ProfileViewModel>() }
+    val catalogUiState by catalogFeatureHost.uiState.collectAsState()
+    val playerUiState by playerFeatureHost.uiState.collectAsState()
+    val profileUiState by profileFeatureHost.uiState.collectAsState()
 
-    val catalogUiState by catalogViewModel.uiState.collectAsState()
-    val playerUiState by playerViewModel.uiState.collectAsState()
-    val profileUiState by profileViewModel.uiState.collectAsState()
-
-    var selectedTab by remember { mutableStateOf(HomeTab.Courses) }
+    var selectedTab by remember { mutableStateOf(HomeTab.Home) }
+    var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
+    var qrHandledToken by remember { mutableStateOf<String?>(null) }
+    var currentUserDisplayName by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val profileErrorMessage = (profileUiState.status as? ProfileStatus.Error)?.message
 
-    LaunchedEffect(
-        playerUiState.bundle?.course?.id,
-        playerUiState.bundle?.screens?.size,
-        playerUiState.currentScreenIndex,
-    ) {
-        val bundle = playerUiState.bundle ?: return@LaunchedEffect
-        val total = bundle.screens.size
-        if (total == 0) return@LaunchedEffect
-        val completed = (playerUiState.currentScreenIndex + 1).coerceAtMost(total)
-        catalogViewModel.processIntent(
-            CatalogIntent.UpdateProgress(
-                courseId = bundle.course.id,
-                completedLessons = completed,
-                totalLessons = total,
-            ),
+    LaunchedEffect(initialGroupQrToken) {
+        if (initialGroupQrToken.isNullOrBlank()) return@LaunchedEffect
+        if (initialGroupQrToken == qrHandledToken) return@LaunchedEffect
+        pendingGroupQrToken = initialGroupQrToken
+    }
+
+    LaunchedEffect(catalogUiState.errorMessage, profileErrorMessage) {
+        snackbarHostState.showAndDismissIfNeeded(
+            message = catalogUiState.errorMessage,
+            dismiss = { catalogFeatureHost.processIntent(CatalogIntent.DismissError) },
+        )
+        snackbarHostState.showAndDismissIfNeeded(
+            message = profileErrorMessage,
+            dismiss = { profileFeatureHost.processIntent(ProfileIntent.DismissError) },
         )
     }
 
-    LaunchedEffect(catalogUiState.errorMessage, profileUiState.errorMessage) {
-        catalogUiState.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message = message)
-            catalogViewModel.processIntent(CatalogIntent.DismissError)
-        }
-        profileUiState.errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message = message)
-            profileViewModel.processIntent(ProfileIntent.DismissError)
+    LaunchedEffect(Unit) {
+        catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
+        currentUserDisplayName = runCatching {
+            authRepository.getCurrentUser().displayName
+        }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    LaunchedEffect(authRepository) {
+        authRepository.observeTokens().collectLatest { tokens ->
+            if (tokens == null) {
+                currentUserDisplayName = null
+                return@collectLatest
+            }
+
+            catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
+            currentUserDisplayName = runCatching {
+                authRepository.getCurrentUser().displayName
+            }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
         }
     }
 
-    ObserveEffects(catalogViewModel.effects) { effect ->
+    ObserveEffects(catalogFeatureHost.effects) { effect ->
         if (effect is CatalogEffect.CourseOpened) {
-            playerViewModel.openBundle(effect.bundle)
-            selectedTab = HomeTab.Lesson
+            playerFeatureHost.openBundle(effect.bundle)
+            selectedTab = HomeTab.Learning
         }
     }
 
-    ObserveEffects(playerViewModel.effects) { effect ->
+    ObserveEffects(playerFeatureHost.effects) { effect ->
         if (effect is PlayerEffect.Closed) {
-            selectedTab = HomeTab.Courses
+            selectedTab = HomeTab.Home
         }
     }
 
-    ObserveEffects(profileViewModel.effects) { effect ->
+    ObserveEffects(profileFeatureHost.effects) { effect ->
         if (effect is ProfileEffect.LoggedOut) {
             onLoggedOut()
         }
     }
 
-    val authTokens by remember { koin.get<AuthRepository>().observeTokens() }
-        .collectAsState(initial = koin.get<AuthRepository>().getCachedTokens())
+    BackHandler(enabled = selectedTab != HomeTab.Home) {
+        selectedTab = HomeTab.Home
+    }
 
-    val mediaAccessToken = authTokens?.accessToken
+    LaunchedEffect(pendingGroupQrToken) {
+        val token = pendingGroupQrToken ?: return@LaunchedEffect
+        if (token == qrHandledToken) return@LaunchedEffect
+
+        runCatching {
+            groupQrRepository.resolveGroupQr(token)
+        }.onSuccess { resolution ->
+            catalogFeatureHost.processIntent(CatalogIntent.OpenCourse(resolution.courseSlug))
+            snackbarHostState.showSnackbar("${resolution.groupName}: course opened")
+        }.onFailure { throwable ->
+            snackbarHostState.showSnackbar(throwable.toUserMessage())
+        }
+
+        qrHandledToken = token
+        pendingGroupQrToken = null
+        onGroupQrTokenConsumed()
+    }
 
     HomeScreen(
         selectedTab = selectedTab,
@@ -97,12 +139,27 @@ fun HomeRoute(
         catalogUiState = catalogUiState,
         playerUiState = playerUiState,
         profileUiState = profileUiState,
-        mediaAccessToken = mediaAccessToken,
-        resolveUrl = playerViewModel::resolveImageUrl,
+        currentUserDisplayName = currentUserDisplayName,
+        catalogUiEntry = catalogUiEntry,
+        playerUiEntry = playerUiEntry,
+        profileUiEntry = profileUiEntry,
+        resolveUrl = playerFeatureHost::resolveImageUrl,
         snackbarHostState = snackbarHostState,
-        onCatalogIntent = catalogViewModel::processIntent,
-        onPlayerIntent = playerViewModel::processIntent,
-        onProfileIntent = profileViewModel::processIntent,
+        onCatalogIntent = catalogFeatureHost::processIntent,
+        onPlayerIntent = playerFeatureHost::processIntent,
+        onProfileIntent = profileFeatureHost::processIntent,
         modifier = modifier,
     )
+}
+
+private suspend fun SnackbarHostState.showAndDismissIfNeeded(
+    message: String?,
+    dismiss: () -> Unit,
+) {
+    message ?: return
+    try {
+        showSnackbar(message = message)
+    } finally {
+        dismiss()
+    }
 }

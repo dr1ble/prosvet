@@ -2,65 +2,72 @@
 
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Generator
+from collections.abc import Generator
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
-from app.modules.auth.infra.models import Base as AuthBase
-from app.modules.auth.infra.models import (
-    OtpChallenge,
-    QrLoginToken,
-    UserSession,
-)
-from app.modules.catalog.infra.models import Base as CatalogBase
-from app.modules.catalog.infra.models import Course, CourseRelease, CourseReleaseScreen
-from app.modules.simulation.infra.models import Base as SimulationBase
-from app.modules.users.models import User, UserRole
-
+from app.main import app
+from app.modules.auth.infra import models as _auth_models  # noqa: F401
+from app.modules.catalog.infra import models as _catalog_models  # noqa: F401
+from app.modules.catalog.infra.models import Course, CourseRelease
+from app.modules.groups.infra import models as _groups_models  # noqa: F401
+from app.modules.moderation.infra import models as _moderation_models  # noqa: F401
+from app.modules.progress.infra import models as _progress_models  # noqa: F401
+from app.modules.simulation.infra import models as _simulation_models  # noqa: F401
+from app.modules.users import models as _user_models  # noqa: F401
+from app.modules.users.models import UserRole
+from app.shared.auth import policy_models as _policy_models  # noqa: F401
+from app.shared.auth.schemas import CurrentActor
+from app.shared.db.base import Base
+from app.shared.security import models as _security_models  # noqa: F401
 
 # Use main database (test database needs pg_hba config for external creation)
 # For isolated tests, use mock repositories instead of real DB
 TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL",
-    settings.database_url.replace("localhost", "127.0.0.1")
+    "TEST_DATABASE_URL", settings.database_url.replace("localhost", "127.0.0.1")
 )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def test_engine():
     """Create test database engine for# entire test session."""
     engine = create_engine(TEST_DATABASE_URL, echo=False)
-    
-    # Create all tables
-    AuthBase.metadata.create_all(bind=engine)
-    CatalogBase.metadata.create_all(bind=engine)
-    SimulationBase.metadata.create_all(bind=engine)
-    
+
+    # Create full test schema for all registered models.
+    Base.metadata.create_all(bind=engine)
+
     yield engine
-    
+
     # Drop all tables after session
-    SimulationBase.metadata.drop_all(bind=engine)
-    CatalogBase.metadata.drop_all(bind=engine)
-    AuthBase.metadata.drop_all(bind=engine)
+    Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 
 @pytest.fixture
 def db_session(test_engine) -> Generator[Session, None, None]:
-    """Create a new database session for each test."""
-    SessionLocal = sessionmaker(bind=test_engine)
-    
-    session = SessionLocal()
+    """Create a new database session wrapped in a rollback-only transaction.
+
+    Uses connection-level transaction that is never committed, ensuring
+    complete test isolation. All commits within the test are effectively
+    no-ops because the outer transaction is rolled back.
+    """
+    connection = test_engine.connect()
+    transaction = connection.begin()
+    session = sessionmaker(bind=connection)()
+
     try:
         yield session
-        session.rollback()
     finally:
         session.close()
+        transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture
@@ -88,7 +95,6 @@ def active_user():
     user = MagicMock()
     user.id = user_id
     user.login = "testuser"
-    user.phone_hash = "test_phone_hash"
     user.password_hash = "hash"
     user.role = UserRole.USER
     user.status = "active"
@@ -102,7 +108,6 @@ def admin_user():
     user = MagicMock()
     user.id = user_id
     user.login = "admin"
-    user.phone_hash = "admin_phone_hash"
     user.password_hash = "hash"
     user.role = UserRole.ADMINISTRATOR
     user.status = "active"
@@ -127,19 +132,51 @@ def published_course():
     """Mock published test course (no DB interaction)."""
     course_id = uuid.uuid4()
     release_id = uuid.uuid4()
-    
+
     course = MagicMock(spec=Course)
     course.id = course_id
     course.slug = "published-course"
     course.title = "Published Course"
     course.description = "Test Description"
     course.status = "published"
-    
+
     release = MagicMock(spec=CourseRelease)
     release.id = release_id
     release.version = "1.0.0"
     release.status = "published"
     release.published_at = datetime.now(timezone.utc)
     release.changelog = "Initial release"
-    
+
     return course
+
+
+@pytest.fixture
+def api_client() -> TestClient:
+    """Shared API client for integration tests."""
+    return TestClient(app)
+
+
+@pytest.fixture
+def dependency_overrider():
+    """Temporarily override FastAPI dependencies in tests."""
+
+    @contextmanager
+    def _overrider(overrides: dict):
+        previous = dict(app.dependency_overrides)
+        app.dependency_overrides.update(overrides)
+        try:
+            yield
+        finally:
+            app.dependency_overrides = previous
+
+    return _overrider
+
+
+@pytest.fixture
+def actor_factory():
+    """Build CurrentActor for role-based endpoint tests."""
+
+    def _build(role: UserRole) -> CurrentActor:
+        return CurrentActor(user_id=uuid.uuid4(), role=role)
+
+    return _build

@@ -1,0 +1,327 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.addButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.addBtn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  background: #fff;
+  color: var(--text-primary, #1a1a1a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.addBtn:hover {
+  background: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 6%,
+    transparent
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 30%,
+    transparent
+  );
+  color: var(--interactive-primary, #1d73e2);
+}
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary, #666);
+  border: 2px dashed var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.card {
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+  background: #fff;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface-card-muted, #f5f5f5);
+  border-bottom: 1px solid var(--border-default, #e0e0e0);
+}
+
+.cardLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dragHandle {
+  color: var(--text-secondary, #999);
+  cursor: grab;
+  display: flex;
+  align-items: center;
+}
+
+.questionNum {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.typeBadge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 10%,
+    transparent
+  );
+  color: var(--interactive-primary, #1d73e2);
+  font-weight: 600;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+
+.iconBtn:hover {
+  background: #fff;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.iconBtn.danger:hover {
+  background: color-mix(
+    in srgb,
+    var(--feedback-danger, #dc3545) 10%,
+    transparent
+  );
+  color: var(--feedback-danger, #dc3545);
+}
+
+.iconBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.cardBody {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+}
+
+.input {
+  padding: 8px 12px;
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  font: inherit;
+  font-size: 14px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--interactive-primary, #1d73e2);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--interactive-primary, #1d73e2) 15%, transparent);
+}
+
+.optionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.optionsSection > label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkboxLabel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-default, #e0e0e0);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.checkbox:checked + .checkmark {
+  background: var(--interactive-primary, #1d73e2);
+  border-color: var(--interactive-primary, #1d73e2);
+}
+
+.checkbox:checked + .checkmark::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+input[type="radio"] + .checkmark {
+  border-radius: 50%;
+}
+
+input[type="radio"]:checked + .checkmark::after {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  transform: none;
+}
+
+.optionInput {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  font: inherit;
+  font-size: 14px;
+}
+
+.optionInput:focus {
+  outline: none;
+  border-color: var(--interactive-primary, #1d73e2);
+}
+
+.addOptionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--text-secondary, #666);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.addOptionBtn:hover {
+  border-color: var(--interactive-primary, #1d73e2);
+  color: var(--interactive-primary, #1d73e2);
+  background: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 4%,
+    transparent
+  );
+}
+
+.matchingHeader {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr 28px;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  padding: 0 4px;
+}
+
+.matchingRow {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr 28px;
+  gap: 8px;
+  align-items: center;
+}
+
+.matchingInput {
+  padding: 6px 10px;
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  font: inherit;
+  font-size: 14px;
+}
+
+.matchingInput:focus {
+  outline: none;
+  border-color: var(--interactive-primary, #1d73e2);
+}
+
+.matchingArrow {
+  text-align: center;
+  color: var(--text-secondary, #999);
+  font-size: 16px;
+}

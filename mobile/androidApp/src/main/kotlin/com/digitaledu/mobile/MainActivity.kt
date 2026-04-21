@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
                 createMobileAppModule(
                     backendBaseUrl = BuildConfig.BACKEND_BASE_URL,
                     enableNetworkLogs = BuildConfig.DEBUG,
-                    enableDebugQuickLogin = BuildConfig.DEBUG,
+                    enableDebugQuickLogin = false,
                     debugQuickLoginPresets = debugQuickLoginPresets(),
                     authSessionStore = SecureAuthSessionStore(this@MainActivity),
                     accessibilityPreferencesRepository = provideAccessibilityPreferencesRepository(this@MainActivity),

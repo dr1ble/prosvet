@@ -1,4 +1,3 @@
-import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -18,52 +17,14 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _normalize_phone(phone: str) -> str:
-    return "".join(char for char in phone if char.isdigit())
-
-
 def _normalize_login(login: str) -> str:
     return login.strip().lower()
-
-
-def _generate_otp_code() -> str:
-    return f"{secrets.randbelow(900_000) + 100_000:06d}"
-
-
-def _parse_admin_phones(raw: str) -> set[str]:
-    phones: set[str] = set()
-    for chunk in raw.split(","):
-        normalized = _normalize_phone(chunk)
-        if normalized:
-            phones.add(normalized)
-    return phones
 
 
 class AuthService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repo = AuthRepository(db)
-
-    def request_otp(self, phone: str) -> tuple[str, str | None]:
-        now = _utcnow()
-        normalized_phone = _normalize_phone(phone)
-        phone_hash = stable_hash(normalized_phone, settings.security_pepper)
-        latest = self.repo.get_latest_challenge(phone_hash)
-
-        if latest and latest.blocked_until and latest.blocked_until > now:
-            raise AuthError("OTP temporarily blocked. Try again later.", status_code=429)
-
-        otp_code = _generate_otp_code()
-        challenge = self.repo.create_challenge(
-            phone_hash=phone_hash,
-            code_hash=stable_hash(otp_code, settings.security_pepper),
-            expires_at=now + timedelta(minutes=settings.otp_ttl_minutes),
-        )
-
-        # SMS provider integration will deliver otp_code to user phone.
-        self.db.commit()
-        dev_code = otp_code if settings.debug_return_otp_code else None
-        return str(challenge.id), dev_code
 
     def login(self, login: str, password: str) -> AuthResponse:
         now = _utcnow()
@@ -77,6 +38,8 @@ class AuthService:
         if user is None:
             user = self._bootstrap_admin_if_needed(normalized_login, password)
             if user is None:
+                user = self._bootstrap_demo_user_if_needed(normalized_login, password)
+            if user is None:
                 raise AuthError("Invalid credentials.", status_code=401)
         else:
             if user.status != UserStatus.ACTIVE:
@@ -85,50 +48,36 @@ class AuthService:
                 raise AuthError("Invalid credentials.", status_code=401)
 
         auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
-        self.db.commit()
         return auth_response
 
-    def verify_otp(self, phone: str, code: str) -> AuthResponse:
+    def register(self, full_name: str, login: str, password: str) -> AuthResponse:
         now = _utcnow()
-        normalized_phone = _normalize_phone(phone)
-        phone_hash = stable_hash(normalized_phone, settings.security_pepper)
-        latest = self.repo.get_latest_challenge(phone_hash)
+        normalized_login = _normalize_login(login)
+        normalized_full_name = full_name.strip()
 
-        if latest is None:
-            raise AuthError("OTP challenge not found.", status_code=401)
+        if len(normalized_full_name) < 2:
+            raise AuthError("Invalid registration data.", status_code=400)
+        if len(normalized_login) < 3:
+            raise AuthError("Invalid registration data.", status_code=400)
+        if len(password) < 8:
+            raise AuthError("Invalid registration data.", status_code=400)
 
-        if latest.blocked_until and latest.blocked_until > now:
-            raise AuthError("OTP temporarily blocked. Try again later.", status_code=429)
+        existing_user = self.repo.get_user_by_login(normalized_login)
+        if existing_user is not None:
+            raise AuthError("Login is already taken.", status_code=409)
 
-        if latest.expires_at <= now:
-            self.repo.mark_challenge_expired(latest)
-            self.db.commit()
-            raise AuthError("OTP challenge expired.", status_code=401)
+        created_user = self.repo.create_user(
+            role=UserRole.USER,
+            login=normalized_login,
+            password_hash=hash_password(password),
+            display_name=normalized_full_name,
+        )
 
-        code_hash = stable_hash(code, settings.security_pepper)
-        if code_hash != latest.code_hash:
-            next_attempt = latest.attempts + 1
-            blocked_until = None
-            if next_attempt >= settings.otp_max_attempts:
-                blocked_until = now + timedelta(minutes=settings.otp_block_minutes)
-            self.repo.register_failed_attempt(latest, blocked_until=blocked_until)
-            self.db.commit()
-
-            if blocked_until is not None:
-                raise AuthError("Too many attempts. OTP flow is temporarily blocked.", status_code=429)
-            raise AuthError("Invalid OTP code.", status_code=401)
-
-        self.repo.mark_challenge_verified(latest, now)
-        user = self.repo.get_user_by_phone_hash(phone_hash)
-        promoted_role = self._resolve_role_for_phone(normalized_phone)
-        if user is None:
-            user = self.repo.create_user(phone_hash=phone_hash, role=promoted_role)
-        elif user.role == UserRole.USER and promoted_role != UserRole.USER:
-            user.role = promoted_role
-
-        auth_response = self._issue_session_tokens(user_id=user.id, role=user.role.value, now=now)
-        self.db.commit()
-        return auth_response
+        return self._issue_session_tokens(
+            user_id=created_user.id,
+            role=created_user.role.value,
+            now=now,
+        )
 
     def activate_qr(self, token: str) -> AuthResponse:
         now = _utcnow()
@@ -142,9 +91,9 @@ class AuthService:
 
         # For now, create a user for one-time QR flow if not pre-bound.
         if qr_token.issued_by_user_id is None:
-            user = self.repo.create_user(phone_hash=stable_hash(f"qr:{qr_token.id}", settings.security_pepper))
-            user_id = user.id
-            role = user.role.value
+            created_user = self.repo.create_user()
+            user_id = created_user.id
+            role = created_user.role.value
         else:
             user = self.repo.get_user_by_id(qr_token.issued_by_user_id)
             if user is None or user.status != UserStatus.ACTIVE:
@@ -153,13 +102,14 @@ class AuthService:
             role = user.role.value
 
         auth_response = self._issue_session_tokens(user_id=user_id, role=role, now=now)
-        self.db.commit()
         return auth_response
 
     def refresh_session(self, refresh_token: str) -> AuthResponse:
         now = _utcnow()
         refresh_token_hash = stable_hash(refresh_token, settings.security_pepper)
-        current_session = self.repo.get_active_session_by_refresh_hash(refresh_token_hash=refresh_token_hash, now=now)
+        current_session = self.repo.get_active_session_by_refresh_hash(
+            refresh_token_hash=refresh_token_hash, now=now
+        )
         if current_session is None:
             raise AuthError("Refresh token is invalid or expired.", status_code=401)
 
@@ -174,16 +124,16 @@ class AuthService:
             now=now,
             device_id_hash=current_session.device_id_hash,
         )
-        self.db.commit()
         return auth_response
 
     def logout(self, refresh_token: str) -> None:
         now = _utcnow()
         refresh_token_hash = stable_hash(refresh_token, settings.security_pepper)
-        session = self.repo.get_active_session_by_refresh_hash(refresh_token_hash=refresh_token_hash, now=now)
+        session = self.repo.get_active_session_by_refresh_hash(
+            refresh_token_hash=refresh_token_hash, now=now
+        )
         if session is not None:
             self.repo.revoke_session(session, now)
-        self.db.commit()
 
     def _issue_session_tokens(
         self,
@@ -206,14 +156,7 @@ class AuthService:
             expires_at=now + timedelta(days=settings.refresh_session_days),
             device_id_hash=device_id_hash,
         )
-        return AuthResponse(access_token=access_token, refresh_token=refresh_token)
-
-    @staticmethod
-    def _resolve_role_for_phone(normalized_phone: str) -> UserRole:
-        admin_phones = _parse_admin_phones(settings.admin_phone_numbers)
-        if normalized_phone in admin_phones:
-            return UserRole.ADMINISTRATOR
-        return UserRole.USER
+        return AuthResponse(access_token=access_token, refresh_token=refresh_token, user_id=user_id)
 
     def _bootstrap_admin_if_needed(self, login: str, password: str) -> User | None:
         admin_login = _normalize_login(settings.admin_login)
@@ -224,10 +167,35 @@ class AuthService:
         if login != admin_login or not admin_password or password != admin_password:
             return None
 
-        synthetic_phone_hash = stable_hash(f"login:{admin_login}", settings.security_pepper)
         return self.repo.create_user(
-            phone_hash=synthetic_phone_hash,
             role=UserRole.ADMINISTRATOR,
             login=admin_login,
             password_hash=hash_password(admin_password),
+        )
+
+    def _bootstrap_demo_user_if_needed(self, login: str, password: str) -> User | None:
+        environment = str(getattr(settings, "environment", "development") or "development").lower()
+        if environment != "development":
+            return None
+
+        demo_users: dict[str, tuple[UserRole, str, str]] = {
+            "methodologist": (UserRole.METHODOLOGIST, "method12345", "Методист"),
+            "methodist": (UserRole.METHODOLOGIST, "method12345", "Методист"),
+            "moderator": (UserRole.MODERATOR, "moder12345", "Модератор"),
+            "user": (UserRole.USER, "user12345", "Пользователь"),
+        }
+
+        demo_user = demo_users.get(login)
+        if demo_user is None:
+            return None
+
+        role, expected_password, display_name = demo_user
+        if password != expected_password:
+            return None
+
+        return self.repo.create_user(
+            role=role,
+            login=login,
+            password_hash=hash_password(expected_password),
+            display_name=display_name,
         )

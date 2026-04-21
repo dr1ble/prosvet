@@ -1,0 +1,227 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.openEditorBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--interactive-primary, #1d73e2);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--interactive-primary, #1d73e2);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.openEditorBtn:hover {
+  background: color-mix(in srgb, var(--interactive-primary, #1d73e2) 85%, #000);
+}
+
+.selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.selector > label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+}
+
+.emptyLibrary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px;
+  color: var(--text-secondary, #666);
+  border: 2px dashed var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  text-align: center;
+}
+
+.emptyLibrary p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.emptyLibrary span {
+  font-size: 12px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.listItem:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 30%,
+    transparent
+  );
+  background: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 4%,
+    transparent
+  );
+}
+
+.selected {
+  border-color: var(--interactive-primary, #1d73e2);
+  background: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 8%,
+    transparent
+  );
+}
+
+.itemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemMeta {
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+}
+
+.itemDate {
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+  flex-shrink: 0;
+}
+
+.selectedInfo {
+  padding: 12px;
+  background: color-mix(
+    in srgb,
+    var(--interactive-primary, #1d73e2) 6%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--interactive-primary, #1d73e2) 20%, transparent);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.selectedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.selectedTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--feedback-danger, #dc3545);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--feedback-danger, #dc3545);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clearBtn:hover {
+  background: color-mix(
+    in srgb,
+    var(--feedback-danger, #dc3545) 10%,
+    transparent
+  );
+}
+
+.selectedMeta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+}
+
+.loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary, #666);
+  font-size: 14px;
+}
+
+.error {
+  padding: 24px;
+  text-align: center;
+  color: var(--feedback-danger, #dc3545);
+}
+
+.retryBtn {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-default, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  background: #fff;
+  color: var(--text-primary, #1a1a1a);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.retryBtn:hover {
+  background: var(--surface-card-muted, #f5f5f5);
+}

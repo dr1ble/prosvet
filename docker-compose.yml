@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    platform: ${POSTGRES_PLATFORM:-linux/amd64}
     container_name: dep_postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-app}
@@ -26,13 +27,10 @@ services:
       APP_SECURITY_PEPPER: ${APP_SECURITY_PEPPER:-dev-pepper-change-in-prod}
       APP_ACCESS_TOKEN_SECRET: ${APP_ACCESS_TOKEN_SECRET:-dev-access-token-secret-change-in-prod}
       APP_ACCESS_TOKEN_TTL_MINUTES: ${APP_ACCESS_TOKEN_TTL_MINUTES:-30}
-      APP_OTP_TTL_MINUTES: ${APP_OTP_TTL_MINUTES:-5}
-      APP_OTP_MAX_ATTEMPTS: ${APP_OTP_MAX_ATTEMPTS:-5}
-      APP_OTP_BLOCK_MINUTES: ${APP_OTP_BLOCK_MINUTES:-15}
       APP_QR_TTL_HOURS: ${APP_QR_TTL_HOURS:-24}
       APP_REFRESH_SESSION_DAYS: ${APP_REFRESH_SESSION_DAYS:-30}
-      APP_ADMIN_PHONE_NUMBERS: ${APP_ADMIN_PHONE_NUMBERS:-}
-      APP_DEBUG_RETURN_OTP_CODE: ${APP_DEBUG_RETURN_OTP_CODE:-false}
+      APP_ADMIN_LOGIN: ${APP_ADMIN_LOGIN:-admin}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-admin12345}
     depends_on:
       postgres:
         condition: service_healthy

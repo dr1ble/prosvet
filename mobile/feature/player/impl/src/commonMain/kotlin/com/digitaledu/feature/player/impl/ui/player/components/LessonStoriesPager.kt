@@ -1,0 +1,219 @@
+package com.digitaledu.feature.player.impl.ui.player.components
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import com.digitaledu.core.ui.components.UiSize
+import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.model.catalog.CatalogBundle
+import com.digitaledu.core.model.content.ArticlePayload
+import com.digitaledu.core.model.content.Hotspot
+import com.digitaledu.core.model.content.QuizPayload
+import com.digitaledu.core.model.content.SimulationPayload
+import com.digitaledu.core.model.reference.LessonReference
+import com.digitaledu.feature.player.api.PlayerIntent
+import com.digitaledu.feature.player.impl.ui.player.PlayerContent
+import digital_education_mobile.feature.player.`impl`.generated.resources.Res
+import digital_education_mobile.feature.player.`impl`.generated.resources.close
+import digital_education_mobile.feature.player.`impl`.generated.resources.theory
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * Stories-style pager for lesson content.
+ *
+ * Features:
+ * - Segmented progress bar at the top
+ * - Tap navigation (left/right zones)
+ * - Deep Immersion mode for simulations (hides UI)
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun LessonStoriesPager(
+    bundle: CatalogBundle,
+    currentScreenIndex: Int,
+    mediaAccessToken: String?,
+    activeHotspotHint: Hotspot?,
+    activeLessonReference: LessonReference?,
+    onIntent: (PlayerIntent) -> Unit,
+    onShowTheory: () -> Unit,
+    resolveUrl: (String) -> String,
+    modifier: Modifier = Modifier
+) {
+    val pagerState = rememberPagerState(
+        initialPage = currentScreenIndex,
+        pageCount = { bundle.screens.size }
+    )
+    LaunchedEffect(currentScreenIndex) {
+        if (pagerState.currentPage != currentScreenIndex) {
+            pagerState.animateScrollToPage(currentScreenIndex)
+        }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage != currentScreenIndex) {
+            if (pagerState.currentPage > currentScreenIndex) {
+                onIntent(PlayerIntent.Next)
+            } else {
+                onIntent(PlayerIntent.Previous)
+            }
+        }
+    }
+
+    val currentScreen = bundle.screens.getOrNull(currentScreenIndex)
+    val isSimulation = currentScreen?.payload is SimulationPayload
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = !isSimulation, // Disable swipe for simulations
+            modifier = Modifier.fillMaxSize()
+        ) { pageIndex ->
+            val screen = bundle.screens.getOrNull(pageIndex)
+            if (screen != null) {
+                // Apply system bars padding only if NOT simulation
+                val contentModifier = if (screen.payload is SimulationPayload) {
+                    Modifier.fillMaxSize()
+                } else {
+                    Modifier
+                        .fillMaxSize()
+                        .systemBarsPadding() 
+                        .padding(top = UiSpacing.xl)
+                }
+                
+                PlayerContent(
+                    screen = screen,
+                    mediaAccessToken = mediaAccessToken,
+                    activeHotspotHint = activeHotspotHint,
+                    activeLessonReference = activeLessonReference,
+                    onIntent = onIntent,
+                    resolveUrl = resolveUrl,
+                    modifier = contentModifier
+                )
+            }
+        }
+
+        val isArticle = currentScreen?.payload is ArticlePayload
+        val isQuiz = currentScreen?.payload is QuizPayload
+        if (!isSimulation && !isArticle && !isQuiz) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .weight(0.3f)
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = {
+                                if (currentScreenIndex > 0) {
+                                    onIntent(PlayerIntent.Previous)
+                                }
+                            })
+                        }
+                )
+                
+                Box(modifier = Modifier.weight(0.4f).fillMaxSize())
+
+                Box(
+                    modifier = Modifier
+                        .weight(0.3f)
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = {
+                                if (currentScreenIndex < bundle.screens.lastIndex) {
+                                    onIntent(PlayerIntent.Next)
+                                }
+                            })
+                        }
+                )
+            }
+        }
+
+        if (!isSimulation) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding()
+                    .padding(horizontal = UiSpacing.md, vertical = UiSpacing.xs)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = UiSpacing.md),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (activeLessonReference != null) {
+                        IconButton(
+                            onClick = onShowTheory,
+                            modifier = Modifier
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.theory),
+                                    role = Role.Button,
+                                ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = stringResource(Res.string.theory),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.size(UiSize.touchTarget))
+                    }
+
+                    IconButton(
+                        onClick = { onIntent(PlayerIntent.ExitFullscreen) },
+                        modifier = Modifier
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(
+                                label = stringResource(Res.string.close),
+                                role = Role.Button,
+                            ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(Res.string.close),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                StoryStepsProgressBar(
+                    stepsCount = bundle.screens.size,
+                    currentStep = currentScreenIndex,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = UiSpacing.xs)
+                )
+            }
+        }
+    }
+}

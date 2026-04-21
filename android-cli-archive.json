@@ -1,0 +1,1242 @@
+{
+  "title": "Android Studio  |  Android Developers",
+  "text": "Перейти к основному контенту\n\ndeveloper.android.com использует файлы cookie от Google. Это необходимо для поддержания и улучшения его работы и для анализа трафика. Подробнее\n\nОК\nEssentials\nЕщё\n/\nAndroid Studio\nВойти\nANDROID STUDIO\nЭта страница переведена с помощью Cloud Translation API.\nAndroid Developers\nAndroid Studio\nЭта информация оказалась полезной?\n\nНа этой странице представлен архив релизов Android CLI.\n\nДля максимально быстрой загрузки и установки выполните команду для вашей операционной системы в терминале:\n\nLinux:\n\ncurl -fsSL https://dl.google.com/android/cli/latest/linux_x86_64/install.sh | bash\n\n\nMac OS:\n\ncurl -fsSL https://dl.google.com/android/cli/latest/darwin_arm64/install.sh | bash\n\n\nОкна:\n\ncurl.exe -fsSL https://dl.google.com/android/cli/latest/windows_x86_64/install.cmd -o \"%TEMP%\\i.cmd\" && \"%TEMP%\\i.cmd\"\n\n\nДля прямой загрузки Android CLI воспользуйтесь одной из следующих ссылок, соответствующих операционной системе вашей операционной системы:\n\nLinux: https://dl.google.com/android/cli/latest/linux_x86_64/android\nWindows: https://dl.google.com/android/cli/latest/windows_x86_64/android.exe\nMac: https://dl.google.com/android/cli/latest/darwin_arm64/android\nЭта информация оказалась полезной?\n\nКонтент и образцы кода на этой странице предоставлены по лицензиям. Java и OpenJDK – это зарегистрированные товарные знаки корпорации Oracle и ее аффилированных лиц.\n\nПоследнее обновление: 2026-04-16 UTC.\n\nX\nЧитайте @AndroidDev в X\nYouTube\nСмотрите видео на канале Android Developers на YouTube\nLinkedIn\nConnect with the Android Developers community on LinkedIn\nПОДРОБНЕЕ ОБ ОС ANDROID\nAndroid\nAndroid for Enterprise\nБезопасность\nИсходный код\nНовости\nБлог\nПодкасты\nОБЗОР\nИгры\nМашинное обучение\nЗдоровье и фитнес\nКамера и медиа\nКонфиденциальность\n5G\nУСТРОЙСТВА ANDROID\nБольшие экраны\nWear OS\nУстройства ChromeOS\nAndroid for Cars\nAndroid TV\nРЕЛИЗЫ\nAndroid 15\nAndroid 14\nAndroid 13\nAndroid 12\nAndroid 11\nAndroid 10\nPie\nДОКУМЕНТЫ И СКАЧАННЫЕ ФАЙЛЫ\nРуководство по Android Studio\nРуководства для разработчиков\nДокументация по API\nDownload Studio\nAndroid NDK\nПОДДЕРЖКА\nСообщить об ошибке на платформе\nСообщить об ошибке в документации\nGoogle Play support\nУчаствовать в исследованиях\nAndroid\nChrome\nFirebase\nGoogle Cloud Platform\nВсе продукты\nКонфиденциальность\nЛицензия\nПравила использования бренда\nПодписаться на рассылку\nПодписаться",
+  "links": [
+    {
+      "text": "Перейти к основному контенту",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ru#main-content"
+    },
+    {
+      "text": "",
+      "href": "https://developer.android.com/"
+    },
+    {
+      "text": "Essentials",
+      "href": "https://developer.android.com/get-started?hl=ru"
+    },
+    {
+      "text": "Начать",
+      "href": "https://developer.android.com/ai?hl=ru"
+    },
+    {
+      "text": "Здравствуй, мир!",
+      "href": "https://developer.android.com/get-started/overview?hl=ru"
+    },
+    {
+      "text": "Учебные курсы",
+      "href": "https://developer.android.com/courses?hl=ru"
+    },
+    {
+      "text": "Руководства",
+      "href": "https://developer.android.com/get-started/codelabs?hl=ru"
+    },
+    {
+      "text": "Сочиняйте для команд",
+      "href": "https://developer.android.com/develop/ui/compose/adopt?hl=ru"
+    },
+    {
+      "text": "Котлин для Android",
+      "href": "https://developer.android.com/kotlin?hl=ru"
+    },
+    {
+      "text": "Проверка разработчика Android",
+      "href": "https://developer.android.com/developer-verification?hl=ru"
+    },
+    {
+      "text": "Адаптивные приложения",
+      "href": "https://developer.android.com/adaptive-apps?hl=ru"
+    },
+    {
+      "text": "Андроид XR",
+      "href": "https://developer.android.com/xr?hl=ru"
+    },
+    {
+      "text": "Wear OS",
+      "href": "https://developer.android.com/wear?hl=ru"
+    },
+    {
+      "text": "Андроид для автомобилей",
+      "href": "https://developer.android.com/cars?hl=ru"
+    },
+    {
+      "text": "Android TV",
+      "href": "https://developer.android.com/tv?hl=ru"
+    },
+    {
+      "text": "ChromeOS",
+      "href": "https://developer.android.com/chrome-os?hl=ru"
+    },
+    {
+      "text": "Игры",
+      "href": "https://developer.android.com/games?hl=ru"
+    },
+    {
+      "text": "Камера и медиа",
+      "href": "https://developer.android.com/media?hl=ru"
+    },
+    {
+      "text": "Социальные сети и обмен сообщениями",
+      "href": "https://developer.android.com/social-and-messaging?hl=ru"
+    },
+    {
+      "text": "Здоровье и фитнес",
+      "href": "https://developer.android.com/health-and-fitness?hl=ru"
+    },
+    {
+      "text": "Производительность",
+      "href": "https://developer.android.com/productivity?hl=ru"
+    },
+    {
+      "text": "Корпоративные приложения",
+      "href": "https://developer.android.com/work/overview?hl=ru"
+    },
+    {
+      "text": "Последние обновления",
+      "href": "https://developer.android.com/latest-updates?hl=ru"
+    },
+    {
+      "text": "Экспериментальные обновления",
+      "href": "https://developer.android.com/latest-updates/experimental?hl=ru"
+    },
+    {
+      "text": "Предварительный просмотр Android-студии",
+      "href": "https://developer.android.com/studio/preview?hl=ru"
+    },
+    {
+      "text": "Библиотеки Jetpack и Compose",
+      "href": "https://developer.android.com/jetpack/androidx/versions?hl=ru"
+    },
+    {
+      "text": "Релизы Wear OS",
+      "href": "https://developer.android.com/training/wearables/versions/latest?hl=ru"
+    },
+    {
+      "text": "Песочница конфиденциальности ↗️",
+      "href": "https://developer.android.com/design-for-safety/privacy-sandbox?hl=ru"
+    },
+    {
+      "text": "Дизайн и план",
+      "href": "https://developer.android.com/design?hl=ru"
+    },
+    {
+      "text": "Подробнее",
+      "href": "https://developer.android.com/quality/excellent?hl=ru"
+    },
+    {
+      "text": "Дизайн для Android",
+      "href": "https://developer.android.com/design/ui?hl=ru"
+    },
+    {
+      "text": "Мобильные устройства",
+      "href": "https://developer.android.com/design/ui/mobile?hl=ru"
+    },
+    {
+      "text": "Настольные приложения",
+      "href": "https://developer.android.com/design/ui/desktop?hl=ru"
+    },
+    {
+      "text": "Гарнитуры XR и очки XR",
+      "href": "https://developer.android.com/design/ui/xr?hl=ru"
+    },
+    {
+      "text": "Очки ИИ",
+      "href": "https://developer.android.com/design/ui/ai-glasses?hl=ru"
+    },
+    {
+      "text": "Виджеты",
+      "href": "https://developer.android.com/design/ui/widget?hl=ru"
+    },
+    {
+      "text": "Wear OS",
+      "href": "https://developer.android.com/design/ui/wear?hl=ru"
+    },
+    {
+      "text": "Android TV",
+      "href": "https://developer.android.com/design/ui/tv?hl=ru"
+    },
+    {
+      "text": "Андроид для автомобилей",
+      "href": "https://developer.android.com/design/ui/cars?hl=ru"
+    },
+    {
+      "text": "Введение",
+      "href": "https://developer.android.com/topic/architecture/intro?hl=ru"
+    },
+    {
+      "text": "Библиотеки",
+      "href": "https://developer.android.com/topic/libraries/view-binding?hl=ru"
+    },
+    {
+      "text": "Навигация",
+      "href": "https://developer.android.com/guide/navigation/navigation-principles?hl=ru"
+    },
+    {
+      "text": "Модульность",
+      "href": "https://developer.android.com/topic/modularization?hl=ru"
+    },
+    {
+      "text": "Тестирование",
+      "href": "https://developer.android.com/training/testing/fundamentals?hl=ru"
+    },
+    {
+      "text": "Котлин Мультиплатформа",
+      "href": "https://developer.android.com/kotlin/multiplatform?hl=ru"
+    },
+    {
+      "text": "Обзор",
+      "href": "https://developer.android.com/quality?hl=ru"
+    },
+    {
+      "text": "Основная ценность",
+      "href": "https://developer.android.com/quality/core-value?hl=ru"
+    },
+    {
+      "text": "Пользовательский опыт",
+      "href": "https://developer.android.com/quality/user-experience?hl=ru"
+    },
+    {
+      "text": "Доступность",
+      "href": "https://developer.android.com/guide/topics/ui/accessibility?hl=ru"
+    },
+    {
+      "text": "Техническое качество",
+      "href": "https://developer.android.com/quality/technical?hl=ru"
+    },
+    {
+      "text": "Превосходные впечатления",
+      "href": "https://developer.android.com/quality/excellent?hl=ru"
+    },
+    {
+      "text": "Обзор",
+      "href": "https://developer.android.com/security?hl=ru"
+    },
+    {
+      "text": "Конфиденциальность",
+      "href": "https://developer.android.com/privacy?hl=ru"
+    },
+    {
+      "text": "Разрешения",
+      "href": "https://developer.android.com/privacy?hl=ru#app-permissions"
+    },
+    {
+      "text": "Идентификация",
+      "href": "https://developer.android.com/identity?hl=ru"
+    },
+    {
+      "text": "Предотвращение мошенничества",
+      "href": "https://developer.android.com/security/fraud-prevention?hl=ru"
+    },
+    {
+      "text": "Развивать",
+      "href": "https://developer.android.com/develop?hl=ru"
+    },
+    {
+      "text": "Подробнее",
+      "href": "https://developer.android.com/gemini-in-android?hl=ru"
+    },
+    {
+      "text": "Получить Android Studio",
+      "href": "https://developer.android.com/studio?hl=ru"
+    },
+    {
+      "text": "Примеры",
+      "href": "https://developer.android.com/samples?hl=ru"
+    },
+    {
+      "text": "Пользовательские интерфейсы",
+      "href": "https://developer.android.com/develop/ui?hl=ru"
+    },
+    {
+      "text": "Фоновая работа",
+      "href": "https://developer.android.com/develop/background-work?hl=ru"
+    },
+    {
+      "text": "Данные и файлы",
+      "href": "https://developer.android.com/guide/topics/data?hl=ru"
+    },
+    {
+      "text": "Возможности подключения",
+      "href": "https://developer.android.com/develop/connectivity?hl=ru"
+    },
+    {
+      "text": "Все основные направления ⤵️",
+      "href": "https://developer.android.com/develop?hl=ru#core-areas"
+    },
+    {
+      "text": "Написание и отладка кода",
+      "href": "https://developer.android.com/studio/write?hl=ru"
+    },
+    {
+      "text": "Создание проектов",
+      "href": "https://developer.android.com/build/gradle-build-overview?hl=ru"
+    },
+    {
+      "text": "Проверьте свое приложение",
+      "href": "https://developer.android.com/training/testing?hl=ru"
+    },
+    {
+      "text": "Эффективность",
+      "href": "https://developer.android.com/topic/performance/overview?hl=ru"
+    },
+    {
+      "text": "Инструменты командной строки",
+      "href": "https://developer.android.com/tools?hl=ru"
+    },
+    {
+      "text": "API плагина Gradle",
+      "href": "https://developer.android.com/reference/tools/gradle-api?hl=ru"
+    },
+    {
+      "text": "Android Bench",
+      "href": "https://developer.android.com/bench?hl=ru"
+    },
+    {
+      "text": "Адаптивный интерфейс",
+      "href": "https://developer.android.com/guide/topics/large-screens/get-started-with-large-screens?hl=ru"
+    },
+    {
+      "text": "Wear OS",
+      "href": "https://developer.android.com/training/wearables?hl=ru"
+    },
+    {
+      "text": "Андроид XR",
+      "href": "https://developer.android.com/develop/xr?hl=ru"
+    },
+    {
+      "text": "Android Здоровье",
+      "href": "https://developer.android.com/health-and-fitness/guides?hl=ru"
+    },
+    {
+      "text": "Андроид для автомобилей",
+      "href": "https://developer.android.com/training/cars?hl=ru"
+    },
+    {
+      "text": "Android TV",
+      "href": "https://developer.android.com/training/tv?hl=ru"
+    },
+    {
+      "text": "Все устройства ⤵️",
+      "href": "https://developer.android.com/develop?hl=ru#devices"
+    },
+    {
+      "text": "Платформа Android",
+      "href": "https://developer.android.com/reference/packages?hl=ru"
+    },
+    {
+      "text": "Библиотеки Jetpack",
+      "href": "https://developer.android.com/jetpack/androidx/explorer?hl=ru"
+    },
+    {
+      "text": "Создание библиотек",
+      "href": "https://developer.android.com/jetpack/androidx/releases/compose?hl=ru"
+    },
+    {
+      "text": "Сервисы Google Play ↗️",
+      "href": "https://developers.google.com/android/reference/packages?hl=ru"
+    },
+    {
+      "text": "Google Play",
+      "href": "https://developer.android.com/distribute?hl=ru"
+    },
+    {
+      "text": "Монетизация игр",
+      "href": "https://developer.android.com/distribute/play-billing?hl=ru"
+    },
+    {
+      "text": "Играйте честно",
+      "href": "https://developer.android.com/google/play/integrity?hl=ru"
+    },
+    {
+      "text": "Политика игры",
+      "href": "https://developer.android.com/distribute/play-policies?hl=ru"
+    },
+    {
+      "text": "Обзор",
+      "href": "https://developer.android.com/games?hl=ru"
+    },
+    {
+      "text": "Доставка игровых активов",
+      "href": "https://developer.android.com/guide/playcore/asset-delivery?hl=ru"
+    },
+    {
+      "text": "Игровые сервисы Play",
+      "href": "https://developer.android.com/games/pgs/overview?hl=ru"
+    },
+    {
+      "text": "Играть в игры на ПК",
+      "href": "https://developer.android.com/games/playgames/overview?hl=ru"
+    },
+    {
+      "text": "Все руководства по игре ⤵️",
+      "href": "https://developer.android.com/distribute?hl=ru"
+    },
+    {
+      "text": "Доставка функций Play",
+      "href": "https://developer.android.com/guide/playcore/feature-delivery?hl=ru"
+    },
+    {
+      "text": "Воспроизведение обновлений в приложении",
+      "href": "https://developer.android.com/guide/playcore/in-app-updates?hl=ru"
+    },
+    {
+      "text": "Воспроизвести обзоры в приложении",
+      "href": "https://developer.android.com/guide/playcore/in-app-review?hl=ru"
+    },
+    {
+      "text": "Играть Установить реферер",
+      "href": "https://developer.android.com/google/play/installreferrer?hl=ru"
+    },
+    {
+      "text": "Сервисы Google Play ↗️",
+      "href": "https://developers.google.com/android/reference/packages?hl=ru"
+    },
+    {
+      "text": "Все библиотеки Play ⤵️",
+      "href": "https://developer.android.com/distribute?hl=ru"
+    },
+    {
+      "text": "Пакеты приложений для Android",
+      "href": "https://developer.android.com/guide/app-bundle?hl=ru"
+    },
+    {
+      "text": "Бренд и маркетинг",
+      "href": "https://developer.android.com/distribute/marketing-tools?hl=ru"
+    },
+    {
+      "text": "API Play Console ↗️",
+      "href": "https://developers.google.com/android-publisher/api-ref/rest?hl=ru"
+    },
+    {
+      "text": "Блог",
+      "href": "https://developer.android.com/blog?hl=ru"
+    },
+    {
+      "text": "Читайте последние новости",
+      "href": "https://developer.android.com/blog/latest?hl=ru"
+    },
+    {
+      "text": "Посмотреть список авторов →",
+      "href": "https://developer.android.com/blog/authors?hl=ru"
+    },
+    {
+      "text": "Истории успеха\n                    \n                    \n                    \n                      Реальные результаты от реальных пользователей. Узнайте, как разные команды используют наши инструменты для достижения своих целей.",
+      "href": "https://developer.android.com/blog/categories/case-studies?hl=ru"
+    },
+    {
+      "text": "Мероприятия и программы\n                    \n                    \n                    \n                      Узнайте подробности о предстоящих вебинарах, мастер-классах, встречах и специальных мероприятиях, призванных помочь вам в развитии.",
+      "href": "https://developer.android.com/blog/categories/events-and-programs?hl=ru"
+    },
+    {
+      "text": "Новости о продуктах\n                    \n                    \n                    \n                      Будьте в курсе последних обновлений, новых функций и закулисных подробностей о нашем развитии.",
+      "href": "https://developer.android.com/blog/categories/product-news?hl=ru"
+    },
+    {
+      "text": "Сообщество\n                    \n                    \n                    \n                      Узнайте истории наших пользователей, ознакомьтесь с интересными материалами и узнайте о совместных проектах, которые объединяют нас всех.",
+      "href": "https://developer.android.com/blog/categories/community?hl=ru"
+    },
+    {
+      "text": "Инструкции\n                    \n                    \n                    \n                      От кратких советов до подробных руководств — эти пошаговые инструкции призваны помочь вам работать эффективнее и быстрее.",
+      "href": "https://developer.android.com/blog/categories/how-tos?hl=ru"
+    },
+    {
+      "text": "English",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive"
+    },
+    {
+      "text": "Deutsch",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=de"
+    },
+    {
+      "text": "Español – América Latina",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=es-419"
+    },
+    {
+      "text": "Français",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=fr"
+    },
+    {
+      "text": "Indonesia",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=id"
+    },
+    {
+      "text": "Italiano",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=it"
+    },
+    {
+      "text": "Polski",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=pl"
+    },
+    {
+      "text": "Português – Brasil",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=pt-br"
+    },
+    {
+      "text": "Tiếng Việt",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=vi"
+    },
+    {
+      "text": "Türkçe",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=tr"
+    },
+    {
+      "text": "Русский",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ru"
+    },
+    {
+      "text": "עברית",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=he"
+    },
+    {
+      "text": "العربيّة",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ar"
+    },
+    {
+      "text": "فارسی",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=fa"
+    },
+    {
+      "text": "हिंदी",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=hi"
+    },
+    {
+      "text": "বাংলা",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=bn"
+    },
+    {
+      "text": "ภาษาไทย",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=th"
+    },
+    {
+      "text": "中文 – 简体",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=zh-cn"
+    },
+    {
+      "text": "中文 – 繁體",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=zh-tw"
+    },
+    {
+      "text": "日本語",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ja"
+    },
+    {
+      "text": "한국어",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ko"
+    },
+    {
+      "text": "Android Studio",
+      "href": "https://developer.android.com/studio?hl=ru"
+    },
+    {
+      "text": "Войти",
+      "href": "https://developer.android.com/_d/signin?continue=https%3A%2F%2Fdeveloper.android.com%2Ftools%2Fagents%2Fandroid-cli%2Farchive%3Fhl%3Dru&prompt=select_account"
+    },
+    {
+      "text": "Android Studio",
+      "href": "https://developer.android.com/studio?hl=ru"
+    },
+    {
+      "text": "",
+      "href": "https://developer.android.com/"
+    },
+    {
+      "text": "Essentials",
+      "href": "https://developer.android.com/get-started"
+    },
+    {
+      "text": "Дизайн и план",
+      "href": "https://developer.android.com/design"
+    },
+    {
+      "text": "Развивать",
+      "href": "https://developer.android.com/develop"
+    },
+    {
+      "text": "Google Play",
+      "href": "https://developer.android.com/distribute"
+    },
+    {
+      "text": "Блог",
+      "href": "https://developer.android.com/blog"
+    },
+    {
+      "text": "Android Studio",
+      "href": "https://developer.android.com/studio"
+    },
+    {
+      "text": "Начать",
+      "href": "https://developer.android.com/ai"
+    },
+    {
+      "text": "Здравствуй, мир!",
+      "href": "https://developer.android.com/get-started/overview"
+    },
+    {
+      "text": "Учебные курсы",
+      "href": "https://developer.android.com/courses"
+    },
+    {
+      "text": "Руководства",
+      "href": "https://developer.android.com/get-started/codelabs"
+    },
+    {
+      "text": "Сочиняйте для команд",
+      "href": "https://developer.android.com/develop/ui/compose/adopt"
+    },
+    {
+      "text": "Котлин для Android",
+      "href": "https://developer.android.com/kotlin"
+    },
+    {
+      "text": "Проверка разработчика Android",
+      "href": "https://developer.android.com/developer-verification"
+    },
+    {
+      "text": "Адаптивные приложения",
+      "href": "https://developer.android.com/adaptive-apps"
+    },
+    {
+      "text": "Андроид XR",
+      "href": "https://developer.android.com/xr"
+    },
+    {
+      "text": "Wear OS",
+      "href": "https://developer.android.com/wear"
+    },
+    {
+      "text": "Андроид для автомобилей",
+      "href": "https://developer.android.com/cars"
+    },
+    {
+      "text": "Android TV",
+      "href": "https://developer.android.com/tv"
+    },
+    {
+      "text": "ChromeOS",
+      "href": "https://developer.android.com/chrome-os"
+    },
+    {
+      "text": "Игры",
+      "href": "https://developer.android.com/games"
+    },
+    {
+      "text": "Камера и медиа",
+      "href": "https://developer.android.com/media"
+    },
+    {
+      "text": "Социальные сети и обмен сообщениями",
+      "href": "https://developer.android.com/social-and-messaging"
+    },
+    {
+      "text": "Здоровье и фитнес",
+      "href": "https://developer.android.com/health-and-fitness"
+    },
+    {
+      "text": "Производительность",
+      "href": "https://developer.android.com/productivity"
+    },
+    {
+      "text": "Корпоративные приложения",
+      "href": "https://developer.android.com/work/overview"
+    },
+    {
+      "text": "Последние обновления",
+      "href": "https://developer.android.com/latest-updates"
+    },
+    {
+      "text": "Экспериментальные обновления",
+      "href": "https://developer.android.com/latest-updates/experimental"
+    },
+    {
+      "text": "Предварительный просмотр Android-студии",
+      "href": "https://developer.android.com/studio/preview"
+    },
+    {
+      "text": "Библиотеки Jetpack и Compose",
+      "href": "https://developer.android.com/jetpack/androidx/versions"
+    },
+    {
+      "text": "Релизы Wear OS",
+      "href": "https://developer.android.com/training/wearables/versions/latest"
+    },
+    {
+      "text": "Песочница конфиденциальности ↗️",
+      "href": "https://developer.android.com/design-for-safety/privacy-sandbox"
+    },
+    {
+      "text": "Подробнее",
+      "href": "https://developer.android.com/quality/excellent"
+    },
+    {
+      "text": "Дизайн для Android",
+      "href": "https://developer.android.com/design/ui"
+    },
+    {
+      "text": "Мобильные устройства",
+      "href": "https://developer.android.com/design/ui/mobile"
+    },
+    {
+      "text": "Настольные приложения",
+      "href": "https://developer.android.com/design/ui/desktop"
+    },
+    {
+      "text": "Гарнитуры XR и очки XR",
+      "href": "https://developer.android.com/design/ui/xr"
+    },
+    {
+      "text": "Очки ИИ",
+      "href": "https://developer.android.com/design/ui/ai-glasses"
+    },
+    {
+      "text": "Виджеты",
+      "href": "https://developer.android.com/design/ui/widget"
+    },
+    {
+      "text": "Wear OS",
+      "href": "https://developer.android.com/design/ui/wear"
+    },
+    {
+      "text": "Android TV",
+      "href": "https://developer.android.com/design/ui/tv"
+    },
+    {
+      "text": "Андроид для автомобилей",
+      "href": "https://developer.android.com/design/ui/cars"
+    },
+    {
+      "text": "Введение",
+      "href": "https://developer.android.com/topic/architecture/intro"
+    },
+    {
+      "text": "Библиотеки",
+      "href": "https://developer.android.com/topic/libraries/view-binding"
+    },
+    {
+      "text": "Навигация",
+      "href": "https://developer.android.com/guide/navigation/navigation-principles"
+    },
+    {
+      "text": "Модульность",
+      "href": "https://developer.android.com/topic/modularization"
+    },
+    {
+      "text": "Тестирование",
+      "href": "https://developer.android.com/training/testing/fundamentals"
+    },
+    {
+      "text": "Котлин Мультиплатформа",
+      "href": "https://developer.android.com/kotlin/multiplatform"
+    },
+    {
+      "text": "Обзор",
+      "href": "https://developer.android.com/quality"
+    },
+    {
+      "text": "Основная ценность",
+      "href": "https://developer.android.com/quality/core-value"
+    },
+    {
+      "text": "Пользовательский опыт",
+      "href": "https://developer.android.com/quality/user-experience"
+    },
+    {
+      "text": "Доступность",
+      "href": "https://developer.android.com/guide/topics/ui/accessibility"
+    },
+    {
+      "text": "Техническое качество",
+      "href": "https://developer.android.com/quality/technical"
+    },
+    {
+      "text": "Превосходные впечатления",
+      "href": "https://developer.android.com/quality/excellent"
+    },
+    {
+      "text": "Обзор",
+      "href": "https://developer.android.com/security"
+    },
+    {
+      "text": "Конфиденциальность",
+      "href": "https://developer.android.com/privacy"
+    },
+    {
+      "text": "Разрешения",
+      "href": "https://developer.android.com/privacy#app-permissions"
+    },
+    {
+      "text": "Идентификация",
+      "href": "https://developer.android.com/identity"
+    },
+    {
+      "text": "Предотвращение мошенничества",
+      "href": "https://developer.android.com/security/fraud-prevention"
+    },
+    {
+      "text": "Подробнее",
+      "href": "https://developer.android.com/gemini-in-android"
+    },
+    {
+      "text": "Получить Android Studio",
+      "href": "https://developer.android.com/studio"
+    },
+    {
+      "text": "Примеры",
+      "href": "https://developer.android.com/samples"
+    },
+    {
+      "text": "Пользовательские интерфейсы",
+      "href": "https://developer.android.com/develop/ui"
+    },
+    {
+      "text": "Фоновая работа",
+      "href": "https://developer.android.com/develop/background-work"
+    },
+    {
+      "text": "Данные и файлы",
+      "href": "https://developer.android.com/guide/topics/data"
+    },
+    {
+      "text": "Возможности подключения",
+      "href": "https://developer.android.com/develop/connectivity"
+    },
+    {
+      "text": "Все основные направления ⤵️",
+      "href": "https://developer.android.com/develop#core-areas"
+    },
+    {
+      "text": "Написание и отладка кода",
+      "href": "https://developer.android.com/studio/write"
+    },
+    {
+      "text": "Создание проектов",
+      "href": "https://developer.android.com/build/gradle-build-overview"
+    },
+    {
+      "text": "Проверьте свое приложение",
+      "href": "https://developer.android.com/training/testing"
+    },
+    {
+      "text": "Эффективность",
+      "href": "https://developer.android.com/topic/performance/overview"
+    },
+    {
+      "text": "Инструменты командной строки",
+      "href": "https://developer.android.com/tools"
+    },
+    {
+      "text": "API плагина Gradle",
+      "href": "https://developer.android.com/reference/tools/gradle-api"
+    },
+    {
+      "text": "Android Bench",
+      "href": "https://developer.android.com/bench"
+    },
+    {
+      "text": "Адаптивный интерфейс",
+      "href": "https://developer.android.com/guide/topics/large-screens/get-started-with-large-screens"
+    },
+    {
+      "text": "Wear OS",
+      "href": "https://developer.android.com/training/wearables"
+    },
+    {
+      "text": "Андроид XR",
+      "href": "https://developer.android.com/develop/xr"
+    },
+    {
+      "text": "Android Здоровье",
+      "href": "https://developer.android.com/health-and-fitness/guides"
+    },
+    {
+      "text": "Андроид для автомобилей",
+      "href": "https://developer.android.com/training/cars"
+    },
+    {
+      "text": "Android TV",
+      "href": "https://developer.android.com/training/tv"
+    },
+    {
+      "text": "Все устройства ⤵️",
+      "href": "https://developer.android.com/develop#devices"
+    },
+    {
+      "text": "Платформа Android",
+      "href": "https://developer.android.com/reference/packages"
+    },
+    {
+      "text": "Библиотеки Jetpack",
+      "href": "https://developer.android.com/jetpack/androidx/explorer"
+    },
+    {
+      "text": "Создание библиотек",
+      "href": "https://developer.android.com/jetpack/androidx/releases/compose"
+    },
+    {
+      "text": "Сервисы Google Play ↗️",
+      "href": "https://developers.google.com/android/reference/packages"
+    },
+    {
+      "text": "Монетизация игр",
+      "href": "https://developer.android.com/distribute/play-billing"
+    },
+    {
+      "text": "Играйте честно",
+      "href": "https://developer.android.com/google/play/integrity"
+    },
+    {
+      "text": "Политика игры",
+      "href": "https://developer.android.com/distribute/play-policies"
+    },
+    {
+      "text": "Обзор",
+      "href": "https://developer.android.com/games"
+    },
+    {
+      "text": "Доставка игровых активов",
+      "href": "https://developer.android.com/guide/playcore/asset-delivery"
+    },
+    {
+      "text": "Игровые сервисы Play",
+      "href": "https://developer.android.com/games/pgs/overview"
+    },
+    {
+      "text": "Играть в игры на ПК",
+      "href": "https://developer.android.com/games/playgames/overview"
+    },
+    {
+      "text": "Все руководства по игре ⤵️",
+      "href": "https://developer.android.com/distribute"
+    },
+    {
+      "text": "Доставка функций Play",
+      "href": "https://developer.android.com/guide/playcore/feature-delivery"
+    },
+    {
+      "text": "Воспроизведение обновлений в приложении",
+      "href": "https://developer.android.com/guide/playcore/in-app-updates"
+    },
+    {
+      "text": "Воспроизвести обзоры в приложении",
+      "href": "https://developer.android.com/guide/playcore/in-app-review"
+    },
+    {
+      "text": "Играть Установить реферер",
+      "href": "https://developer.android.com/google/play/installreferrer"
+    },
+    {
+      "text": "Сервисы Google Play ↗️",
+      "href": "https://developers.google.com/android/reference/packages"
+    },
+    {
+      "text": "Все библиотеки Play ⤵️",
+      "href": "https://developer.android.com/distribute"
+    },
+    {
+      "text": "Пакеты приложений для Android",
+      "href": "https://developer.android.com/guide/app-bundle"
+    },
+    {
+      "text": "Бренд и маркетинг",
+      "href": "https://developer.android.com/distribute/marketing-tools"
+    },
+    {
+      "text": "API Play Console ↗️",
+      "href": "https://developers.google.com/android-publisher/api-ref/rest"
+    },
+    {
+      "text": "Читайте последние новости",
+      "href": "https://developer.android.com/blog/latest"
+    },
+    {
+      "text": "Посмотреть список авторов →",
+      "href": "https://developer.android.com/blog/authors"
+    },
+    {
+      "text": "Истории успеха",
+      "href": "https://developer.android.com/blog/categories/case-studies"
+    },
+    {
+      "text": "Мероприятия и программы",
+      "href": "https://developer.android.com/blog/categories/events-and-programs"
+    },
+    {
+      "text": "Новости о продуктах",
+      "href": "https://developer.android.com/blog/categories/product-news"
+    },
+    {
+      "text": "Сообщество",
+      "href": "https://developer.android.com/blog/categories/community"
+    },
+    {
+      "text": "Инструкции",
+      "href": "https://developer.android.com/blog/categories/how-tos"
+    },
+    {
+      "text": "Android Developers",
+      "href": "https://developer.android.com/?hl=ru"
+    },
+    {
+      "text": "Android Studio",
+      "href": "https://developer.android.com/studio?hl=ru"
+    },
+    {
+      "text": "https://dl.google.com/android/cli/latest/linux_x86_64/android",
+      "href": "https://dl.google.com/android/cli/latest/linux_x86_64/android?hl=ru"
+    },
+    {
+      "text": "https://dl.google.com/android/cli/latest/windows_x86_64/android.exe",
+      "href": "https://dl.google.com/android/cli/latest/windows_x86_64/android.exe?hl=ru"
+    },
+    {
+      "text": "https://dl.google.com/android/cli/latest/darwin_arm64/android",
+      "href": "https://dl.google.com/android/cli/latest/darwin_arm64/android?hl=ru"
+    },
+    {
+      "text": "лицензиям",
+      "href": "https://developer.android.com/license?hl=ru"
+    },
+    {
+      "text": "X",
+      "href": "https://x.com/AndroidDev"
+    },
+    {
+      "text": "YouTube",
+      "href": "https://www.youtube.com/user/androiddevelopers?hl=ru"
+    },
+    {
+      "text": "LinkedIn",
+      "href": "https://www.linkedin.com/showcase/androiddev"
+    },
+    {
+      "text": "Android",
+      "href": "https://www.android.com/"
+    },
+    {
+      "text": "Android for Enterprise",
+      "href": "https://www.android.com/enterprise/"
+    },
+    {
+      "text": "Безопасность",
+      "href": "https://www.android.com/security-center/"
+    },
+    {
+      "text": "Исходный код",
+      "href": "https://source.android.com/"
+    },
+    {
+      "text": "Новости",
+      "href": "https://developer.android.com/news"
+    },
+    {
+      "text": "Блог",
+      "href": "https://android-developers.googleblog.com/"
+    },
+    {
+      "text": "Подкасты",
+      "href": "https://developer.android.com/podcasts"
+    },
+    {
+      "text": "Игры",
+      "href": "https://developer.android.com/games"
+    },
+    {
+      "text": "Машинное обучение",
+      "href": "https://developer.android.com/ml"
+    },
+    {
+      "text": "Здоровье и фитнес",
+      "href": "https://developer.android.com/health-and-fitness"
+    },
+    {
+      "text": "Камера и медиа",
+      "href": "https://developer.android.com/media"
+    },
+    {
+      "text": "Конфиденциальность",
+      "href": "https://developer.android.com/privacy"
+    },
+    {
+      "text": "5G",
+      "href": "https://developer.android.com/training/connectivity/5g"
+    },
+    {
+      "text": "Большие экраны",
+      "href": "https://developer.android.com/large-screens"
+    },
+    {
+      "text": "Wear OS",
+      "href": "https://developer.android.com/wear"
+    },
+    {
+      "text": "Устройства ChromeOS",
+      "href": "https://developer.android.com/chrome-os"
+    },
+    {
+      "text": "Android for Cars",
+      "href": "https://developer.android.com/cars"
+    },
+    {
+      "text": "Android TV",
+      "href": "https://developer.android.com/tv"
+    },
+    {
+      "text": "Android 15",
+      "href": "https://developer.android.com/about/versions/15"
+    },
+    {
+      "text": "Android 14",
+      "href": "https://developer.android.com/about/versions/14"
+    },
+    {
+      "text": "Android 13",
+      "href": "https://developer.android.com/about/versions/13"
+    },
+    {
+      "text": "Android 12",
+      "href": "https://developer.android.com/about/versions/12"
+    },
+    {
+      "text": "Android 11",
+      "href": "https://developer.android.com/about/versions/11"
+    },
+    {
+      "text": "Android 10",
+      "href": "https://developer.android.com/about/versions/10"
+    },
+    {
+      "text": "Pie",
+      "href": "https://developer.android.com/about/versions/pie"
+    },
+    {
+      "text": "Руководство по Android Studio",
+      "href": "https://developer.android.com/studio/intro"
+    },
+    {
+      "text": "Руководства для разработчиков",
+      "href": "https://developer.android.com/guide"
+    },
+    {
+      "text": "Документация по API",
+      "href": "https://developer.android.com/reference"
+    },
+    {
+      "text": "Download Studio",
+      "href": "https://developer.android.com/studio"
+    },
+    {
+      "text": "Android NDK",
+      "href": "https://developer.android.com/ndk"
+    },
+    {
+      "text": "Google Play support",
+      "href": "https://support.google.com/googleplay/android-developer"
+    },
+    {
+      "text": "Участвовать в исследованиях",
+      "href": "https://g.co/userresearch/androiddeveloperfooter"
+    },
+    {
+      "text": "Android",
+      "href": "https://developer.android.com/?hl=ru"
+    },
+    {
+      "text": "Лицензия",
+      "href": "https://developer.android.com/license?hl=ru"
+    },
+    {
+      "text": "Правила использования бренда",
+      "href": "https://developer.android.com/distribute/marketing-tools/brand-guidelines?hl=ru"
+    },
+    {
+      "text": "Manage cookies",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ru#"
+    },
+    {
+      "text": "Подписаться",
+      "href": "https://developer.android.com/updates?hl=ru"
+    },
+    {
+      "text": "English",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive"
+    },
+    {
+      "text": "Deutsch",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=de"
+    },
+    {
+      "text": "Español – América Latina",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=es-419"
+    },
+    {
+      "text": "Français",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=fr"
+    },
+    {
+      "text": "Indonesia",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=id"
+    },
+    {
+      "text": "Italiano",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=it"
+    },
+    {
+      "text": "Polski",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=pl"
+    },
+    {
+      "text": "Português – Brasil",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=pt-br"
+    },
+    {
+      "text": "Tiếng Việt",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=vi"
+    },
+    {
+      "text": "Türkçe",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=tr"
+    },
+    {
+      "text": "Русский",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ru"
+    },
+    {
+      "text": "עברית",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=he"
+    },
+    {
+      "text": "العربيّة",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ar"
+    },
+    {
+      "text": "فارسی",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=fa"
+    },
+    {
+      "text": "हिंदी",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=hi"
+    },
+    {
+      "text": "বাংলা",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=bn"
+    },
+    {
+      "text": "ภาษาไทย",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=th"
+    },
+    {
+      "text": "中文 – 简体",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=zh-cn"
+    },
+    {
+      "text": "中文 – 繁體",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=zh-tw"
+    },
+    {
+      "text": "日本語",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ja"
+    },
+    {
+      "text": "한국어",
+      "href": "https://developer.android.com/tools/agents/android-cli/archive?hl=ko"
+    }
+  ]
+}

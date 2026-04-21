@@ -16,6 +16,8 @@ fun RootNavHost(
     startDestination: String,
     authFeatureEntry: AuthFeatureEntry,
     homeFeatureEntry: HomeFeatureEntry,
+    initialGroupQrToken: String?,
+    onGroupQrTokenConsumed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -43,6 +45,8 @@ fun RootNavHost(
                     clearHomeFromBackStack()
                 }
             },
+            initialGroupQrToken = initialGroupQrToken,
+            onGroupQrTokenConsumed = onGroupQrTokenConsumed,
         )
     }
 }

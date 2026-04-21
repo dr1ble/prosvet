@@ -53,7 +53,9 @@ def issue_access_token(
         "role": role,
         "exp": int(expires_at.timestamp()),
     }
-    payload_json = json.dumps(payload_dict, separators=(",", ":"), sort_keys=True, ensure_ascii=True).encode("utf-8")
+    payload_json = json.dumps(
+        payload_dict, separators=(",", ":"), sort_keys=True, ensure_ascii=True
+    ).encode("utf-8")
     payload_b64 = _b64url_encode(payload_json)
 
     signing_input = f"{TOKEN_VERSION}.{payload_b64}".encode("ascii")

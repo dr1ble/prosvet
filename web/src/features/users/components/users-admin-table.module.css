@@ -1,0 +1,72 @@
+.tableWrap {
+  overflow: auto;
+}
+
+.error {
+  margin: 0 0 8px;
+  color: #9c3434;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #e6edf4;
+  padding: 10px 8px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.inlineInput,
+.inlineSelect {
+  min-height: 34px;
+  width: 100%;
+  border-radius: 9px;
+  border: 1px solid rgba(43, 72, 98, 0.18);
+  background: #fff;
+  color: #243c4f;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.statusButton {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(42, 70, 96, 0.18);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.statusActive {
+  background: #edf9f1;
+  color: #2d7a47;
+  border-color: rgba(46, 138, 73, 0.25);
+}
+
+.statusBlocked {
+  background: #fff1f1;
+  color: #9e4b4b;
+  border-color: rgba(193, 81, 81, 0.25);
+}
+
+.selfBadge {
+  margin-left: 8px;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(22, 125, 228, 0.12);
+  color: #2d5f8a;
+  font-size: 10px;
+  font-weight: 700;
+}

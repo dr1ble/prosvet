@@ -1,0 +1,74 @@
+.state {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(58, 88, 115, 0.28);
+  background: rgba(245, 249, 255, 0.72);
+}
+
+.compact {
+  padding: 9px 10px;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #355471;
+}
+
+.description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #607a91;
+}
+
+.error {
+  border-style: solid;
+  border-color: rgba(181, 54, 54, 0.28);
+  background: rgba(181, 54, 54, 0.08);
+}
+
+.error .title {
+  color: #8b2f2f;
+}
+
+.error .description {
+  color: #965656;
+}
+
+.loading {
+  border-style: solid;
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.loading .title {
+  color: #2563eb;
+}
+
+.loading .title::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 2px solid rgba(37, 99, 235, 0.2);
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: data-state-spin 0.8s linear infinite;
+}
+
+@keyframes data-state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.action {
+  margin-top: 4px;
+}
