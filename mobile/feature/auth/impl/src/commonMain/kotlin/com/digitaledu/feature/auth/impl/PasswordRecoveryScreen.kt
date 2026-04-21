@@ -46,6 +46,8 @@ import com.digitaledu.core.ui.components.AuthUiStroke
 import com.digitaledu.core.ui.components.AuthUiTypography
 import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.ProsvetTextField
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_back_to_login_full
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_forgot_password
@@ -103,7 +105,7 @@ internal fun PasswordRecoveryScreen(
                 ProsvetTextField(
                     value = uiState.loginOrEmail,
                     onValueChange = { viewModel.processIntent(RecoveryIntent.LoginOrEmailChanged(it)) },
-                    placeholder = "Например: ivan@mail.ru",
+                    placeholder = "Введите логин или e-mail",
                     enabled = !uiState.isSubmitting,
                     trailingIcon = {
                         Icon(
@@ -201,6 +203,11 @@ internal fun PasswordRecoveryScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = AuthUiSpacing.sectionLg)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = stringResource(Res.string.auth_back_to_login_full),
+                            role = androidx.compose.ui.semantics.Role.Button,
+                        )
                         .clickable(onClick = onBack),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,

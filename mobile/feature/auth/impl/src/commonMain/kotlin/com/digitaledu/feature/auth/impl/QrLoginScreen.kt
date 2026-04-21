@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -45,6 +46,8 @@ import com.digitaledu.core.ui.components.AuthUiSize
 import com.digitaledu.core.ui.components.AuthUiSpacing
 import com.digitaledu.core.ui.components.AuthUiStroke
 import com.digitaledu.core.ui.components.AuthUiTypography
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_qr_action_manual
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_qr_instruction
@@ -163,7 +166,13 @@ internal fun QrLoginScreen(
 
                 Button(
                     onClick = onManualLogin,
-                    modifier = Modifier.padding(horizontal = AuthUiSpacing.sectionLg),
+                    modifier = Modifier
+                        .padding(horizontal = AuthUiSpacing.sectionLg)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = stringResource(Res.string.auth_qr_action_manual),
+                            role = Role.Button,
+                        ),
                     shape = AuthUiShapes.pill,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,

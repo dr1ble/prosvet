@@ -8,6 +8,9 @@
     <string name="auth_start_subtitle">Мы поможем вам освоить интернет, смартфоны и цифровые сервисы. Без сложных терминов, в вашем темпе и с полной поддержкой.</string>
     <string name="auth_start_learning">Начать обучение</string>
     <string name="auth_start_accessibility">Настройка доступности</string>
+    <string name="auth_accessibility_controls_size">Размер элементов управления</string>
+    <string name="auth_accessibility_bold_text">Жирный текст</string>
+    <string name="auth_accessibility_reset">Сбросить настройки доступности</string>
     <string name="auth_terms_hint">Нажимая «Начать», вы принимаете условия использования и политику конфиденциальности.</string>
     <string name="auth_benefit_safety">Безопасность</string>
     <string name="auth_benefit_safety_desc">Учим распознавать угрозы и защищать данные.</string>

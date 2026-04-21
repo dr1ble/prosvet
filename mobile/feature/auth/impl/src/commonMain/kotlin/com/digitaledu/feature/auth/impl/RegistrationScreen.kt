@@ -43,6 +43,8 @@ import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.PasswordToggle
 import com.digitaledu.core.ui.components.ProsvetTextField
 import com.digitaledu.core.ui.components.SecurityInfoCard
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_create_account
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_create_account_button
@@ -109,7 +111,7 @@ internal fun RegistrationScreen(
                 ProsvetTextField(
                     value = uiState.fullName,
                     onValueChange = { viewModel.processIntent(RegistrationIntent.FullNameChanged(it)) },
-                    placeholder = "Введите ваше имя",
+                    placeholder = "Имя и фамилия",
                     enabled = !uiState.isSubmitting,
                 )
 
@@ -120,7 +122,7 @@ internal fun RegistrationScreen(
                 ProsvetTextField(
                     value = uiState.login,
                     onValueChange = { viewModel.processIntent(RegistrationIntent.LoginChanged(it)) },
-                    placeholder = "Придумайте имя пользователя",
+                    placeholder = "Логин",
                     enabled = !uiState.isSubmitting,
                 )
 
@@ -131,7 +133,7 @@ internal fun RegistrationScreen(
                 ProsvetTextField(
                     value = uiState.password,
                     onValueChange = { viewModel.processIntent(RegistrationIntent.PasswordChanged(it)) },
-                    placeholder = "Минимум 8 символов",
+                    placeholder = "Пароль",
                     isPassword = !passwordVisible,
                     enabled = !uiState.isSubmitting,
                     trailingIcon = {
@@ -150,7 +152,7 @@ internal fun RegistrationScreen(
                 ProsvetTextField(
                     value = uiState.confirmPassword,
                     onValueChange = { viewModel.processIntent(RegistrationIntent.ConfirmPasswordChanged(it)) },
-                    placeholder = "Введите пароль еще раз",
+                    placeholder = "Повторите пароль",
                     isPassword = !confirmVisible,
                     isError = uiState.confirmPassword.isNotEmpty() && !uiState.passwordsMatch,
                     enabled = !uiState.isSubmitting,
@@ -206,7 +208,15 @@ internal fun RegistrationScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.size(AuthUiSpacing.itemXs))
-                    TextButton(onClick = onBack) {
+                    TextButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(
+                                label = stringResource(Res.string.auth_sign_in_link),
+                                role = androidx.compose.ui.semantics.Role.Button,
+                            ),
+                    ) {
                         Text(
                             text = stringResource(Res.string.auth_sign_in_link),
                             fontWeight = FontWeight.Medium,
