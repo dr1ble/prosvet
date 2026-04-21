@@ -1,3 +1,5 @@
+# pyright: reportMissingImports=false
+
 import argparse
 import hashlib
 import json
@@ -16,7 +18,11 @@ from app.modules.catalog.infra.models import (
     LessonStatus,
     LessonTask,
 )
+from app.modules.users.models import User
 from app.shared.db.session import SessionLocal
+from scripts.db_schema_health import SchemaHealthError, ensure_db_schema_healthy
+
+USER_TABLE = User.__table__
 
 TARGET_SLUGS = [
     "builder-demo-valid",
@@ -176,6 +182,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Seed mock data for Course Builder UI checks.")
     parser.add_argument("command", choices=["seed", "cleanup", "reset"])
     args = parser.parse_args()
+
+    try:
+        ensure_db_schema_healthy()
+    except SchemaHealthError as exc:
+        raise SystemExit(str(exc)) from exc
 
     if args.command == "seed":
         seed()

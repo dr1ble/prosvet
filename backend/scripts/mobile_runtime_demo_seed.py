@@ -1,3 +1,5 @@
+# pyright: reportMissingImports=false
+
 import argparse
 import hashlib
 import json
@@ -31,6 +33,7 @@ from scripts.catalog_mock_data import (
     cleanup_mock_catalog_courses,
     seed_mock_catalog_courses,
 )
+from scripts.db_schema_health import SchemaHealthError, ensure_db_schema_healthy
 
 USER_LOGIN_PREFIX = "mobile_demo_"
 SeedProfile = Literal["default", "mobile-heavy"]
@@ -581,6 +584,11 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    try:
+        ensure_db_schema_healthy()
+    except SchemaHealthError as exc:
+        raise SystemExit(str(exc)) from exc
 
     if args.command == "seed":
         seed_mobile_runtime_demo_data(profile=args.profile)

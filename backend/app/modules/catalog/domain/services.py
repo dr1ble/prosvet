@@ -660,8 +660,10 @@ class CatalogService:
 
         validation = self.validate_course(course_id)
         if not validation["valid"]:
+            reasons = "; ".join(error["message"] for error in validation["errors"][:3])
+            suffix = "" if len(validation["errors"]) <= 3 else "; ..."
             raise CatalogError(
-                f"Course validation failed: {len(validation['errors'])} errors.",
+                f"Course validation failed: {reasons}{suffix}",
                 status_code=422,
             )
 

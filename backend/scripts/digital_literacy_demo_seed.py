@@ -1,8 +1,11 @@
+# pyright: reportMissingImports=false
+
 import argparse
 import os
 import random
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import delete, select
 
@@ -22,6 +25,7 @@ from app.modules.progress.infra.models import LessonProgress
 from app.modules.users.models import User, UserRole, UserStatus
 from app.shared.db.session import SessionLocal
 from app.shared.security.passwords import hash_password
+from scripts.db_schema_health import SchemaHealthError, ensure_db_schema_healthy
 from scripts.progress_mocks import seed as seed_progress
 
 USER_LOGIN_PREFIX = "demo_lit_"
@@ -450,6 +454,49 @@ def _seed_realistic(db, demo_users: dict[str, User], courses: list[Course]) -> N
             )
 
 
+def _spread_demo_progress_dates(profile: str) -> None:
+    rng = random.Random(42 if profile == "basic" else 84)
+    max_days = 45 if profile == "basic" else 120
+    now = datetime.now(timezone.utc)
+
+    with SessionLocal.begin() as db:
+        demo_user_ids = list(
+            db.scalars(
+                select(User.id).where(
+                    User.login.like(f"{USER_LOGIN_PREFIX}%")
+                    | User.login.like(f"{LEGACY_USER_LOGIN_PREFIX}%")
+                )
+            ).all()
+        )
+
+        if not demo_user_ids:
+            return
+
+        progress_rows = list(
+            db.scalars(
+                select(LessonProgress)
+                .join(CourseLesson, CourseLesson.id == LessonProgress.lesson_id)
+                .join(Course, Course.id == CourseLesson.course_id)
+                .where(
+                    LessonProgress.user_id.in_(demo_user_ids),
+                    LessonProgress.completed_at.is_not(None),
+                    Course.slug.like(f"{COURSE_SLUG_PREFIX}%")
+                    | Course.slug.like(f"{LEGACY_COURSE_SLUG_PREFIX}%"),
+                )
+                .order_by(LessonProgress.user_id, CourseLesson.order_index, LessonProgress.id)
+            ).all()
+        )
+
+        for index, row in enumerate(progress_rows):
+            day_offset = (index * 5 + rng.randint(0, 6)) % max_days
+            hour_offset = rng.randint(0, 23)
+            row.completed_at = now - timedelta(days=day_offset, hours=hour_offset)
+
+        print(
+            f"[seed] demo progress dates distributed across the last {max_days} days"
+        )
+
+
 def seed(clean_first: bool = True, profile: str = "basic") -> None:
     if clean_first:
         cleanup()
@@ -469,6 +516,7 @@ def seed(clean_first: bool = True, profile: str = "basic") -> None:
         )
 
     seed_progress(seed_value=42)
+    _spread_demo_progress_dates(profile)
     print("[seed] demo progress generated")
     print("[credentials] логин: demo_lit_admin / пароль: demo12345")
 
@@ -478,6 +526,11 @@ def main() -> None:
     parser.add_argument("command", choices=["seed", "cleanup", "reset"])
     parser.add_argument("--profile", choices=["basic", "realistic"], default="basic")
     args = parser.parse_args()
+
+    try:
+        ensure_db_schema_healthy()
+    except SchemaHealthError as exc:
+        raise SystemExit(str(exc)) from exc
 
     if args.command == "seed":
         seed(clean_first=True, profile=args.profile)

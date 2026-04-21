@@ -1,3 +1,5 @@
+# pyright: reportMissingImports=false
+
 import argparse
 import os
 import random
@@ -19,6 +21,7 @@ from app.modules.groups.infra.models import (
 )
 from app.modules.progress.infra.models import LessonProgress, LessonProgressStatus
 from app.shared.db.session import SessionLocal
+from scripts.db_schema_health import SchemaHealthError, ensure_db_schema_healthy
 
 
 def _load_targets(db) -> dict[UUID, set[UUID]]:
@@ -195,6 +198,11 @@ def main() -> None:
     parser.add_argument("command", choices=["seed", "cleanup", "reset"])
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
+
+    try:
+        ensure_db_schema_healthy()
+    except SchemaHealthError as exc:
+        raise SystemExit(str(exc)) from exc
 
     if args.command == "seed":
         seed(seed_value=args.seed)
