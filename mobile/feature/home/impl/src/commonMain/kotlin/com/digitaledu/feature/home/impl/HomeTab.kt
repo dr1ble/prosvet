@@ -9,10 +9,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 enum class HomeTab(
     val icon: ImageVector,
 ) {
-    Courses(
+    Home(
         icon = Icons.Rounded.Home,
     ),
-    Lesson(
+    Learning(
         icon = Icons.AutoMirrored.Rounded.MenuBook,
     ),
     Profile(

@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
@@ -33,6 +34,8 @@ import com.digitaledu.core.ui.CenteredLoadingIndicator
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.feature.catalog.api.CatalogIntent
 import com.digitaledu.feature.catalog.api.CatalogUiState
 import digital_education_mobile.feature.catalog.impl.generated.resources.Res
@@ -76,7 +79,15 @@ fun CoursesContent(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            Button(onClick = { onIntent(CatalogIntent.RefreshCourses) }) {
+            Button(
+                onClick = { onIntent(CatalogIntent.RefreshCourses) },
+                modifier = Modifier
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = stringResource(Res.string.catalog_refresh),
+                        role = Role.Button,
+                    ),
+            ) {
                 Text(text = stringResource(Res.string.catalog_refresh))
             }
         }
@@ -117,6 +128,8 @@ private fun CourseTile(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = course.title, role = Role.Button)
             .clickable(onClick = onClick),
     ) {
         val imageUrl = course.coverUrlOrNull()

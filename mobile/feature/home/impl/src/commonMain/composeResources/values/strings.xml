@@ -6,7 +6,7 @@
     <string name="home_tab_courses">Главная</string>
     <string name="home_tab_lesson">Обучение</string>
     <string name="home_tab_profile">Профиль</string>
-    <string name="home_search_placeholder">Спросите помощника...</string>
+    <string name="home_search_placeholder">Найти курс</string>
     <string name="home_continue_learning">Продолжить обучение</string>
     <string name="home_continue_progress_format">Урок %1$d из %2$d</string>
     <string name="home_continue_progress_empty">Прогресс появится после старта</string>

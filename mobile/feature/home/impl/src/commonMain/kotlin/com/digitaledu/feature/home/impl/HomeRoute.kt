@@ -47,7 +47,7 @@ fun HomeRoute(
     val playerUiState by playerFeatureHost.uiState.collectAsState()
     val profileUiState by profileFeatureHost.uiState.collectAsState()
 
-    var selectedTab by remember { mutableStateOf(HomeTab.Courses) }
+    var selectedTab by remember { mutableStateOf(HomeTab.Home) }
     var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
     var qrHandledToken by remember { mutableStateOf<String?>(null) }
     var currentUserDisplayName by remember { mutableStateOf<String?>(null) }
@@ -95,13 +95,13 @@ fun HomeRoute(
     ObserveEffects(catalogFeatureHost.effects) { effect ->
         if (effect is CatalogEffect.CourseOpened) {
             playerFeatureHost.openBundle(effect.bundle)
-            selectedTab = HomeTab.Lesson
+            selectedTab = HomeTab.Learning
         }
     }
 
     ObserveEffects(playerFeatureHost.effects) { effect ->
         if (effect is PlayerEffect.Closed) {
-            selectedTab = HomeTab.Courses
+            selectedTab = HomeTab.Home
         }
     }
 
@@ -111,8 +111,8 @@ fun HomeRoute(
         }
     }
 
-    BackHandler(enabled = selectedTab != HomeTab.Courses) {
-        selectedTab = HomeTab.Courses
+    BackHandler(enabled = selectedTab != HomeTab.Home) {
+        selectedTab = HomeTab.Home
     }
 
     LaunchedEffect(pendingGroupQrToken) {

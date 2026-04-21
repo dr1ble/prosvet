@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,10 @@ import com.digitaledu.core.ui.CenteredLoadingIndicator
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilityControlScale
+import com.digitaledu.core.ui.components.accessibilityFocusHighlight
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.feature.catalog.api.CatalogIntent
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
 import com.digitaledu.feature.catalog.api.CatalogUiState
@@ -109,12 +114,19 @@ fun HomeScreen(
             SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
-            if (selectedTab == HomeTab.Courses) {
+            if (selectedTab == HomeTab.Home) {
                 FloatingActionButton(
                     onClick = { },
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError,
                     shape = UiShapes.pill,
+                    modifier = Modifier
+                        .accessibilityControlScale
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = stringResource(Res.string.home_sos),
+                            role = Role.Button,
+                        ),
                 ) {
                     Text(
                         text = stringResource(Res.string.home_sos),
@@ -135,18 +147,22 @@ fun HomeScreen(
             ) {
                 HomeTab.entries.forEach { tab ->
                     val label = when (tab) {
-                        HomeTab.Courses -> stringResource(Res.string.home_tab_courses)
-                        HomeTab.Lesson -> stringResource(Res.string.home_tab_lesson)
+                        HomeTab.Home -> stringResource(Res.string.home_tab_courses)
+                        HomeTab.Learning -> stringResource(Res.string.home_tab_lesson)
                         HomeTab.Profile -> stringResource(Res.string.home_tab_profile)
                     }
                     val selected = selectedTab == tab
 
                     Column(
                         modifier = Modifier
+                            .accessibilityControlScale
                             .clip(if (selected) UiShapes.cardXl else UiShapes.pill)
                             .background(
                                 if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
                             )
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(label = label, state = if (selected) "текущая вкладка" else null, role = Role.Tab)
+                            .accessibilityFocusHighlight(shape = if (selected) UiShapes.cardXl else UiShapes.pill, color = MaterialTheme.colorScheme.secondary)
                             .clickable { onTabSelected(tab) }
                             .padding(horizontal = UiSpacing.lg, vertical = UiSpacing.xs),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -176,21 +192,21 @@ fun HomeScreen(
         },
     ) { innerPadding ->
         when (selectedTab) {
-            HomeTab.Courses -> {
+            HomeTab.Home -> {
                 HomeCoursesContent(
                     uiState = catalogUiState,
                     playerUiState = playerUiState,
                     currentUserDisplayName = currentUserDisplayName,
                     onOpenCourse = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
                     onRefresh = { onCatalogIntent(CatalogIntent.RefreshCourses) },
-                    onOpenLessonTab = { onTabSelected(HomeTab.Lesson) },
+                    onOpenLearningTab = { onTabSelected(HomeTab.Learning) },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
                 )
             }
 
-            HomeTab.Lesson -> {
+            HomeTab.Learning -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -232,7 +248,7 @@ private fun HomeCoursesContent(
     currentUserDisplayName: String?,
     onOpenCourse: (String) -> Unit,
     onRefresh: () -> Unit,
-    onOpenLessonTab: () -> Unit,
+    onOpenLearningTab: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val titleText = if (currentUserDisplayName != null) {
@@ -291,7 +307,9 @@ private fun HomeCoursesContent(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(UiShapes.pill)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(MaterialTheme.colorScheme.primary)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -334,7 +352,13 @@ private fun HomeCoursesContent(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable(onClick = onOpenLessonTab),
+                    modifier = Modifier
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = stringResource(Res.string.home_recommended_all),
+                            role = Role.Button,
+                        )
+                        .clickable(onClick = onOpenLearningTab),
                 )
             }
         }
@@ -476,6 +500,11 @@ private fun ContinueLearningCard(
                     .fillMaxWidth()
                     .clip(UiShapes.cardLg)
                     .background(MaterialTheme.colorScheme.primary)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = stringResource(Res.string.home_continue_start),
+                        role = Role.Button,
+                    )
                     .clickable(onClick = onStart)
                     .padding(vertical = UiSpacing.md),
                 horizontalArrangement = Arrangement.Center,
@@ -511,8 +540,12 @@ private fun RecommendedCourseCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         ),
         modifier = Modifier
+            .accessibilityControlScale
             .fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UiOpacity.border), UiShapes.cardLg)
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = course.title, state = "кнопка открыть курс", role = Role.Button)
+            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
             .clickable(onClick = onClick),
     ) {
         Row(
