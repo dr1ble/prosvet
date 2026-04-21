@@ -1,5 +1,28 @@
 # Work Log
 
+## Entry: 2026-04-21 (run script Docker runtime auto-start hardening)
+
+- **Date:** 2026-04-21
+- **Task:** Fix `./run` local startup flow so it can start the correct Docker runtime instead of assuming Docker Desktop only.
+- **Decision/Change:**
+  - Hardened `scripts/ensure-docker.sh` to detect the active Docker context before startup.
+  - Added runtime-aware auto-start behavior:
+    - `colima*` context -> `colima start`
+    - `orbstack*` context -> `open -a OrbStack`
+    - Docker Desktop fallback only when the app is actually installed.
+  - Added Colima self-heal retry path for stale local VM state:
+    - if initial `colima start` fails, script now runs `colima stop --force` once and retries `colima start`.
+  - Changed failure handling to surface real runtime startup errors immediately instead of silently swallowing them and waiting the full timeout.
+  - Added regression coverage in `backend/tests/test_ensure_docker_script.py` for:
+    - successful Colima startup for `docker context = colima`;
+    - fail-fast error surfacing when Colima startup still fails;
+    - one-shot Colima recovery via forced stop + retry.
+- **Why:** Local startup was broken on machines using Colima because `./run` always tried `open -a Docker`, while Docker Desktop was not installed and the active Docker context was `colima`.
+- **Validation:**
+  - `cd backend && PYTHONPATH=. pytest tests/test_ensure_docker_script.py` -> **3 passed**.
+  - `./scripts/ensure-docker.sh` -> verified real runtime detection and Colima recovery output.
+  - `./run` -> passed Docker stage, started postgres/backend/web, printed startup summary, and served health checks on `127.0.0.1:8000` and `127.0.0.1:3000`.
+
 ## Entry: 2026-04-21 (mobile debug quick-login panel for auth)
 
 - **Date:** 2026-04-21

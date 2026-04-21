@@ -33,6 +33,7 @@ Environment overrides:
 - CONFIRM_DB_RESET (default: YES_I_UNDERSTAND_DATA_LOSS)
 - DB_BACKUP_BEFORE_DESTRUCTIVE (default: 1, set 0 to skip backup before destructive reset)
 - DB_BACKUP_DIR (default: .backups/db)
+- HEALTH_POLL_INTERVAL (default: 10, seconds between post-start health checks)
 USAGE
   exit 0
 fi
@@ -73,6 +74,7 @@ AUTO_FIX_BROKEN_DB_SCHEMA="${AUTO_FIX_BROKEN_DB_SCHEMA:-1}"
 ALLOW_DB_SCHEMA_RESET="${ALLOW_DB_SCHEMA_RESET:-1}"
 CONFIRM_DB_RESET="${CONFIRM_DB_RESET:-YES_I_UNDERSTAND_DATA_LOSS}"
 HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-60}"
+HEALTH_POLL_INTERVAL="${HEALTH_POLL_INTERVAL:-10}"
 
 if [[ "$CGC_WATCH_PATH" != /* ]]; then
   CGC_WATCH_PATH="$ROOT_DIR/$CGC_WATCH_PATH"
@@ -592,5 +594,5 @@ while true; do
     CGC_PID=""
   fi
 
-  sleep 2
+  sleep "$HEALTH_POLL_INTERVAL"
 done
