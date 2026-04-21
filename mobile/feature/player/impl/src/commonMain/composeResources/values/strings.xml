@@ -10,7 +10,7 @@
 
     <string name="learning_choose_course_title">Обучение</string>
     <string name="learning_choose_course_subtitle">Выберите курс и продолжайте обучение в удобном темпе.</string>
-    <string name="learning_search_placeholder">Поиск курсов...</string>
+    <string name="learning_search_placeholder">Найти курс</string>
     <string name="learning_all_courses">Все курсы</string>
     <string name="learning_gosuslugi">Госуслуги</string>
     <string name="learning_banks">Банки</string>
@@ -66,8 +66,7 @@
     <string name="cheat_sheet_copy_code">Скопировать код</string>
     <string name="list_bullet">•</string>
 
-    <string name="video_debug_text">Видео: %1$s
-Состояние: %2$s</string>
+    <string name="video_debug_text">Состояние видео: %2$s</string>
     <string name="video_state_playing">воспроизведение</string>
     <string name="video_state_paused">пауза</string>
     <string name="video_play">Запустить видео</string>

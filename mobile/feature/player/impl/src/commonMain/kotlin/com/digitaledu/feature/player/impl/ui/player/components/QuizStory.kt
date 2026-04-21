@@ -25,9 +25,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.content.QuizPayload
 import com.digitaledu.core.model.quiz.MatchingQuestion
 import com.digitaledu.core.model.quiz.MultipleChoiceQuestion
@@ -126,22 +129,55 @@ fun QuizStory(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     if (currentQuestionIndex > 0) {
-                        Button(onClick = { currentQuestionIndex-- }) {
+                        Button(
+                            onClick = { currentQuestionIndex-- },
+                            modifier = Modifier
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.quiz_previous),
+                                    role = Role.Button,
+                                ),
+                        ) {
                             Text(stringResource(Res.string.quiz_previous))
                         }
                     } else {
                         // First question: "Previous" means Previous Screen in Course
-                         Button(onClick = { onIntent(PlayerIntent.Previous) }) {
+                         Button(
+                            onClick = { onIntent(PlayerIntent.Previous) },
+                            modifier = Modifier
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.quiz_back),
+                                    role = Role.Button,
+                                ),
+                         ) {
                             Text(stringResource(Res.string.quiz_back))
-                        }
+                         }
+
                     }
 
                     if (currentQuestionIndex < payload.questions.lastIndex) {
-                        Button(onClick = { currentQuestionIndex++ }) {
+                        Button(
+                            onClick = { currentQuestionIndex++ },
+                            modifier = Modifier
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.quiz_next),
+                                    role = Role.Button,
+                                ),
+                        ) {
                             Text(stringResource(Res.string.quiz_next))
                         }
                     } else {
-                        Button(onClick = { onIntent(PlayerIntent.Next) }) {
+                        Button(
+                            onClick = { onIntent(PlayerIntent.Next) },
+                            modifier = Modifier
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.quiz_finish),
+                                    role = Role.Button,
+                                ),
+                        ) {
                             Text(stringResource(Res.string.quiz_finish))
                         }
                     }
@@ -149,7 +185,15 @@ fun QuizStory(
             }
         } else {
              // Fallback for empty quiz
-             Button(onClick = { onIntent(PlayerIntent.Next) }) {
+             Button(
+                 onClick = { onIntent(PlayerIntent.Next) },
+                 modifier = Modifier
+                     .accessibilityTouchTarget
+                     .accessibilitySemantics(
+                         label = stringResource(Res.string.quiz_continue),
+                         role = Role.Button,
+                     ),
+             ) {
                  Text(stringResource(Res.string.quiz_continue))
              }
         }
@@ -166,6 +210,8 @@ fun QuizOptionItem(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = text, role = Role.Button)
             .clickable(onClick = onClick)
             .clip(UiShapes.cardMd),
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,

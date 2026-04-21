@@ -26,14 +26,6 @@ import digital_education_mobile.feature.player.`impl`.generated.resources.video_
 import digital_education_mobile.feature.player.`impl`.generated.resources.video_state_playing
 import org.jetbrains.compose.resources.stringResource
 
-/**
- * Stories-style Video Player.
- * 
- * Features:
- * - Autoplay when visible (handled by parent logic or lifecycle).
- * - Tap center to Pause/Play.
- * - Tap edges are handled by parent Pager (Next/Prev).
- */
 @Composable
 fun VideoStory(
     payload: VideoPayload,
@@ -42,19 +34,14 @@ fun VideoStory(
     modifier: Modifier = Modifier
 ) {
     var isPlaying by remember { mutableStateOf(true) }
-    
-    // Placeholder for actual ExoPlayer/AVPlayer implementation.
-    // For now, simulating the UI state.
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.scrim)
-            // Center tap toggles playback
             .clickable { isPlaying = !isPlaying },
         contentAlignment = Alignment.Center
     ) {
-        // Video Surface Placeholder
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -66,8 +53,7 @@ fun VideoStory(
                     },
                 )
         )
-        
-        // Debug Text
+
         val playbackStateText = if (isPlaying) {
             stringResource(Res.string.video_state_playing)
         } else {
@@ -79,8 +65,7 @@ fun VideoStory(
             color = MaterialTheme.colorScheme.onPrimary,
             style = MaterialTheme.typography.bodyLarge
         )
-        
-        // Play/Pause Icon Overlay (Visible when paused)
+
         if (!isPlaying) {
              Icon(
                  imageVector = Icons.Default.PlayArrow,

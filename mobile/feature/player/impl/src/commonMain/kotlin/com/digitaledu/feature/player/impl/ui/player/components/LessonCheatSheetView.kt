@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +33,8 @@ import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSize
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.reference.CodeSnippet
 import com.digitaledu.core.model.reference.LessonReference
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
@@ -154,7 +157,13 @@ fun CodeSnippetCard(
                 )
                 IconButton(
                     onClick = onCopy,
-                    modifier = Modifier.size(UiSize.iconLg),
+                    modifier = Modifier
+                        .size(UiSize.iconLg)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = stringResource(Res.string.cheat_sheet_copy_code),
+                            role = Role.Button,
+                        ),
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,

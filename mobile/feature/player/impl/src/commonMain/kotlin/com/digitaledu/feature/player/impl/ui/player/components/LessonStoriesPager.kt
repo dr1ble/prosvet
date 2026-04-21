@@ -25,8 +25,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
 import com.digitaledu.core.ui.components.UiSize
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.content.ArticlePayload
 import com.digitaledu.core.model.content.Hotspot
@@ -65,7 +68,6 @@ fun LessonStoriesPager(
         initialPage = currentScreenIndex,
         pageCount = { bundle.screens.size }
     )
-    // Sync external state with internal pager state
     LaunchedEffect(currentScreenIndex) {
         if (pagerState.currentPage != currentScreenIndex) {
             pagerState.animateScrollToPage(currentScreenIndex)
@@ -74,7 +76,6 @@ fun LessonStoriesPager(
 
     LaunchedEffect(pagerState.currentPage) {
         if (pagerState.currentPage != currentScreenIndex) {
-            // Determine direction based on index difference
             if (pagerState.currentPage > currentScreenIndex) {
                 onIntent(PlayerIntent.Next)
             } else {
@@ -91,7 +92,6 @@ fun LessonStoriesPager(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Content Layer
         HorizontalPager(
             state = pagerState,
             userScrollEnabled = !isSimulation, // Disable swipe for simulations
@@ -121,13 +121,10 @@ fun LessonStoriesPager(
             }
         }
 
-        // Overlay Navigation Controls (Tap Zones)
-        // We only add this if it's NOT a simulation AND NOT an article AND NOT a quiz
         val isArticle = currentScreen?.payload is ArticlePayload
         val isQuiz = currentScreen?.payload is QuizPayload
         if (!isSimulation && !isArticle && !isQuiz) {
             Row(modifier = Modifier.fillMaxSize()) {
-                // Left Zone (Previous)
                 Box(
                     modifier = Modifier
                         .weight(0.3f)
@@ -141,12 +138,8 @@ fun LessonStoriesPager(
                         }
                 )
                 
-                // Center Zone (Pause/Menu - placeholder)
-                Box(modifier = Modifier.weight(0.4f).fillMaxSize()) {
-                    // Pass-through touches to content (e.g. scrolling text, video controls)
-                }
+                Box(modifier = Modifier.weight(0.4f).fillMaxSize())
 
-                // Right Zone (Next)
                 Box(
                     modifier = Modifier
                         .weight(0.3f)
@@ -162,8 +155,6 @@ fun LessonStoriesPager(
             }
         }
 
-        // UI Layer (Progress Bar & Controls)
-        // Hidden during simulation ("Deep Immersion")
         if (!isSimulation) {
             Box(
                 modifier = Modifier
@@ -171,7 +162,6 @@ fun LessonStoriesPager(
                     .systemBarsPadding()
                     .padding(horizontal = UiSpacing.md, vertical = UiSpacing.xs)
             ) {
-                // Top Layer Controls
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -179,10 +169,15 @@ fun LessonStoriesPager(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Theory / Reference Button (Left)
                     if (activeLessonReference != null) {
                         IconButton(
-                            onClick = onShowTheory
+                            onClick = onShowTheory,
+                            modifier = Modifier
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.theory),
+                                    role = Role.Button,
+                                ),
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Info,
@@ -194,9 +189,14 @@ fun LessonStoriesPager(
                         Spacer(modifier = Modifier.size(UiSize.touchTarget))
                     }
 
-                    // Close Button (Right)
                     IconButton(
-                        onClick = { onIntent(PlayerIntent.ExitFullscreen) }
+                        onClick = { onIntent(PlayerIntent.ExitFullscreen) },
+                        modifier = Modifier
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(
+                                label = stringResource(Res.string.close),
+                                role = Role.Button,
+                            ),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -206,7 +206,6 @@ fun LessonStoriesPager(
                     }
                 }
 
-                // Top Progress Bar (Aligned to top center, above controls)
                 StoryStepsProgressBar(
                     stepsCount = bundle.screens.size,
                     currentStep = currentScreenIndex,

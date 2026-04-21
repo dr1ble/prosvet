@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +68,9 @@ import com.digitaledu.core.model.content.UnknownPayload
 import com.digitaledu.core.model.content.VideoPayload
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilityFocusHighlight
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.ui.util.BackHandler
 import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.player.api.PlayerUiState
@@ -316,7 +320,9 @@ private fun LearningCoursesScreen(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(UiShapes.pill)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(MaterialTheme.colorScheme.primary)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -334,6 +340,9 @@ private fun LearningCoursesScreen(
                     FilterChip(
                         selected = selectedChip.value == index,
                         onClick = { selectedChip.value = index },
+                        modifier = Modifier
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(label = label, role = Role.Button),
                         label = {
                             Text(
                                 text = label,
@@ -428,6 +437,8 @@ private fun CoursePreviewCard(
         ),
         modifier = Modifier
             .fillMaxWidth()
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = title, role = Role.Button)
             .clickable(onClick = onClick),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
@@ -634,7 +645,13 @@ private fun LearningCourseLessonsScreen(
         item {
             OutlinedButton(
                 onClick = onBackToCourses,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = stringResource(Res.string.lesson_choose_other_course),
+                        role = Role.Button,
+                    ),
                 shape = UiShapes.cardMd,
             ) {
                 Text(
@@ -687,6 +704,19 @@ private fun LessonRow(
         modifier = Modifier
             .fillMaxWidth()
             .border(width = 2.dp, color = borderColor, shape = UiShapes.cardMd)
+            .accessibilityTouchTarget
+            .accessibilitySemantics(
+                label = screen.title,
+                state = when (status) {
+                    LessonStatus.Completed -> "завершён"
+                    LessonStatus.InProgress -> "текущий урок"
+                    LessonStatus.Available -> "доступен"
+                    LessonStatus.Locked -> "недоступен"
+                },
+                role = Role.Button,
+                enabled = status != LessonStatus.Locked,
+            )
+            .accessibilityFocusHighlight(shape = UiShapes.cardMd, color = MaterialTheme.colorScheme.primary)
             .clickable(enabled = status != LessonStatus.Locked, onClick = onOpen),
     ) {
         Column(
@@ -962,7 +992,18 @@ private fun LearningLessonDetailsScreen(
         Button(
             onClick = onStartLesson,
             enabled = canStartLesson,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .accessibilityTouchTarget
+                .accessibilitySemantics(
+                    label = if (canStartLesson) {
+                        stringResource(Res.string.learning_start_lesson)
+                    } else {
+                        stringResource(Res.string.learning_preview_only)
+                    },
+                    role = Role.Button,
+                    enabled = canStartLesson,
+                ),
             shape = UiShapes.cardMd,
             colors = ButtonDefaults.buttonColors(
                 disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -982,7 +1023,13 @@ private fun LearningLessonDetailsScreen(
 
         OutlinedButton(
             onClick = onBack,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .accessibilityTouchTarget
+                .accessibilitySemantics(
+                    label = stringResource(Res.string.lesson_back_to_courses),
+                    role = Role.Button,
+                ),
             shape = UiShapes.cardMd,
         ) {
             Text(

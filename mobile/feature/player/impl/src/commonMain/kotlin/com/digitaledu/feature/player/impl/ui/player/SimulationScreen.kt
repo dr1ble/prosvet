@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
@@ -37,6 +38,9 @@ import coil3.request.ImageRequest
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilityFocusHighlight
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.content.Hotspot
 import com.digitaledu.core.model.content.SimulationPayload
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
@@ -191,6 +195,13 @@ private fun HotspotOverlay(
                 color = MaterialTheme.colorScheme.primary.copy(alpha = UiOpacity.strong),
                 shape = UiShapes.cardSm,
             )
+            .accessibilityTouchTarget
+            .accessibilitySemantics(
+                label = hotspot.label.takeIf { it.isNotBlank() } ?: hotspot.hint,
+                state = if (hotspot.targetScreenKey != null) "открывает следующий экран" else "показывает подсказку",
+                role = Role.Button,
+            )
+            .accessibilityFocusHighlight(shape = UiShapes.cardSm, color = MaterialTheme.colorScheme.secondary)
             .clickable(
                 onClick = onClick,
                 indication = ripple(),
