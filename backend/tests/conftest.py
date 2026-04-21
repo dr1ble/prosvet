@@ -14,10 +14,19 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.main import app
+from app.modules.auth.infra import models as _auth_models  # noqa: F401
+from app.modules.catalog.infra import models as _catalog_models  # noqa: F401
 from app.modules.catalog.infra.models import Course, CourseRelease
+from app.modules.groups.infra import models as _groups_models  # noqa: F401
+from app.modules.moderation.infra import models as _moderation_models  # noqa: F401
+from app.modules.progress.infra import models as _progress_models  # noqa: F401
+from app.modules.simulation.infra import models as _simulation_models  # noqa: F401
+from app.modules.users import models as _user_models  # noqa: F401
 from app.modules.users.models import UserRole
+from app.shared.auth import policy_models as _policy_models  # noqa: F401
 from app.shared.auth.schemas import CurrentActor
 from app.shared.db.base import Base
+from app.shared.security import models as _security_models  # noqa: F401
 
 # Use main database (test database needs pg_hba config for external creation)
 # For isolated tests, use mock repositories instead of real DB
