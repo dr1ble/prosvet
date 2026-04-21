@@ -16,6 +16,7 @@ import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage, type AppLanguage } from "@/shared/i18n/lang";
 import { getUiMessages } from "@/shared/i18n/messages";
 
+import { PeriodSelect } from "./period-select";
 import styles from "./dashboard.module.css";
 
 type HomePageProps = {
@@ -397,6 +398,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       : `Good morning, ${profile.display_name ?? "there"}`;
   const periodLabel = periodLabelByValue[period];
   const periodSelectorLabel = language === "ru" ? "Период" : "Period";
+  const periodOptions = DASHBOARD_PERIODS.map((value) => ({
+    value,
+    label: periodLabelByValue[value],
+  }));
   const chartTitle = language === "ru" ? "Пульс обучения" : "Learning pulse";
   const completionLabel = language === "ru" ? "Завершение" : "Completion";
   const engagementLabel = language === "ru" ? "Активность" : "Engagement";
@@ -474,16 +479,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           : "Roles, permissions, and access control for admin actions.",
       href: withDashboardState(`/users?lang=${language}`),
       requiredPermissions: ["users.manage", "rbac.manage"],
-    },
-    {
-      id: "search",
-      title: language === "ru" ? "Глобальный поиск" : "Global Search",
-      description:
-        language === "ru"
-          ? "Поиск по курсам, пользователям и учебным группам."
-          : "Search across courses, users, and learning groups.",
-      href: withDashboardState(`/search?lang=${language}`),
-      requiredPermissions: ["search.view"],
     },
     {
       id: "progress",
@@ -739,26 +734,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <div className={styles.dashboardTopBar}>
                   <h3 className={styles.dashboardTitle}>{greetingTitle}</h3>
                   <div className={styles.dashboardTopActions}>
-                    <span className={styles.periodSelectorLabel}>
-                      {periodSelectorLabel}
-                    </span>
-                    <div className={styles.periodSelector}>
-                      {DASHBOARD_PERIODS.map((value) => {
-                        const isActive = value === period;
-                        return (
-                          <Link
-                            key={value}
-                            href={withDashboardState(
-                              `/dashboard?lang=${language}&period=${value}`,
-                            )}
-                            className={`${styles.periodOption} ${isActive ? styles.periodOptionActive : ""}`}
-                            aria-current={isActive ? "page" : undefined}
-                          >
-                            {periodLabelByValue[value]}
-                          </Link>
-                        );
-                      })}
-                    </div>
+                    <PeriodSelect
+                      language={language}
+                      value={period}
+                      label={periodSelectorLabel}
+                      options={periodOptions}
+                    />
                   </div>
                 </div>
 
