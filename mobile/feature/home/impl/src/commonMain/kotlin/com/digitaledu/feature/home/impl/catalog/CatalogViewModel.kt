@@ -17,6 +17,18 @@ class CatalogViewModel(
             CatalogIntent.RefreshCourses -> loadCourses()
             is CatalogIntent.OpenCourse -> openCourse(intent.slug)
             CatalogIntent.DismissError -> dismissError()
+            is CatalogIntent.SetSearchQuery -> updateState { copy(searchQuery = intent.query) }
+            is CatalogIntent.SetCategory -> updateState { copy(selectedCategoryId = intent.categoryId) }
+            is CatalogIntent.UpdateProgress -> updateState {
+                copy(
+                    progressByCourseId = progressByCourseId + (
+                        intent.courseId to CourseProgress(
+                            completedLessons = intent.completedLessons,
+                            totalLessons = intent.totalLessons,
+                        )
+                    ),
+                )
+            }
         }
     }
 

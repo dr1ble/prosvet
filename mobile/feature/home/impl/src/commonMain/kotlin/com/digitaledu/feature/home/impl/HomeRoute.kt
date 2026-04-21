@@ -38,6 +38,24 @@ fun HomeRoute(
     var selectedTab by remember { mutableStateOf(HomeTab.Courses) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(
+        playerUiState.bundle?.course?.id,
+        playerUiState.bundle?.screens?.size,
+        playerUiState.currentScreenIndex,
+    ) {
+        val bundle = playerUiState.bundle ?: return@LaunchedEffect
+        val total = bundle.screens.size
+        if (total == 0) return@LaunchedEffect
+        val completed = (playerUiState.currentScreenIndex + 1).coerceAtMost(total)
+        catalogViewModel.processIntent(
+            CatalogIntent.UpdateProgress(
+                courseId = bundle.course.id,
+                completedLessons = completed,
+                totalLessons = total,
+            ),
+        )
+    }
+
     LaunchedEffect(catalogUiState.errorMessage, profileUiState.errorMessage) {
         catalogUiState.errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message = message)
