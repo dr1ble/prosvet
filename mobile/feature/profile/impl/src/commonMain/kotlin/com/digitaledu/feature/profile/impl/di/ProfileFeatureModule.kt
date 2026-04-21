@@ -12,7 +12,10 @@ fun profileFeatureModule(): Module = module {
     factory { LogoutUseCase(authRepository = get()) }
 
     factory<ProfileFeatureHost> {
-        ProfileViewModel(logoutUseCase = get())
+        ProfileViewModel(
+            logoutUseCase = get(),
+            accessibilityPreferencesRepository = get(),
+        )
     }
 
     single<ProfileUiEntry> { ProfileUiEntryImpl() }

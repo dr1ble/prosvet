@@ -7,16 +7,37 @@ import com.digitaledu.feature.profile.api.ProfileFeatureHost
 import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiState
+import androidx.lifecycle.viewModelScope
+import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
+import com.digitaledu.core.model.preferences.AccessibilitySettings
 import com.digitaledu.feature.profile.impl.domain.LogoutUseCase
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 internal class ProfileViewModel(
     private val logoutUseCase: LogoutUseCase,
+    private val accessibilityPreferencesRepository: AccessibilityPreferencesRepository,
 ) : BaseViewModel<ProfileUiState, ProfileIntent, ProfileEffect>(ProfileUiState()), ProfileFeatureHost {
+
+    init {
+        viewModelScope.launch {
+            accessibilityPreferencesRepository.settings.collect { settings ->
+                updateState { copy(accessibilitySettings = settings) }
+            }
+        }
+    }
 
     override suspend fun handleIntent(intent: ProfileIntent) {
         when (intent) {
             ProfileIntent.Logout -> logout()
             ProfileIntent.DismissError -> dismissError()
+            ProfileIntent.ResetAccessibility -> resetAccessibility()
+            is ProfileIntent.SetFontScale -> updateAccessibility { copy(fontScale = intent.value.coerceIn(0.9f, 1.6f)) }
+            is ProfileIntent.SetControlScale -> updateAccessibility { copy(controlScale = intent.value.coerceIn(1.0f, 1.6f)) }
+            is ProfileIntent.SetBoldText -> updateAccessibility { copy(boldText = intent.enabled) }
+            is ProfileIntent.SetHighContrast -> updateAccessibility { copy(highContrast = intent.enabled) }
+            is ProfileIntent.SetVoiceSupport -> updateAccessibility { copy(voiceSupport = intent.enabled) }
+            is ProfileIntent.SetTremorFilter -> updateAccessibility { copy(tremorFilter = intent.enabled) }
         }
     }
 
@@ -51,6 +72,14 @@ internal class ProfileViewModel(
         updateState {
             copy(status = ProfileStatus.Error(throwable.toUserMessage()))
         }
+    }
+
+    private suspend fun updateAccessibility(transform: AccessibilitySettings.() -> AccessibilitySettings) {
+        accessibilityPreferencesRepository.update(transform)
+    }
+
+    private suspend fun resetAccessibility() {
+        accessibilityPreferencesRepository.update { AccessibilitySettings() }
     }
 
     private fun dismissError() {

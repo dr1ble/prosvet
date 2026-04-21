@@ -45,11 +45,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,17 +65,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilityControlScale
+import com.digitaledu.core.ui.components.accessibilityFocusHighlight
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiState
 import digital_education_mobile.feature.profile.`impl`.generated.resources.Res
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_font_size
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_bold_text
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_reset
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_large_text
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_preview
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_controls_size
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_tremor
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_voice
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account
@@ -110,6 +126,7 @@ fun ProfileContent(
             ProfileMain(
                 isLoggingOut = isLoggingOut,
                 errorMessage = errorMessage,
+                accessibilitySettings = uiState.accessibilitySettings,
                 onOpenAccessibility = { section = ProfileSection.Accessibility },
                 onOpenAccount = { section = ProfileSection.Account },
                 onLogout = { onIntent(ProfileIntent.Logout) },
@@ -119,7 +136,15 @@ fun ProfileContent(
         }
 
         ProfileSection.Accessibility -> {
-            AccessibilitySettings(
+            AccessibilitySettingsContent(
+                settings = uiState.accessibilitySettings,
+                onSetFontScale = { onIntent(ProfileIntent.SetFontScale(it)) },
+                onSetControlScale = { onIntent(ProfileIntent.SetControlScale(it)) },
+                onSetBoldText = { onIntent(ProfileIntent.SetBoldText(it)) },
+                onResetAccessibility = { onIntent(ProfileIntent.ResetAccessibility) },
+                onSetHighContrast = { onIntent(ProfileIntent.SetHighContrast(it)) },
+                onSetVoiceSupport = { onIntent(ProfileIntent.SetVoiceSupport(it)) },
+                onSetTremorFilter = { onIntent(ProfileIntent.SetTremorFilter(it)) },
                 onBack = { section = ProfileSection.Main },
                 modifier = modifier,
             )
@@ -138,6 +163,7 @@ fun ProfileContent(
 private fun ProfileMain(
     isLoggingOut: Boolean,
     errorMessage: String?,
+    accessibilitySettings: com.digitaledu.core.model.preferences.AccessibilitySettings,
     onOpenAccessibility: () -> Unit,
     onOpenAccount: () -> Unit,
     onLogout: () -> Unit,
@@ -336,8 +362,10 @@ private fun ProfileMain(
             SettingsRow(
                 icon = Icons.Rounded.Visibility,
                 title = stringResource(Res.string.profile_accessibility),
-                subtitle = "Размер шрифта, контрастность",
+                subtitle = accessibilitySubtitle(accessibilitySettings),
                 onClick = onOpenAccessibility,
+                voiceSupport = accessibilitySettings.voiceSupport,
+                tremorFilter = accessibilitySettings.tremorFilter,
             )
         }
 
@@ -347,6 +375,8 @@ private fun ProfileMain(
                 title = stringResource(Res.string.profile_account),
                 subtitle = "Персональные данные, уведомления",
                 onClick = onOpenAccount,
+                voiceSupport = accessibilitySettings.voiceSupport,
+                tremorFilter = accessibilitySettings.tremorFilter,
             )
         }
 
@@ -356,7 +386,17 @@ private fun ProfileMain(
                 enabled = !isLoggingOut,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = UiSpacing.md),
+                    .padding(top = UiSpacing.md)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = if (isLoggingOut) {
+                            stringResource(Res.string.profile_logout_loading)
+                        } else {
+                            stringResource(Res.string.profile_logout)
+                        },
+                        role = Role.Button,
+                        enabled = !isLoggingOut,
+                    ),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.error,
@@ -402,6 +442,11 @@ private fun ProfileMain(
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier
                                 .padding(top = UiSpacing.xs)
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.profile_error_dismiss),
+                                    role = Role.Button,
+                                )
                                 .clickable(onClick = onDismissError),
                         )
                     }
@@ -412,15 +457,21 @@ private fun ProfileMain(
 }
 
 @Composable
-private fun AccessibilitySettings(
+fun AccessibilitySettingsContent(
+    settings: com.digitaledu.core.model.preferences.AccessibilitySettings,
+    onSetFontScale: (Float) -> Unit,
+    onSetControlScale: (Float) -> Unit,
+    onSetBoldText: (Boolean) -> Unit,
+    onResetAccessibility: () -> Unit,
+    onSetHighContrast: (Boolean) -> Unit,
+    onSetVoiceSupport: (Boolean) -> Unit,
+    onSetTremorFilter: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var largeText by rememberSaveable { mutableStateOf(false) }
-    var highContrast by rememberSaveable { mutableStateOf(true) }
-    var voiceSupport by rememberSaveable { mutableStateOf(false) }
-    var tremorFilter by rememberSaveable { mutableStateOf(false) }
-
+    val snackbarHostState = remember { SnackbarHostState() }
+    var feedbackMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val resetLabel = stringResource(Res.string.profile_accessibility_reset)
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
@@ -440,6 +491,8 @@ private fun AccessibilitySettings(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
                         .clickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
@@ -499,7 +552,10 @@ private fun AccessibilitySettings(
                     Button(
                         onClick = { },
                         shape = UiShapes.pill,
-                        modifier = Modifier.padding(top = UiSpacing.md),
+                        modifier = Modifier
+                            .padding(top = UiSpacing.md)
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(label = "Кнопка действия", role = Role.Button),
                     ) {
                         Text("Кнопка действия")
                     }
@@ -508,12 +564,47 @@ private fun AccessibilitySettings(
         }
 
         item {
+            feedbackMessage?.let { message ->
+                SnackbarHost(hostState = snackbarHostState)
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        item {
+            FontScaleRow(
+                icon = Icons.Rounded.TextFields,
+                title = stringResource(Res.string.profile_accessibility_font_size),
+                value = settings.fontScale,
+                onValueChange = {
+                    onSetFontScale(it)
+                    feedbackMessage = "Размер шрифта: ${String.format("%.1f", it)}x"
+                },
+            )
+        }
+        item {
+            FontScaleRow(
+                icon = Icons.Rounded.Settings,
+                title = stringResource(Res.string.profile_accessibility_controls_size),
+                value = settings.controlScale,
+                rangeStart = 1.0f,
+                rangeEnd = 1.6f,
+                steps = 5,
+                onValueChange = {
+                    onSetControlScale(it)
+                },
+            )
+        }
+        item {
             ToggleRow(
                 icon = Icons.Rounded.TextFields,
-                title = stringResource(Res.string.profile_accessibility_large_text),
-                subtitle = "Увеличенный шрифт для чтения",
-                checked = largeText,
-                onCheckedChange = { largeText = it },
+                title = stringResource(Res.string.profile_accessibility_bold_text),
+                subtitle = "Усиленный вес шрифта для лучшей читаемости",
+                checked = settings.boldText,
+                onCheckedChange = onSetBoldText,
             )
         }
         item {
@@ -521,8 +612,8 @@ private fun AccessibilitySettings(
                 icon = Icons.Rounded.Contrast,
                 title = "Высокий контраст",
                 subtitle = "Более четкие границы и цвета",
-                checked = highContrast,
-                onCheckedChange = { highContrast = it },
+                checked = settings.highContrast,
+                onCheckedChange = onSetHighContrast,
             )
         }
         item {
@@ -530,8 +621,8 @@ private fun AccessibilitySettings(
                 icon = Icons.Rounded.RecordVoiceOver,
                 title = stringResource(Res.string.profile_accessibility_voice),
                 subtitle = "Озвучивание элементов экрана",
-                checked = voiceSupport,
-                onCheckedChange = { voiceSupport = it },
+                checked = settings.voiceSupport,
+                onCheckedChange = onSetVoiceSupport,
             )
         }
         item {
@@ -539,9 +630,29 @@ private fun AccessibilitySettings(
                 icon = Icons.Rounded.Vibration,
                 title = stringResource(Res.string.profile_accessibility_tremor),
                 subtitle = "Игнорирование случайных нажатий",
-                checked = tremorFilter,
-                onCheckedChange = { tremorFilter = it },
+                checked = settings.tremorFilter,
+                onCheckedChange = onSetTremorFilter,
             )
+        }
+        item {
+            Button(
+                onClick = {
+                    onResetAccessibility()
+                    feedbackMessage = resetLabel
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = UiSpacing.md)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(label = resetLabel, role = Role.Button),
+                shape = UiShapes.cardLg,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+            ) {
+                Text(text = resetLabel, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -572,6 +683,8 @@ private fun AccountSettings(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
                         .clickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
@@ -636,7 +749,12 @@ private fun AccountSettings(
                         onClick = { },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = UiSpacing.md),
+                            .padding(top = UiSpacing.md)
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(
+                                label = stringResource(Res.string.profile_account_bind),
+                                role = Role.Button,
+                            ),
                         shape = UiShapes.cardLg,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -657,6 +775,8 @@ private fun AccountSettings(
                 title = "Смена пароля",
                 subtitle = "Обновите ваш пароль",
                 onClick = { },
+                voiceSupport = false,
+                tremorFilter = false,
             )
         }
         item {
@@ -665,6 +785,8 @@ private fun AccountSettings(
                 title = "Уведомления",
                 subtitle = "Настройте важные оповещения",
                 onClick = { },
+                voiceSupport = false,
+                tremorFilter = false,
             )
         }
         item {
@@ -673,6 +795,8 @@ private fun AccountSettings(
                 title = "Конфиденциальность",
                 subtitle = "Управление вашими данными",
                 onClick = { },
+                voiceSupport = false,
+                tremorFilter = false,
             )
         }
     }
@@ -758,23 +882,97 @@ private fun ProgressCard(
 }
 
 @Composable
+private fun accessibilitySubtitle(settings: com.digitaledu.core.model.preferences.AccessibilitySettings): String {
+    val active = buildList {
+        if (settings.fontScale > 1.0f) add("шрифт ${String.format("%.1f", settings.fontScale)}x")
+        if (settings.highContrast) add("высокий контраст")
+        if (settings.voiceSupport) add("озвучивание")
+        if (settings.tremorFilter) add("фильтр касаний")
+    }
+    return if (active.isEmpty()) {
+        "Стандартный режим"
+    } else {
+        active.joinToString(separator = " • ")
+    }
+}
+
+@Composable
+private fun FontScaleRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    value: Float,
+    rangeStart: Float = 0.9f,
+    rangeEnd: Float = 1.6f,
+    steps: Int = 6,
+    onValueChange: (Float) -> Unit,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(UiShapes.pill)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = "${String.format("%.1f", value)}x", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Slider(
+                value = value,
+                onValueChange = { onValueChange((it * 10).toInt() / 10f) },
+                valueRange = rangeStart..rangeEnd,
+                steps = steps,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SettingsRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    voiceSupport: Boolean,
+    tremorFilter: Boolean,
 ) {
+    val rowVerticalPadding = if (tremorFilter) UiSpacing.lg else UiSpacing.md
+
     Card(
         shape = UiShapes.cardLg,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
         modifier = Modifier
             .fillMaxWidth()
+            .accessibilityTouchTarget
+            .accessibilitySemantics(
+                label = if (voiceSupport) "$title. $subtitle" else title,
+                state = "кнопка настройки",
+                role = Role.Button,
+            )
+            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
             .clickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(UiSpacing.md),
+                .padding(horizontal = UiSpacing.md, vertical = rowVerticalPadding),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -820,6 +1018,9 @@ private fun ToggleRow(
     Card(
         shape = UiShapes.cardLg,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = Modifier
+            .accessibilityControlScale
+            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary),
     ) {
         Row(
             modifier = Modifier
@@ -861,7 +1062,7 @@ private fun ToggleRow(
                     )
                 }
             }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Switch(checked = checked, onCheckedChange = onCheckedChange, modifier = Modifier.accessibilityControlScale.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch))
         }
     }
 }
