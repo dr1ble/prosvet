@@ -96,6 +96,7 @@ tasks.named("preBuild").configure {
 dependencies {
     implementation(projects.core.data)
     implementation(projects.core.designsystem)
+    implementation(libs.androidx.datastore.preferences)
     implementation(projects.core.model)
     implementation(project(":shared"))
 
