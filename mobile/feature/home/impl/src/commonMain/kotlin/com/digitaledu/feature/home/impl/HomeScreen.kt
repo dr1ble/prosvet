@@ -22,8 +22,7 @@ import com.digitaledu.feature.home.impl.player.PlayerIntent
 import com.digitaledu.feature.home.impl.player.PlayerUiState
 import com.digitaledu.feature.home.impl.profile.ProfileIntent
 import com.digitaledu.feature.home.impl.profile.ProfileUiState
-import com.digitaledu.feature.home.impl.ui.CoursesContent
-import com.digitaledu.feature.home.impl.ui.LessonContent
+import com.digitaledu.feature.home.impl.ui.LearningContent
 import com.digitaledu.feature.home.impl.ui.ProfileContent
 import com.digitaledu.feature.home.impl.ui.player.LessonPlayerScreen
 
@@ -66,7 +65,7 @@ fun HomeScreen(
                 title = {
                     Text(
                         text = when (selectedTab) {
-                            HomeTab.Courses -> "Каталог курсов"
+                            HomeTab.Courses -> "Курсы"
                             HomeTab.Lesson -> "Обучение"
                             HomeTab.Profile -> "Профиль"
                         },
@@ -102,8 +101,8 @@ fun HomeScreen(
     ) { innerPadding ->
         when (selectedTab) {
             HomeTab.Courses -> {
-                CoursesContent(
-                    uiState = catalogUiState,
+                LearningContent(
+                    catalogUiState = catalogUiState,
                     onIntent = onCatalogIntent,
                     modifier = Modifier
                         .fillMaxSize()
@@ -112,9 +111,9 @@ fun HomeScreen(
             }
 
             HomeTab.Lesson -> {
-                LessonContent(
-                    uiState = playerUiState,
-                    onIntent = onPlayerIntent,
+                LearningContent(
+                    catalogUiState = catalogUiState,
+                    onIntent = onCatalogIntent,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
