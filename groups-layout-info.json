@@ -1,0 +1,106 @@
+{
+  "header": {
+    "tag": "HEADER",
+    "className": "groups-module__A_Xlla__header",
+    "rect": {
+      "x": 24,
+      "y": 24,
+      "width": 1152,
+      "height": 276.25,
+      "top": 24,
+      "right": 1176,
+      "bottom": 300.25,
+      "left": 24
+    },
+    "styles": {
+      "display": "flex",
+      "fontSize": "16px",
+      "lineHeight": "24px",
+      "marginTop": "0px",
+      "marginBottom": "0px",
+      "gap": "10px",
+      "minHeight": "auto",
+      "height": "276.25px",
+      "alignItems": "flex-start",
+      "justifyContent": "space-between"
+    }
+  },
+  "mainDiv": {
+    "tag": "DIV",
+    "className": "groups-module__A_Xlla__headerMain",
+    "rect": {
+      "x": 24,
+      "y": 24,
+      "width": 536.3671875,
+      "height": 72,
+      "top": 24,
+      "right": 560.3671875,
+      "bottom": 96,
+      "left": 24
+    },
+    "styles": {
+      "display": "grid",
+      "fontSize": "16px",
+      "lineHeight": "24px",
+      "marginTop": "0px",
+      "marginBottom": "0px",
+      "gap": "6px",
+      "minHeight": "auto",
+      "height": "72px",
+      "alignItems": "normal",
+      "justifyContent": "normal"
+    }
+  },
+  "titleRow": {
+    "tag": "DIV",
+    "className": "groups-module__A_Xlla__titleRow",
+    "rect": {
+      "x": 24,
+      "y": 24,
+      "width": 536.3671875,
+      "height": 36,
+      "top": 24,
+      "right": 560.3671875,
+      "bottom": 60,
+      "left": 24
+    },
+    "styles": {
+      "display": "flex",
+      "fontSize": "16px",
+      "lineHeight": "24px",
+      "marginTop": "0px",
+      "marginBottom": "0px",
+      "gap": "8px",
+      "minHeight": "auto",
+      "height": "36px",
+      "alignItems": "center",
+      "justifyContent": "normal"
+    }
+  },
+  "subtitle": {
+    "tag": "P",
+    "className": "groups-module__A_Xlla__subtitle",
+    "rect": {
+      "x": 24,
+      "y": 72,
+      "width": 536.3671875,
+      "height": 24,
+      "top": 72,
+      "right": 560.3671875,
+      "bottom": 96,
+      "left": 24
+    },
+    "styles": {
+      "display": "block",
+      "fontSize": "16px",
+      "lineHeight": "24px",
+      "marginTop": "6px",
+      "marginBottom": "0px",
+      "gap": "normal",
+      "minHeight": "auto",
+      "height": "24px",
+      "alignItems": "normal",
+      "justifyContent": "normal"
+    }
+  }
+}

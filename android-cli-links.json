@@ -1,0 +1,458 @@
+[
+  {
+    "text": "Перейти к основному контенту",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#main-content"
+  },
+  {
+    "text": "English",
+    "href": "https://developer.android.com/tools/agents/android-cli"
+  },
+  {
+    "text": "Deutsch",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=de"
+  },
+  {
+    "text": "Español – América Latina",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=es-419"
+  },
+  {
+    "text": "Français",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=fr"
+  },
+  {
+    "text": "Indonesia",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=id"
+  },
+  {
+    "text": "Italiano",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=it"
+  },
+  {
+    "text": "Polski",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=pl"
+  },
+  {
+    "text": "Português – Brasil",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=pt-br"
+  },
+  {
+    "text": "Tiếng Việt",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=vi"
+  },
+  {
+    "text": "Türkçe",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=tr"
+  },
+  {
+    "text": "Русский",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru"
+  },
+  {
+    "text": "עברית",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=he"
+  },
+  {
+    "text": "العربيّة",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ar"
+  },
+  {
+    "text": "فارسی",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=fa"
+  },
+  {
+    "text": "हिंदी",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=hi"
+  },
+  {
+    "text": "বাংলা",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=bn"
+  },
+  {
+    "text": "ภาษาไทย",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=th"
+  },
+  {
+    "text": "中文 – 简体",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=zh-cn"
+  },
+  {
+    "text": "中文 – 繁體",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=zh-tw"
+  },
+  {
+    "text": "日本語",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ja"
+  },
+  {
+    "text": "한국어",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ko"
+  },
+  {
+    "text": "Войти",
+    "href": "https://developer.android.com/_d/signin?continue=https%3A%2F%2Fdeveloper.android.com%2Ftools%2Fagents%2Fandroid-cli%3Fhl%3Dru&prompt=select_account"
+  },
+  {
+    "text": "Обзор",
+    "href": "https://developer.android.com/tools/agents/android-cli"
+  },
+  {
+    "text": "Примечания к выпускам",
+    "href": "https://developer.android.com/tools/agents/android-cli/release-notes"
+  },
+  {
+    "text": "Установите Android CLI.",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#install"
+  },
+  {
+    "text": "Настройка для агентов",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#setup-agents"
+  },
+  {
+    "text": "Известные проблемы",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#known-issues"
+  },
+  {
+    "text": "Глобальные опции",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#global-options"
+  },
+  {
+    "text": "-h, --help",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#help"
+  },
+  {
+    "text": "--sdk",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk"
+  },
+  {
+    "text": "Команды",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#commands"
+  },
+  {
+    "text": "create",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#create"
+  },
+  {
+    "text": "create list",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#create-list"
+  },
+  {
+    "text": "describe",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#describe"
+  },
+  {
+    "text": "docs",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#docs"
+  },
+  {
+    "text": "emulator create",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#emulator-create"
+  },
+  {
+    "text": "emulator list",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#emulator-list"
+  },
+  {
+    "text": "emulator start",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#emulator-start"
+  },
+  {
+    "text": "emulator stop",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#emulator-stop"
+  },
+  {
+    "text": "info",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#info"
+  },
+  {
+    "text": "init",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#init"
+  },
+  {
+    "text": "layout",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#layout"
+  },
+  {
+    "text": "skills add",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#skills-add"
+  },
+  {
+    "text": "skills find",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#skills-find"
+  },
+  {
+    "text": "skills list",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#skills-list"
+  },
+  {
+    "text": "skills remove",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#skills-remove"
+  },
+  {
+    "text": "screen capture",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#screen-capture"
+  },
+  {
+    "text": "screen resolve",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#screen-resolve"
+  },
+  {
+    "text": "sdk install",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk-install"
+  },
+  {
+    "text": "sdk list",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk-list"
+  },
+  {
+    "text": "sdk remove",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk-remove"
+  },
+  {
+    "text": "run",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#run"
+  },
+  {
+    "text": "sdk update",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk-update"
+  },
+  {
+    "text": "update",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#update"
+  },
+  {
+    "text": "-V, --version",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#version"
+  },
+  {
+    "text": "Установите Android CLI.",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#install"
+  },
+  {
+    "text": "Настройка для агентов",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#setup-agents"
+  },
+  {
+    "text": "Известные проблемы",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#known-issues"
+  },
+  {
+    "text": "Глобальные опции",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#global-options"
+  },
+  {
+    "text": "-h, --help",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#help"
+  },
+  {
+    "text": "--sdk",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk"
+  },
+  {
+    "text": "Команды",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#commands"
+  },
+  {
+    "text": "create",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#create"
+  },
+  {
+    "text": "create list",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#create-list"
+  },
+  {
+    "text": "describe",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#describe"
+  },
+  {
+    "text": "docs",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#docs"
+  },
+  {
+    "text": "emulator create",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#emulator-create"
+  },
+  {
+    "text": "emulator list",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#emulator-list"
+  },
+  {
+    "text": "emulator start",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#emulator-start"
+  },
+  {
+    "text": "emulator stop",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#emulator-stop"
+  },
+  {
+    "text": "info",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#info"
+  },
+  {
+    "text": "init",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#init"
+  },
+  {
+    "text": "layout",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#layout"
+  },
+  {
+    "text": "skills add",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#skills-add"
+  },
+  {
+    "text": "skills find",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#skills-find"
+  },
+  {
+    "text": "skills list",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#skills-list"
+  },
+  {
+    "text": "skills remove",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#skills-remove"
+  },
+  {
+    "text": "screen capture",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#screen-capture"
+  },
+  {
+    "text": "screen resolve",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#screen-resolve"
+  },
+  {
+    "text": "sdk install",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk-install"
+  },
+  {
+    "text": "sdk list",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk-list"
+  },
+  {
+    "text": "sdk remove",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk-remove"
+  },
+  {
+    "text": "run",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#run"
+  },
+  {
+    "text": "sdk update",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk-update"
+  },
+  {
+    "text": "update",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#update"
+  },
+  {
+    "text": "-V, --version",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#version"
+  },
+  {
+    "text": "Загрузите Android CLI",
+    "href": "https://developer.android.com/tools/agents?hl=ru"
+  },
+  {
+    "text": "android update",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#update"
+  },
+  {
+    "text": "android info",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#info"
+  },
+  {
+    "text": "--sdk",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#sdk"
+  },
+  {
+    "text": "Download Studio",
+    "href": "https://developer.android.com/studio"
+  },
+  {
+    "text": "Manage cookies",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru#"
+  },
+  {
+    "text": "English",
+    "href": "https://developer.android.com/tools/agents/android-cli"
+  },
+  {
+    "text": "Deutsch",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=de"
+  },
+  {
+    "text": "Español – América Latina",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=es-419"
+  },
+  {
+    "text": "Français",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=fr"
+  },
+  {
+    "text": "Indonesia",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=id"
+  },
+  {
+    "text": "Italiano",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=it"
+  },
+  {
+    "text": "Polski",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=pl"
+  },
+  {
+    "text": "Português – Brasil",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=pt-br"
+  },
+  {
+    "text": "Tiếng Việt",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=vi"
+  },
+  {
+    "text": "Türkçe",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=tr"
+  },
+  {
+    "text": "Русский",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ru"
+  },
+  {
+    "text": "עברית",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=he"
+  },
+  {
+    "text": "العربيّة",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ar"
+  },
+  {
+    "text": "فارسی",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=fa"
+  },
+  {
+    "text": "हिंदी",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=hi"
+  },
+  {
+    "text": "বাংলা",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=bn"
+  },
+  {
+    "text": "ภาษาไทย",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=th"
+  },
+  {
+    "text": "中文 – 简体",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=zh-cn"
+  },
+  {
+    "text": "中文 – 繁體",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=zh-tw"
+  },
+  {
+    "text": "日本語",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ja"
+  },
+  {
+    "text": "한국어",
+    "href": "https://developer.android.com/tools/agents/android-cli?hl=ko"
+  }
+]
