@@ -6,6 +6,9 @@ data class CatalogCourse(
     val title: String,
     val description: String?,
     val coverImageUrl: String? = null,
+    val category: String? = null,
+    val lessonCount: Int? = null,
+    val durationMinutes: Int? = null,
 )
 
 data class CatalogRelease(

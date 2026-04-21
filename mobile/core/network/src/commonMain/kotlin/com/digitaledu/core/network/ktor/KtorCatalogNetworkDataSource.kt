@@ -43,6 +43,9 @@ class KtorCatalogNetworkDataSource(
                     title = response.title,
                     description = response.description,
                     coverImageUrl = response.pickCoverImageUrl(),
+                    category = response.category,
+                    lessonCount = response.lessonCount,
+                    durationMinutes = response.durationMinutes,
                 )
             }
         }
@@ -61,6 +64,9 @@ class KtorCatalogNetworkDataSource(
                     title = response.course.title,
                     description = response.course.description,
                     coverImageUrl = response.course.pickCoverImageUrl(),
+                    category = response.course.category,
+                    lessonCount = response.course.lessonCount,
+                    durationMinutes = response.course.durationMinutes,
                 ),
                 release = CatalogRelease(
                     id = response.release.id,
@@ -142,6 +148,9 @@ private data class CourseResponse(
     @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("photo_url") val photoUrl: String? = null,
     @SerialName("image_url") val imageUrl: String? = null,
+    val category: String? = null,
+    @SerialName("lesson_count") val lessonCount: Int? = null,
+    @SerialName("duration_minutes") val durationMinutes: Int? = null,
 )
 
 @Serializable
