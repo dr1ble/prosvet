@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# pyright: reportMissingImports=false
+
 from __future__ import annotations
 
 import json
@@ -45,15 +47,12 @@ def check_auth_smoke() -> None:
 
 
 def check_db_tables() -> None:
-    from sqlalchemy import inspect
+    from scripts.db_schema_health import SchemaHealthError, ensure_db_schema_healthy
 
-    from app.shared.db.session import engine
-
-    required = {"users", "courses", "course_lessons", "lesson_tasks"}
-    tables = set(inspect(engine).get_table_names(schema="public"))
-    missing = sorted(required - tables)
-    if missing:
-        raise SystemExit(f"missing tables: {', '.join(missing)}")
+    try:
+        ensure_db_schema_healthy()
+    except SchemaHealthError as exc:
+        raise SystemExit(str(exc)) from exc
     print("db schema OK")
 
 

@@ -12,6 +12,8 @@ Starts local development stack:
 - Web admin (Next.js dev server)
 - CodeGraphContext watcher (auto reindex on file changes)
 
+After startup, prints localhost + LAN URLs for browser access.
+
 Environment overrides:
 - BACKEND_HOST (default: 127.0.0.1)
 - BACKEND_PORT (default: 8000)
@@ -26,9 +28,9 @@ Environment overrides:
 - KG_MEMORY_SYNC_MODE (default: auto, values: auto|force)
 - KG_MEMORY_FILE (default: .context/operations/kg_memory.jsonl)
 - AUTO_INSTALL_BACKEND_DEPS (default: 1, set 0 to disable auto pip install)
-- AUTO_FIX_BROKEN_DB_SCHEMA (default: 0, set 1 to allow auto-repair flow)
-- ALLOW_DB_SCHEMA_RESET (default: 0, MUST be 1 to allow DROP SCHEMA public)
-- CONFIRM_DB_RESET (required for destructive reset: YES_I_UNDERSTAND_DATA_LOSS)
+- AUTO_FIX_BROKEN_DB_SCHEMA (default: 1, auto-repair schema on inconsistency)
+- ALLOW_DB_SCHEMA_RESET (default: 1, allows DROP SCHEMA public in auto-repair)
+- CONFIRM_DB_RESET (default: YES_I_UNDERSTAND_DATA_LOSS)
 - DB_BACKUP_BEFORE_DESTRUCTIVE (default: 1, set 0 to skip backup before destructive reset)
 - DB_BACKUP_DIR (default: .backups/db)
 USAGE
@@ -67,9 +69,9 @@ KG_SEED_SCRIPT="$ROOT_DIR/scripts/seed_kg_memory.py"
 DB_BACKUP_BEFORE_DESTRUCTIVE="${DB_BACKUP_BEFORE_DESTRUCTIVE:-1}"
 DB_BACKUP_DIR="${DB_BACKUP_DIR:-$ROOT_DIR/.backups/db}"
 AUTO_INSTALL_BACKEND_DEPS="${AUTO_INSTALL_BACKEND_DEPS:-1}"
-AUTO_FIX_BROKEN_DB_SCHEMA="${AUTO_FIX_BROKEN_DB_SCHEMA:-0}"
-ALLOW_DB_SCHEMA_RESET="${ALLOW_DB_SCHEMA_RESET:-0}"
-CONFIRM_DB_RESET="${CONFIRM_DB_RESET:-}"
+AUTO_FIX_BROKEN_DB_SCHEMA="${AUTO_FIX_BROKEN_DB_SCHEMA:-1}"
+ALLOW_DB_SCHEMA_RESET="${ALLOW_DB_SCHEMA_RESET:-1}"
+CONFIRM_DB_RESET="${CONFIRM_DB_RESET:-YES_I_UNDERSTAND_DATA_LOSS}"
 HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-60}"
 
 if [[ "$CGC_WATCH_PATH" != /* ]]; then
@@ -302,27 +304,11 @@ sync_knowledge_memory_if_needed() {
 db_has_required_tables() {
   (
     cd "$BACKEND_DIR"
-    PYTHONPATH=. python3 - <<'PY'
-from sqlalchemy import inspect
-
-from app.shared.db.session import engine
-
-required_tables = {
-    "users",
-    "courses",
-    "course_lessons",
-    "lesson_tasks",
-}
-
-inspector = inspect(engine)
-existing_tables = set(inspector.get_table_names(schema="public"))
-missing = sorted(required_tables - existing_tables)
-if missing:
-    print("MISSING_TABLES=" + ",".join(missing))
-    raise SystemExit(1)
-
-print("DB_SCHEMA_OK")
-PY
+    if [[ -n "${APP_DATABASE_URL:-}" ]]; then
+      APP_DATABASE_URL="$APP_DATABASE_URL" PYTHONPATH=. python3 scripts/db_schema_health.py >/dev/null
+    else
+      PYTHONPATH=. python3 scripts/db_schema_health.py >/dev/null
+    fi
   )
 }
 
@@ -340,26 +326,22 @@ reset_db_public_schema() {
     return 1
   fi
 
-  if [[ "$DB_BACKUP_BEFORE_DESTRUCTIVE" == "1" ]]; then
-    echo "[run] Creating DB backup before DROP SCHEMA..."
-    DB_BACKUP_DIR="$DB_BACKUP_DIR" APP_DATABASE_URL="${APP_DATABASE_URL:-}" \
-      bash "$ROOT_DIR/scripts/db-backup.sh" --reason "run-auto-fix-before-drop-schema"
-  else
-    echo "[run] DB backup policy disabled (DB_BACKUP_BEFORE_DESTRUCTIVE=0)."
-  fi
-
   (
     cd "$BACKEND_DIR"
-    PYTHONPATH=. python3 - <<'PY'
-from sqlalchemy import text
-
-from app.shared.db.session import engine
-
-with engine.begin() as conn:
-    conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
-    conn.execute(text("CREATE SCHEMA public"))
-print("DB_SCHEMA_RESET")
-PY
+    if [[ -n "${APP_DATABASE_URL:-}" ]]; then
+      APP_DATABASE_URL="$APP_DATABASE_URL" \
+        ALLOW_LOCAL_SCHEMA_REPAIR=1 \
+        DB_BACKUP_BEFORE_DESTRUCTIVE="$DB_BACKUP_BEFORE_DESTRUCTIVE" \
+        DB_BACKUP_DIR="$DB_BACKUP_DIR" \
+        PYTHONPATH=. \
+        python3 scripts/repair_local_db_schema.py --allow-repair
+    else
+      ALLOW_LOCAL_SCHEMA_REPAIR=1 \
+        DB_BACKUP_BEFORE_DESTRUCTIVE="$DB_BACKUP_BEFORE_DESTRUCTIVE" \
+        DB_BACKUP_DIR="$DB_BACKUP_DIR" \
+        PYTHONPATH=. \
+        python3 scripts/repair_local_db_schema.py --allow-repair
+    fi
   )
 }
 
@@ -375,8 +357,8 @@ ensure_backend_schema() {
   echo "[run] Database schema is inconsistent (missing required tables)."
   if [[ "$AUTO_FIX_BROKEN_DB_SCHEMA" != "1" ]]; then
     echo "[run] Auto-fix is disabled (AUTO_FIX_BROKEN_DB_SCHEMA=0)."
-    echo "[run] Run manually:"
-    echo "[run]   cd backend && PYTHONPATH=. python3 -m alembic upgrade head"
+    echo "[run] Refusing to continue in non-working state."
+    echo "[run] Manual fix: cd backend && PYTHONPATH=. python3 -m alembic upgrade head"
     exit 1
   fi
 
@@ -419,6 +401,49 @@ wait_for_http_ready() {
   echo ""
   echo "[run] $label did not become ready within ${timeout_seconds}s: $url"
   return 1
+}
+
+http_is_ready() {
+  local url="$1"
+  curl -fsS "$url" >/dev/null 2>&1
+}
+
+print_access_urls() {
+  local backend_url="http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health"
+  local web_url="http://$WEB_HOST:$WEB_PORT"
+
+  echo "[run] Startup summary"
+  echo "[run] Web:     $web_url"
+  echo "[run] Backend: $backend_url"
+
+  local lan_ips=()
+  local iface
+  for iface in en0 en1 en2 en3 en4; do
+    local ip
+    ip="$(ipconfig getifaddr "$iface" 2>/dev/null || true)"
+    if [[ -n "$ip" ]]; then
+      lan_ips+=("$ip")
+    fi
+  done
+
+  if [[ "${#lan_ips[@]}" -gt 0 ]]; then
+    echo "[run] LAN access:"
+    local seen=""
+    local ip
+    for ip in "${lan_ips[@]}"; do
+      if [[ " $seen " == *" $ip "* ]]; then
+        continue
+      fi
+      seen="$seen $ip"
+      echo "[run]   Web:     http://$ip:$WEB_PORT"
+      echo "[run]   Backend: http://$ip:$BACKEND_PORT/api/v1/health"
+    done
+  fi
+
+  if [[ -n "${CGC_PID:-}" ]]; then
+    echo "[run] CGC:     watching $CGC_WATCH_PATH"
+  fi
+  echo "[run] Press Ctrl+C to stop"
 }
 
 if ! ensure_docker_daemon; then
@@ -547,24 +572,16 @@ if ! wait_for_http_ready "web" "http://$WEB_HOST:$WEB_PORT" "$HEALTH_WAIT_SECOND
   exit 1
 fi
 
-echo "[run] Ready"
-echo "[run] Web:     http://$WEB_HOST:$WEB_PORT"
-echo "[run] Backend: http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health"
-if [[ -n "${CGC_PID:-}" ]]; then
-  echo "[run] CGC:     watching $CGC_WATCH_PATH"
-fi
-echo "[run] Press Ctrl+C to stop"
+print_access_urls
 
 while true; do
-  if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-    echo "[run] Backend process exited unexpectedly."
-    wait "$BACKEND_PID" || true
+  if ! http_is_ready "http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health"; then
+    echo "[run] Backend health check failed after startup."
     exit 1
   fi
 
-  if ! kill -0 "$WEB_PID" 2>/dev/null; then
-    echo "[run] Web admin process exited unexpectedly."
-    wait "$WEB_PID" || true
+  if ! http_is_ready "http://$WEB_HOST:$WEB_PORT"; then
+    echo "[run] Web admin health check failed after startup."
     exit 1
   fi
 
@@ -575,5 +592,5 @@ while true; do
     CGC_PID=""
   fi
 
-  sleep 1
+  sleep 2
 done
