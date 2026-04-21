@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
@@ -53,6 +54,9 @@ fun GradientPrimaryButton(
                 color = colors.primary,
                 shape = AuthUiShapes.pill,
             )
+            .accessibilityControlScale
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = text, role = Role.Button, enabled = enabled)
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
@@ -221,7 +225,16 @@ fun PasswordToggle(
     onToggle: (Boolean) -> Unit,
     contentDescription: String?,
 ) {
-    IconButton(onClick = { onToggle(!visible) }) {
+    IconButton(
+        onClick = { onToggle(!visible) },
+        modifier = Modifier
+            .accessibilityControlScale
+            .accessibilityTouchTarget
+            .accessibilitySemantics(
+                label = contentDescription ?: "Переключить видимость пароля",
+                role = Role.Button,
+            ),
+    ) {
         Icon(
             imageVector = if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
             contentDescription = contentDescription,
