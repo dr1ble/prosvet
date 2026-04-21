@@ -9,6 +9,7 @@ androidxLifecycle = "2.10.0"
 jetbrainsLifecycle = "2.9.6"
 androidxActivity = "1.12.3"
 androidxNavigation = "2.9.1"
+androidxDataStore = "1.1.7"
 androidxComposeBom = "2026.01.01"
 androidxComposeCompiler = "1.5.15"
 kotlinxCoroutines = "1.10.2"
@@ -37,6 +38,7 @@ jetbrains-lifecycle-viewmodel-compose = { group = "org.jetbrains.androidx.lifecy
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidxActivity" }
 androidx-navigation-runtime = { group = "org.jetbrains.androidx.navigation", name = "navigation-runtime", version.ref = "androidxNavigation" }
 androidx-navigation-compose = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigation" }
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "androidxDataStore" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
