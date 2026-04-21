@@ -314,12 +314,33 @@ export function CourseBuilderHeader() {
 
             <div className={styles.publishAction}>
               <button
+                type="button"
                 className={`${styles.btn} ${styles.publish}`}
                 onClick={() =>
                   useCourseBuilderStore.getState().openPublishDialog()
                 }
               >
-                На проверку
+                <svg
+                  className={styles.publishIcon}
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M4.2 10h11.2"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M11.2 6.8 15 10l-3.8 3.2"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span>На проверку</span>
               </button>
             </div>
           </div>
