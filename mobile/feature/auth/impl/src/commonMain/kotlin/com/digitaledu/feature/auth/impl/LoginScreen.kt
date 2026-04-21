@@ -2,6 +2,7 @@ package com.digitaledu.feature.auth.impl
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.digitaledu.core.model.auth.DebugQuickLoginPreset
 import com.digitaledu.core.ui.components.AuthUiOpacity
 import com.digitaledu.core.ui.components.AuthUiShapes
 import com.digitaledu.core.ui.components.AuthUiSize
@@ -46,6 +48,8 @@ import com.digitaledu.core.ui.components.AuthUiTypography
 import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.ProsvetTextField
 import com.digitaledu.core.ui.components.SecurityInfoCard
+import com.digitaledu.core.ui.components.accessibilitySemantics
+import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_forgot_password_link
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_label_login
@@ -76,7 +80,7 @@ internal fun LoginScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surface,
     ) { innerPadding ->
-        androidx.compose.foundation.layout.Column(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
@@ -112,12 +116,15 @@ internal fun LoginScreen(
                 fontWeight = FontWeight.Medium,
                 style = AuthUiTypography.bodyLg,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = AuthUiSpacing.contentPadding, bottom = AuthUiSpacing.itemXs),
+                modifier = Modifier.padding(
+                    start = AuthUiSpacing.contentPadding,
+                    bottom = AuthUiSpacing.itemXs,
+                ),
             )
             ProsvetTextField(
                 value = uiState.login,
                 onValueChange = { onIntent(AuthIntent.LoginChanged(it)) },
-                placeholder = "example@mail.ru",
+                placeholder = "Введите логин или e-mail",
                 enabled = !uiState.isSubmitting,
             )
 
@@ -143,6 +150,13 @@ internal fun LoginScreen(
                 TextButton(
                     onClick = onOpenRecovery,
                     enabled = !uiState.isSubmitting,
+                    modifier = Modifier
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = stringResource(Res.string.auth_forgot_password_link),
+                            role = androidx.compose.ui.semantics.Role.Button,
+                            enabled = !uiState.isSubmitting,
+                        ),
                     contentPadding = PaddingValues(
                         horizontal = AuthUiSpacing.itemSm,
                         vertical = AuthUiSpacing.item2xs,
@@ -186,13 +200,28 @@ internal fun LoginScreen(
                 isLoading = uiState.isSubmitting,
             )
 
+            if (uiState.debugQuickLoginConfig.enabled && uiState.debugQuickLoginConfig.presets.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+                DebugQuickLoginPanel(
+                    presets = uiState.debugQuickLoginConfig.presets,
+                    isSubmitting = uiState.isSubmitting,
+                    onPresetClick = { preset -> onIntent(AuthIntent.DebugQuickLoginClicked(preset)) },
+                )
+            }
+
             Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
 
             OutlinedButton(
                 onClick = onOpenQrLogin,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AuthUiSize.buttonHeight),
+                    .height(AuthUiSize.buttonHeight)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = stringResource(Res.string.auth_qr_button),
+                        role = androidx.compose.ui.semantics.Role.Button,
+                        enabled = !uiState.isSubmitting,
+                    ),
                 shape = AuthUiShapes.pill,
                 border = BorderStroke(
                     AuthUiStroke.thin,
@@ -229,7 +258,15 @@ internal fun LoginScreen(
                     style = AuthUiTypography.bodyLg,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TextButton(onClick = onOpenRegistration) {
+                TextButton(
+                    onClick = onOpenRegistration,
+                    modifier = Modifier
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = stringResource(Res.string.auth_open_registration),
+                            role = androidx.compose.ui.semantics.Role.Button,
+                        ),
+                ) {
                     Text(
                         text = stringResource(Res.string.auth_open_registration),
                         fontWeight = FontWeight.Bold,
@@ -261,6 +298,64 @@ internal fun LoginScreen(
                 text = stringResource(Res.string.auth_security_info),
                 iconTint = MaterialTheme.colorScheme.secondary,
             )
+        }
+    }
+}
+
+@Composable
+private fun DebugQuickLoginPanel(
+    presets: List<DebugQuickLoginPreset>,
+    isSubmitting: Boolean,
+    onPresetClick: (DebugQuickLoginPreset) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = AuthUiShapes.cardMd,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        border = BorderStroke(
+            AuthUiStroke.thin,
+            MaterialTheme.colorScheme.secondary.copy(alpha = AuthUiOpacity.border),
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AuthUiSpacing.contentPadding),
+            verticalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemSm),
+        ) {
+            Text(
+                text = "Debug quick login",
+                style = AuthUiTypography.bodyLg,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                text = "Только для debug-сборки: быстрый вход под тестовым пользователем для проверки следующих экранов.",
+                style = AuthUiTypography.bodyMd,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            presets.forEach { preset ->
+                OutlinedButton(
+                    onClick = { onPresetClick(preset) },
+                    enabled = !isSubmitting,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AuthUiShapes.pill,
+                    border = BorderStroke(
+                        AuthUiStroke.thin,
+                        MaterialTheme.colorScheme.secondary.copy(alpha = AuthUiOpacity.border),
+                    ),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                ) {
+                    Text(
+                        text = preset.label,
+                        fontWeight = FontWeight.SemiBold,
+                        style = AuthUiTypography.bodyLg,
+                    )
+                }
+            }
         }
     }
 }
