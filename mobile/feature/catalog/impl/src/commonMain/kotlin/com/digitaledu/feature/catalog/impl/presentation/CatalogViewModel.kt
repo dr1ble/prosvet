@@ -23,6 +23,13 @@ internal class CatalogViewModel(
             CatalogIntent.RefreshCourses -> loadCourses()
             is CatalogIntent.OpenCourse -> openCourse(intent.slug)
             CatalogIntent.DismissError -> dismissError()
+            is CatalogIntent.SetSearchQuery -> setSearchQuery(intent.query)
+            is CatalogIntent.SetCategory -> setCategory(intent.categoryId)
+            is CatalogIntent.UpdateProgress -> updateProgress(
+                courseId = intent.courseId,
+                completedLessons = intent.completedLessons,
+                totalLessons = intent.totalLessons,
+            )
         }
     }
 
@@ -84,5 +91,30 @@ internal class CatalogViewModel(
 
     private fun dismissError() {
         updateState { copy(errorMessage = null) }
+    }
+
+    private fun setSearchQuery(query: String) {
+        updateState { copy(searchQuery = query) }
+    }
+
+    private fun setCategory(categoryId: String) {
+        updateState { copy(selectedCategoryId = categoryId) }
+    }
+
+    private fun updateProgress(
+        courseId: String,
+        completedLessons: Int,
+        totalLessons: Int,
+    ) {
+        updateState {
+            copy(
+                progressByCourseId = progressByCourseId + (
+                    courseId to com.digitaledu.feature.catalog.api.CourseProgress(
+                        completedLessons = completedLessons,
+                        totalLessons = totalLessons,
+                    )
+                ),
+            )
+        }
     }
 }

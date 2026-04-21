@@ -27,10 +27,6 @@ data class CatalogUiState(
 
     private fun matchesCategory(course: CatalogCourse, category: CatalogCategory): Boolean {
         if (category.id == CatalogCategories.ALL_ID) return true
-        course.category?.let { explicit ->
-            return explicit.equals(category.id, ignoreCase = true) ||
-                explicit.equals(category.label, ignoreCase = true)
-        }
         val haystack = (course.title + " " + (course.description ?: "")).lowercase()
         return category.keywords.any { haystack.contains(it) }
     }
@@ -61,12 +57,6 @@ object CatalogCategories {
     fun byId(id: String): CatalogCategory = all.firstOrNull { it.id == id } ?: all.first()
 
     fun detectLabel(course: CatalogCourse): String {
-        course.category?.takeIf { it.isNotBlank() }?.let { explicit ->
-            return all.firstOrNull {
-                it.id.equals(explicit, ignoreCase = true) ||
-                    it.label.equals(explicit, ignoreCase = true)
-            }?.label ?: explicit
-        }
         val haystack = (course.title + " " + (course.description ?: "")).lowercase()
         return all.drop(1)
             .firstOrNull { cat -> cat.keywords.any { haystack.contains(it) } }
