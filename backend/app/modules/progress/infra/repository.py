@@ -152,3 +152,12 @@ class ProgressRepository:
             item.completed_at = completed_at
         self.db.flush()
         return item
+
+    def get_courses_with_progress_for_user(self, user_id: UUID) -> set[UUID]:
+        stmt = (
+            select(CourseLesson.course_id)
+            .join(LessonProgress, LessonProgress.lesson_id == CourseLesson.id)
+            .where(LessonProgress.user_id == user_id)
+            .distinct()
+        )
+        return {row[0] for row in self.db.execute(stmt).all()}

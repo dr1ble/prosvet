@@ -102,6 +102,7 @@ private fun ReleaseResponse.toCatalogRelease(): CatalogRelease {
 private fun ScreenResponse.toCatalogScreen(): CatalogScreen {
     return CatalogScreen(
         id = id,
+        lessonId = lessonId,
         screenKey = screenKey,
         title = title,
         orderIndex = orderIndex,

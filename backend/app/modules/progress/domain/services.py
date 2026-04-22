@@ -4,7 +4,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.modules.progress.api.schemas import ProgressOverviewRowOut
+from app.modules.progress.api.schemas import (
+    MyCourseProgressOut,
+    MyProgressOut,
+    ProgressOverviewRowOut,
+)
 from app.modules.progress.domain.errors import ProgressError
 from app.modules.progress.infra.repository import ProgressRepository
 
@@ -137,3 +141,32 @@ class ProgressService:
         if status not in {"in_progress", "completed"}:
             raise ProgressError("Unsupported progress status.", status_code=422)
         return self.repo.upsert_lesson_progress(user_id=user_id, lesson_id=lesson_id, status=status)
+
+    def get_my_progress(self, user_id: UUID) -> MyProgressOut:
+        course_ids = self.repo.get_courses_with_progress_for_user(user_id)
+        if not course_ids:
+            return MyProgressOut(user_id=user_id, courses=[])
+        courses_map = self.repo.get_courses_map(course_ids)
+        total_map = self.repo.get_course_lessons_count(course_ids)
+        completed_map = self.repo.get_completed_lessons_count(
+            course_ids=course_ids,
+            user_ids={user_id},
+        )
+        rows: list[MyCourseProgressOut] = []
+        for cid in sorted(course_ids):
+            course = courses_map.get(cid)
+            if course is None:
+                continue
+            total = total_map.get(cid, 0)
+            completed = completed_map.get((cid, user_id), 0)
+            rate = float(completed) / float(total) if total > 0 else 0.0
+            rows.append(
+                MyCourseProgressOut(
+                    course_id=cid,
+                    course_title=course.title,
+                    total_lessons=total,
+                    completed_lessons=completed,
+                    completion_rate=rate,
+                )
+            )
+        return MyProgressOut(user_id=user_id, courses=rows)

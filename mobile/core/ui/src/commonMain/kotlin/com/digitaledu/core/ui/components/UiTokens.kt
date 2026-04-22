@@ -94,7 +94,7 @@ val Modifier.accessibilityControlScale: Modifier
     @Composable
     @ReadOnlyComposable
     get() {
-        val scale = LocalAccessibilityUiState.current.controlScale.coerceIn(1.0f, 1.6f)
+        val scale = LocalAccessibilityUiState.current.controlScale.coerceIn(1.0f, 1.3f)
         return if (scale > 1.0f) {
             graphicsLayer {
                 scaleX = scale
@@ -149,7 +149,7 @@ fun ProvideAccessibilityUiState(
 ) {
     CompositionLocalProvider(
         LocalAccessibilityUiState provides AccessibilityUiState(
-            controlScale = controlScale.coerceIn(1.0f, 1.6f),
+            controlScale = controlScale.coerceIn(1.0f, 1.3f),
             voiceSupport = voiceSupport,
             tremorFilter = tremorFilter,
         ),

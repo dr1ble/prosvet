@@ -136,9 +136,11 @@ def _to_release_out(release: CourseRelease, screen_count: int) -> CourseReleaseO
 
 
 def _to_screen_out(screen: CourseReleaseScreen) -> ReleaseScreenOut:
+    lesson_id = screen.payload_json.get("lesson_id") if isinstance(screen.payload_json, dict) else None
     return ReleaseScreenOut(
         id=screen.id,
         release_id=screen.release_id,
+        lesson_id=lesson_id,
         screen_key=screen.screen_key,
         title=screen.title,
         order_index=screen.order_index,

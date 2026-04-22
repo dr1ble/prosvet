@@ -2,7 +2,6 @@ package com.digitaledu.feature.home.impl
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
@@ -22,7 +21,6 @@ internal fun NavGraphBuilder.homeScreen(
     catalogUiEntry: CatalogUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
-    authRepository: AuthRepository,
     groupQrRepository: GroupQrRepository,
 ) {
     composable(route = HOME_ROUTE) {
@@ -36,7 +34,6 @@ internal fun NavGraphBuilder.homeScreen(
             catalogUiEntry = catalogUiEntry,
             playerUiEntry = playerUiEntry,
             profileUiEntry = profileUiEntry,
-            authRepository = authRepository,
             groupQrRepository = groupQrRepository,
         )
     }

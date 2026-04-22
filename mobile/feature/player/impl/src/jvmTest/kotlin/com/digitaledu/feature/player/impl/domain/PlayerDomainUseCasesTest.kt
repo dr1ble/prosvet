@@ -15,6 +15,7 @@ class PlayerDomainUseCasesTest {
     private val progressTransition = ProgressTransitionUseCase()
     private val restoreCourseProgress = RestoreCourseProgressUseCase()
     private val resolveReferenceId = ResolveReferenceIdUseCase()
+    private val resolveCompletedLessonId = ResolveCompletedLessonIdUseCase()
 
     @Test
     fun progressTransition_addsSourceIndex_whenMovedForward() {
@@ -89,6 +90,45 @@ class PlayerDomainUseCasesTest {
         assertEquals(null, resolveReferenceId(article))
     }
 
+    @Test
+    fun resolveCompletedLessonId_returnsSourceLesson_whenMovingToAnotherLesson() {
+        val bundle = bundleWithLessons(listOf("lesson-1", "lesson-1", "lesson-2"))
+
+        val result = resolveCompletedLessonId(
+            bundle = bundle,
+            sourceIndex = 1,
+            targetIndex = 2,
+        )
+
+        assertEquals("lesson-1", result)
+    }
+
+    @Test
+    fun resolveCompletedLessonId_returnsNull_withinSameLessonOrBackward() {
+        val bundle = bundleWithLessons(listOf("lesson-1", "lesson-1", "lesson-2"))
+
+        assertEquals(
+            null,
+            resolveCompletedLessonId(bundle = bundle, sourceIndex = 0, targetIndex = 1),
+        )
+        assertEquals(
+            null,
+            resolveCompletedLessonId(bundle = bundle, sourceIndex = 2, targetIndex = 1),
+        )
+    }
+
+    @Test
+    fun resolveCompletedLessonId_returnsLastLesson_whenClosingOnLastScreen() {
+        val bundle = bundleWithLessons(listOf("lesson-1", "lesson-2"))
+
+        val result = resolveCompletedLessonId.resolveOnClose(
+            bundle = bundle,
+            currentIndex = 1,
+        )
+
+        assertEquals("lesson-2", result)
+    }
+
     private fun bundleWithScreens(count: Int): CatalogBundle {
         val screens = (0 until count).map { index ->
             CatalogScreen(
@@ -112,6 +152,35 @@ class PlayerDomainUseCasesTest {
                 version = "1.0.0",
                 changelog = null,
                 screenCount = count,
+            ),
+            screens = screens,
+        )
+    }
+
+    private fun bundleWithLessons(lessonIds: List<String>): CatalogBundle {
+        val screens = lessonIds.mapIndexed { index, lessonId ->
+            CatalogScreen(
+                id = "screen-$index",
+                screenKey = "key-$index",
+                title = "Screen $index",
+                orderIndex = index,
+                lessonId = lessonId,
+                payload = ArticlePayload(markdownContent = "Screen $index"),
+            )
+        }
+
+        return CatalogBundle(
+            course = CatalogCourse(
+                id = "course-1",
+                slug = "course-1",
+                title = "Course",
+                description = null,
+            ),
+            release = CatalogRelease(
+                id = "release-1",
+                version = "1.0.0",
+                changelog = null,
+                screenCount = screens.size,
             ),
             screens = screens,
         )

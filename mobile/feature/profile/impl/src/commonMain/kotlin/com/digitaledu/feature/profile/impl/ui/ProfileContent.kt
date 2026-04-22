@@ -26,7 +26,7 @@ import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LockReset
-import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PersonSearch
@@ -45,6 +45,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -70,6 +71,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.digitaledu.core.common.formatOneDecimal
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
@@ -80,6 +82,7 @@ import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiState
+import com.digitaledu.core.model.progress.CourseProgressInfo
 import digital_education_mobile.feature.profile.`impl`.generated.resources.Res
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_font_size
@@ -124,9 +127,14 @@ fun ProfileContent(
     when (section) {
         ProfileSection.Main -> {
             ProfileMain(
+                displayName = uiState.displayName,
+                role = uiState.role,
+                accountStatus = uiState.accountStatus,
                 isLoggingOut = isLoggingOut,
                 errorMessage = errorMessage,
                 accessibilitySettings = uiState.accessibilitySettings,
+                courseProgress = uiState.courseProgress,
+                isLoadingProgress = uiState.isLoadingProgress,
                 onOpenAccessibility = { section = ProfileSection.Accessibility },
                 onOpenAccount = { section = ProfileSection.Account },
                 onLogout = { onIntent(ProfileIntent.Logout) },
@@ -161,9 +169,14 @@ fun ProfileContent(
 
 @Composable
 private fun ProfileMain(
+    displayName: String?,
+    role: String?,
+    accountStatus: String?,
     isLoggingOut: Boolean,
     errorMessage: String?,
     accessibilitySettings: com.digitaledu.core.model.preferences.AccessibilitySettings,
+    courseProgress: List<CourseProgressInfo>,
+    isLoadingProgress: Boolean,
     onOpenAccessibility: () -> Unit,
     onOpenAccount: () -> Unit,
     onLogout: () -> Unit,
@@ -210,63 +223,18 @@ private fun ProfileMain(
                     }
 
                     Text(
-                        text = stringResource(Res.string.profile_name),
+                        text = displayName?.trim()?.takeIf { it.isNotEmpty() }
+                            ?: stringResource(Res.string.profile_name),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = UiSpacing.sm),
                     )
                     Text(
-                        text = stringResource(Res.string.profile_title),
+                        text = buildProfileSubtitle(role = role, accountStatus = accountStatus)
+                            ?: stringResource(Res.string.profile_title),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-
-                    Row(
-                        modifier = Modifier
-                            .padding(top = UiSpacing.sm)
-                            .clip(UiShapes.pill)
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(horizontal = UiSpacing.md, vertical = UiSpacing.xs),
-                        horizontalArrangement = Arrangement.spacedBy(UiSpacing.xs),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Stars,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = stringResource(Res.string.profile_points),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.secondary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = UiSpacing.md),
-                        horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
-                    ) {
-                        QuickAction(
-                            title = stringResource(Res.string.profile_featured),
-                            counter = "32",
-                            icon = Icons.Rounded.Favorite,
-                            modifier = Modifier.weight(1f),
-                        )
-                        QuickAction(
-                            title = "Словарь",
-                            icon = Icons.Rounded.TextFields,
-                            modifier = Modifier.weight(1f),
-                        )
-                        QuickAction(
-                            title = "Заметки",
-                            icon = Icons.Rounded.Description,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
                 }
             }
         }
@@ -281,69 +249,36 @@ private fun ProfileMain(
         }
 
         item {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
-                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
-                userScrollEnabled = false,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(252.dp),
-            ) {
-                item {
-                    ProgressCard(
-                        icon = Icons.Rounded.AutoStories,
-                        value = "12",
-                        subtitle = "Уроков пройдено",
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                item {
-                    ProgressCard(
-                        icon = Icons.Rounded.EventAvailable,
-                        value = "5 дней",
-                        subtitle = "Ударный темп",
-                        tint = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                    Card(
-                        shape = UiShapes.cardLg,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                        ),
+            if (isLoadingProgress) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 3.dp,
+                )
+            } else if (courseProgress.isEmpty()) {
+                Surface(
+                    shape = UiShapes.cardLg,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(UiSpacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
                     ) {
-                        Column(modifier = Modifier.padding(UiSpacing.md)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text("Текущий курс", fontWeight = FontWeight.Bold)
-                                Text("60%", color = MaterialTheme.colorScheme.secondary)
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = UiSpacing.xs)
-                                    .height(12.dp)
-                                    .clip(UiShapes.pill)
-                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(0.6f)
-                                        .height(12.dp)
-                                        .clip(UiShapes.pill)
-                                        .background(MaterialTheme.colorScheme.primary),
-                                )
-                            }
-                            Text(
-                                text = "Цифровая грамотность: Базовый уровень",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = UiSpacing.xs),
-                            )
-                        }
+                        Text(
+                            text = "Пока нет пройденных уроков",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text = "Начните проходить курсы, и здесь появится ваш прогресс.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                    for (course in courseProgress) {
+                        CourseProgressCard(course)
                     }
                 }
             }
@@ -373,7 +308,7 @@ private fun ProfileMain(
             SettingsRow(
                 icon = Icons.Rounded.Settings,
                 title = stringResource(Res.string.profile_account),
-                subtitle = "Персональные данные, уведомления",
+                subtitle = "Почта для восстановления доступа",
                 onClick = onOpenAccount,
                 voiceSupport = accessibilitySettings.voiceSupport,
                 tremorFilter = accessibilitySettings.tremorFilter,
@@ -410,7 +345,7 @@ private fun ProfileMain(
                         color = MaterialTheme.colorScheme.error,
                     )
                 } else {
-                    Icon(imageVector = Icons.Rounded.Logout, contentDescription = null)
+                    Icon(imageVector = Icons.AutoMirrored.Rounded.Logout, contentDescription = null)
                 }
                 Text(
                     text = if (isLoggingOut) {
@@ -454,6 +389,14 @@ private fun ProfileMain(
             }
         }
     }
+}
+
+private fun buildProfileSubtitle(role: String?, accountStatus: String?): String? {
+    val values = listOfNotNull(
+        role?.trim()?.takeIf { it.isNotEmpty() },
+        accountStatus?.trim()?.takeIf { it.isNotEmpty() },
+    )
+    return if (values.isEmpty()) null else values.joinToString(separator = " • ")
 }
 
 @Composable
@@ -545,7 +488,7 @@ fun AccessibilitySettingsContent(
                         }
                     }
                     Text(
-                        text = "Этот текст меняется в зависимости от выбранных вами настроек. Мы стремимся сделать приложение удобным для каждого.",
+                        text = "Этот блок показывает, как будут выглядеть текст и элементы управления после изменения настроек доступности.",
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(top = UiSpacing.md),
                     )
@@ -554,6 +497,7 @@ fun AccessibilitySettingsContent(
                         shape = UiShapes.pill,
                         modifier = Modifier
                             .padding(top = UiSpacing.md)
+                            .accessibilityControlScale
                             .accessibilityTouchTarget
                             .accessibilitySemantics(label = "Кнопка действия", role = Role.Button),
                     ) {
@@ -581,7 +525,7 @@ fun AccessibilitySettingsContent(
                 value = settings.fontScale,
                 onValueChange = {
                     onSetFontScale(it)
-                    feedbackMessage = "Размер шрифта: ${String.format("%.1f", it)}x"
+                    feedbackMessage = "Размер шрифта: ${formatOneDecimal(it)}x"
                 },
             )
         }
@@ -591,10 +535,11 @@ fun AccessibilitySettingsContent(
                 title = stringResource(Res.string.profile_accessibility_controls_size),
                 value = settings.controlScale,
                 rangeStart = 1.0f,
-                rangeEnd = 1.6f,
-                steps = 5,
+                rangeEnd = 1.3f,
+                steps = 2,
                 onValueChange = {
                     onSetControlScale(it)
+                    feedbackMessage = "Размер элементов управления: ${formatOneDecimal(it)}x"
                 },
             )
         }
@@ -770,113 +715,26 @@ private fun AccountSettings(
         }
 
         item {
-            SettingsRow(
-                icon = Icons.Rounded.LockReset,
-                title = "Смена пароля",
-                subtitle = "Обновите ваш пароль",
-                onClick = { },
-                voiceSupport = false,
-                tremorFilter = false,
-            )
-        }
-        item {
-            SettingsRow(
-                icon = Icons.Rounded.NotificationsActive,
-                title = "Уведомления",
-                subtitle = "Настройте важные оповещения",
-                onClick = { },
-                voiceSupport = false,
-                tremorFilter = false,
-            )
-        }
-        item {
-            SettingsRow(
-                icon = Icons.Rounded.Shield,
-                title = "Конфиденциальность",
-                subtitle = "Управление вашими данными",
-                onClick = { },
-                voiceSupport = false,
-                tremorFilter = false,
-            )
-        }
-    }
-}
-
-@Composable
-private fun QuickAction(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier,
-    counter: String? = null,
-) {
-    Card(
-        shape = UiShapes.cardMd,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = modifier.heightIn(min = 96.dp),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(UiSpacing.sm),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(UiShapes.pill)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center,
+            Surface(
+                shape = UiShapes.cardLg,
+                color = MaterialTheme.colorScheme.surfaceContainer,
             ) {
-                Icon(imageVector = icon, contentDescription = null)
+                Column(
+                    modifier = Modifier.padding(UiSpacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+                ) {
+                    Text(
+                        text = "Дополнительные настройки профиля пока недоступны",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "Когда backend-контракты для уведомлений, пароля и приватности будут готовы, эти разделы появятся здесь без ложных кнопок и заглушек.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = UiSpacing.xs),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (counter != null) {
-                Text(
-                    text = counter,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .padding(top = UiSpacing.xxs)
-                        .clip(UiShapes.pill)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = UiOpacity.medium))
-                        .padding(horizontal = UiSpacing.xs, vertical = 2.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProgressCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    value: String,
-    subtitle: String,
-    tint: Color,
-) {
-    Card(
-        shape = UiShapes.cardLg,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-    ) {
-        Column(modifier = Modifier.padding(UiSpacing.md)) {
-            Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(28.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = UiSpacing.sm),
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -884,7 +742,7 @@ private fun ProgressCard(
 @Composable
 private fun accessibilitySubtitle(settings: com.digitaledu.core.model.preferences.AccessibilitySettings): String {
     val active = buildList {
-        if (settings.fontScale > 1.0f) add("шрифт ${String.format("%.1f", settings.fontScale)}x")
+        if (settings.fontScale > 1.0f) add("шрифт ${formatOneDecimal(settings.fontScale)}x")
         if (settings.highContrast) add("высокий контраст")
         if (settings.voiceSupport) add("озвучивание")
         if (settings.tremorFilter) add("фильтр касаний")
@@ -901,9 +759,9 @@ private fun FontScaleRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     value: Float,
-    rangeStart: Float = 0.9f,
+    rangeStart: Float = 1.0f,
     rangeEnd: Float = 1.6f,
-    steps: Int = 6,
+    steps: Int = 5,
     onValueChange: (Float) -> Unit,
 ) {
     Card(
@@ -931,7 +789,6 @@ private fun FontScaleRow(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = "${String.format("%.1f", value)}x", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Slider(
@@ -1022,15 +879,14 @@ private fun ToggleRow(
             .accessibilityControlScale
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(UiSpacing.md),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
         ) {
             Row(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1062,7 +918,74 @@ private fun ToggleRow(
                     )
                 }
             }
-            Switch(checked = checked, onCheckedChange = onCheckedChange, modifier = Modifier.accessibilityControlScale.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch))
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Switch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                    modifier = Modifier.accessibilityControlScale.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CourseProgressCard(course: CourseProgressInfo) {
+    val percent = (course.completionRate * 100).toInt().coerceIn(0, 100)
+    val totalLessons = course.totalLessons.coerceAtLeast(1)
+    val completedDisplay = course.completedLessons.coerceAtMost(totalLessons)
+
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            Text(
+                text = course.courseTitle,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "$completedDisplay из $totalLessons уроков",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "$percent%",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(UiShapes.pill)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(course.completionRate.coerceIn(0f, 1f))
+                        .height(8.dp)
+                        .clip(UiShapes.pill)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            }
         }
     }
 }

@@ -22,6 +22,7 @@ fun playerFeatureModule(): Module = module {
             urlResolver = get(),
             catalogRepository = get(),
             authRepository = get(),
+            progressRepository = get(),
         )
     }
 

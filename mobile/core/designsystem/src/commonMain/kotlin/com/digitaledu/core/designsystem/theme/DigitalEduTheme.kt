@@ -27,7 +27,7 @@ fun DigitalEduTheme(
     val density = LocalDensity.current
     val appDensity = Density(
         density = density.density,
-        fontScale = density.fontScale * fontScale.coerceIn(0.9f, 1.6f),
+        fontScale = density.fontScale * fontScale.coerceIn(1.0f, 1.6f),
     )
 
     CompositionLocalProvider(LocalDensity provides appDensity) {

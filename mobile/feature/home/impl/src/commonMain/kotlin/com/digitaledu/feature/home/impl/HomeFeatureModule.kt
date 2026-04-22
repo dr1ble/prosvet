@@ -13,7 +13,6 @@ fun homeFeatureModule(): Module = module {
             catalogUiEntry = get(),
             playerUiEntry = get(),
             profileUiEntry = get(),
-            authRepository = get(),
             groupQrRepository = get(),
         )
     }

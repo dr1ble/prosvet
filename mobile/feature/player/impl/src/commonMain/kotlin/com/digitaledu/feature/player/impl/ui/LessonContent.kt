@@ -148,7 +148,7 @@ private data class LearningCoursePreview(
     val completedLessonsCount: Int,
     val totalLessonsCount: Int,
     val estimatedDurationMinutes: Int,
-    val coverImageUrl: String,
+    val coverImageUrl: String?,
     val isPlayableBundle: Boolean,
 )
 
@@ -424,7 +424,7 @@ private fun CoursePreviewCard(
     title: String,
     subtitle: String,
     categoryLabel: String,
-    coverImageUrl: String,
+    coverImageUrl: String?,
     durationText: String,
     progressText: String,
     progress: Float,
@@ -443,63 +443,68 @@ private fun CoursePreviewCard(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
             Box {
-                SubcomposeAsyncImage(
-                    model = coverImageUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(188.dp),
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        )
-                    },
-                    error = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        )
-                    },
-                )
-
-                Surface(
-                    shape = UiShapes.pill,
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(UiSpacing.md),
-                ) {
-                    Text(
-                        text = categoryLabel.uppercase(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = UiSpacing.sm, vertical = UiSpacing.xxs),
+                if (coverImageUrl != null) {
+                    SubcomposeAsyncImage(
+                        model = coverImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(188.dp),
+                        contentScale = ContentScale.Crop,
+                        loading = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            )
+                        },
+                        error = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            )
+                        },
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(188.dp)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     )
                 }
             }
-
             Column(
-                modifier = Modifier.padding(horizontal = UiSpacing.lg, vertical = UiSpacing.sm),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                modifier = Modifier.padding(horizontal = UiSpacing.md, vertical = UiSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
             ) {
+                FilterChip(
+                    selected = true,
+                    onClick = {},
+                    label = { Text(categoryLabel) },
+                    enabled = false,
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.secondary,
+                        disabledSelectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        disabledLabelColor = MaterialTheme.colorScheme.secondary,
+                    ),
+                )
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(UiSpacing.md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Row(
@@ -525,18 +530,45 @@ private fun CoursePreviewCard(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-
                 LinearProgressIndicator(
                     progress = { progress.coerceIn(0f, 1f) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(UiSpacing.xs)
-                        .clip(UiShapes.pill),
-                    color = MaterialTheme.colorScheme.secondary,
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun CourseDetailsHeaderImage(
+    coverImageUrl: String?,
+    title: String,
+    modifier: Modifier = Modifier,
+) {
+    if (coverImageUrl != null) {
+        SubcomposeAsyncImage(
+            model = coverImageUrl,
+            contentDescription = title,
+            contentScale = ContentScale.Crop,
+            modifier = modifier,
+            loading = {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                ) {}
+            },
+            error = {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {}
+            },
+        )
+    } else {
+        Surface(
+            modifier = modifier,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {}
     }
 }
 
@@ -867,25 +899,12 @@ private fun LearningLessonDetailsScreen(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
         ) {
             Box {
-                SubcomposeAsyncImage(
-                    model = selectedCourse.coverImageUrl,
-                    contentDescription = selectedCourse.title,
-                    contentScale = ContentScale.Crop,
+                CourseDetailsHeaderImage(
+                    coverImageUrl = selectedCourse.coverImageUrl,
+                    title = selectedCourse.title,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(220.dp),
-                    loading = {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                        ) {}
-                    },
-                    error = {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ) {}
-                    },
                 )
                 Box(
                     modifier = Modifier
@@ -1118,6 +1137,11 @@ private fun buildLearningCoursePreviews(
 ): List<LearningCoursePreview> {
     val openedBundle = bundle ?: return emptyList()
     val category = inferCategoryFromTitle(openedBundle.course.title)
+    val simulationCover = openedBundle.screens
+        .asSequence()
+        .mapNotNull { it.payload as? SimulationPayload }
+        .map { it.imageUrl }
+        .firstOrNull()
     return listOf(
         LearningCoursePreview(
             id = openedBundle.course.id,
@@ -1129,7 +1153,10 @@ private fun buildLearningCoursePreviews(
             completedLessonsCount = (currentScreenIndex + 1).coerceIn(0, openedBundle.screens.size),
             totalLessonsCount = openedBundle.screens.size.coerceAtLeast(1),
             estimatedDurationMinutes = estimateDurationMinutes(openedBundle.screens),
-            coverImageUrl = resolveCoverImageUrl(openedBundle.screens, category),
+            coverImageUrl = resolveCoursePreviewCoverUrl(
+                simulationImageUrl = simulationCover,
+                courseCoverImageUrl = openedBundle.course.coverImageUrl,
+            ),
             isPlayableBundle = true,
         ),
     )
@@ -1152,25 +1179,6 @@ private fun estimateDurationMinutes(screens: List<CatalogScreen>): Int {
         }
     }
     return total.coerceAtLeast(15L).toInt()
-}
-
-private fun resolveCoverImageUrl(screens: List<CatalogScreen>, category: LearningCategory): String {
-    val simulationCover = screens
-        .asSequence()
-        .mapNotNull { it.payload as? SimulationPayload }
-        .map { it.imageUrl }
-        .firstOrNull()
-
-    if (!simulationCover.isNullOrBlank()) {
-        return simulationCover
-    }
-
-    return when (category) {
-        LearningCategory.Gosuslugi -> "https://lh3.googleusercontent.com/aida-public/AB6AXuDNPc7h1B1AZXRWDyhSY4RA70NpHIaz0wflGRhwQWxdLW0IpOtXfMY0PHDd2yo_i_cbSrgLJ2iwilYnaHuRIroUwM8bkf2tH6oKiWLkAECJ95jUWcA4LzBcCOR3Xb3HLgekcT0pg2kpuSAd4FIjkZdCcZKC1KLdnlf6wsU_UH2Ee809RrI90E5KPYw8kMiz5Y1luqqcheZrEaTs_QC3S30yGY1NOuMIYkVMuBCkBUPmpWRcuH0NbTjw6ptZdIqZx_YY9-IsPS6C4fKU"
-        LearningCategory.Banks -> "https://lh3.googleusercontent.com/aida-public/AB6AXuBCcKwODqyUG45Tw2Nyq-Z8LfyGvVaLnKcy7KSOC_IuvyZdwvqwe-t70yg3US5qXClTMZwu4YIm6QqBXuNgHxB5mJlIDa7TXyppuCc_bMOQuaU7l1Okvi1uQzamUP2_2jjXPr94-hAqMhGMPWc_up9huCWSq0ZIMoqrQ5u0Ny4W7FkBf8JYJFqi4Dxpese_wpMkiF8tkuJICB4W_JUZd34eBuhffRAgoj97NVa3IPbRuqZp5ilfSE2s0kWtl7xWlCrVIf-FWDbvKOe3"
-        LearningCategory.Messengers -> "https://lh3.googleusercontent.com/aida-public/AB6AXuDNcE6OGAOxEXYGTS8dYM7BjDVMoTRuuWYaIas1n8aWW-puqdOOiq55KIK5nZ4gxTlwpYB0CMvZX1WQUX8tU0fvjhBE8vCQR7m1oJwagmrk3FFhV_wGhfmqqPwPWYZuampmu_SXeld6JWSBzs3mI-2VdQDBxXxgtqjljtl5Nj_CqX9jPczzfDE5bn5VGvsR5nd8qZtXB_JXXprgpU0U3JhIFxOKqjVeKpwyxwr7CGM0m4fxdfMT-WMlENm0yFwf6bCXhLyH6Eaok0ds"
-        LearningCategory.Cybersecurity -> "https://lh3.googleusercontent.com/aida-public/AB6AXuB_D3ISYkeIT3VOKg4vMNgxNHXgE06mHS74vRzTvsQ2oXMkEb4WasctJdHN_9-oxxa95JrCYSEnloD8DBKzXP2DarClqxwoVV-ZcLR7y8gPiB2MOYg1bF-yAqWRsYhySbfITpo8nsX0wKpjLChTGy57z3p6RJ18kbRdJQfkLdAm_hc-ty0Q8EgjWllhCM3UuVwonEr7eC-iWFyHbkLkp2llUrw83irtCpLQDnsA09p_N4xSYAecFSyN_MDQGeI92zHJMhJEN9F6uap0"
-    }
 }
 
 private fun inferCategoryFromTitle(title: String): LearningCategory {

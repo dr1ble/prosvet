@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import com.digitaledu.core.common.BaseViewModel
 import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.data.catalog.CatalogRepository
+import com.digitaledu.core.data.progress.ProgressRepository
 import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.content.Hotspot
 import com.digitaledu.core.model.content.ScreenPayload
@@ -16,6 +17,7 @@ import com.digitaledu.feature.player.impl.domain.NavigationCommand
 import com.digitaledu.feature.player.impl.domain.ProgressTransitionUseCase
 import com.digitaledu.feature.player.impl.domain.ResolveReferenceIdUseCase
 import com.digitaledu.feature.player.impl.domain.ResolveHotspotActionUseCase
+import com.digitaledu.feature.player.impl.domain.ResolveCompletedLessonIdUseCase
 import com.digitaledu.feature.player.impl.domain.ResolveNavigationUseCase
 import com.digitaledu.feature.player.impl.domain.RestoreCourseProgressUseCase
 import com.digitaledu.feature.player.impl.domain.SavedCourseProgress
@@ -28,6 +30,7 @@ internal class PlayerViewModel(
     private val urlResolver: SimulationUrlResolver,
     private val catalogRepository: CatalogRepository,
     private val authRepository: AuthRepository,
+    private val progressRepository: ProgressRepository,
 ) : BaseViewModel<PlayerUiState, PlayerIntent, PlayerEffect>(PlayerUiState()), PlayerFeatureHost {
 
     private var referenceFetchJob: Job? = null
@@ -36,6 +39,7 @@ internal class PlayerViewModel(
     private val restoreCourseProgress = RestoreCourseProgressUseCase()
     private val resolveReferenceId = ResolveReferenceIdUseCase()
     private val resolveNavigation = ResolveNavigationUseCase(progressTransition = progressTransition)
+    private val resolveCompletedLessonId = ResolveCompletedLessonIdUseCase()
     private val resolveHotspotAction = ResolveHotspotActionUseCase()
 
     init {
@@ -97,6 +101,7 @@ internal class PlayerViewModel(
     }
 
     private fun navigate(command: NavigationCommand) {
+        var completedLessonId: String? = null
         updateState {
             val currentBundle = bundle ?: return@updateState this
             val outcome = resolveNavigation(
@@ -106,10 +111,20 @@ internal class PlayerViewModel(
                 command = command,
             ) ?: return@updateState this
 
+            completedLessonId = resolveCompletedLessonId(
+                bundle = currentBundle,
+                sourceIndex = currentScreenIndex,
+                targetIndex = outcome.targetIndex,
+            )
+
             copy(
                 currentScreenIndex = outcome.targetIndex,
                 completedScreens = outcome.completedScreens,
             )
+        }
+        val lessonIdToSync = completedLessonId
+        if (lessonIdToSync != null) {
+            syncCompletedLesson(lessonIdToSync)
         }
         refreshProgressAndReference()
     }
@@ -130,6 +145,15 @@ internal class PlayerViewModel(
     }
 
     private fun closeCourse() {
+        currentState.bundle?.let { bundle ->
+            val completedLessonId = resolveCompletedLessonId.resolveOnClose(
+                bundle = bundle,
+                currentIndex = currentState.currentScreenIndex,
+            )
+            if (completedLessonId != null) {
+                syncCompletedLesson(completedLessonId)
+            }
+        }
         updateState { PlayerUiState(mediaAccessToken = mediaAccessToken) }
         emitEffect(PlayerEffect.Closed)
     }
@@ -179,5 +203,16 @@ internal class PlayerViewModel(
 
     private fun clearActiveLessonReference() {
         updateState { copy(activeLessonReference = null) }
+    }
+
+    private fun syncCompletedLesson(lessonId: String) {
+        viewModelScope.launch {
+            runCatching {
+                progressRepository.upsertLessonProgress(
+                    lessonId = lessonId,
+                    status = "completed",
+                )
+            }
+        }
     }
 }

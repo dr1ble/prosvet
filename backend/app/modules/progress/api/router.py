@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.modules.progress.api.schemas import (
     LessonProgressOut,
     LessonProgressUpsertIn,
+    MyProgressOut,
     ProgressOverviewRowOut,
 )
 from app.modules.progress.domain.errors import ProgressError
@@ -15,6 +16,37 @@ from app.shared.auth.schemas import CurrentActor
 from app.shared.di.services import ProgressServiceDep
 
 router = APIRouter()
+
+
+@router.get("/me", response_model=MyProgressOut)
+def get_my_progress(
+    service: ProgressServiceDep,
+    _actor: CurrentActor = Depends(require_policy("progress.view.self")),
+) -> MyProgressOut:
+    return service.get_my_progress(user_id=_actor.user_id)
+
+
+@router.post("/lesson/self", response_model=LessonProgressOut)
+def upsert_own_lesson_progress(
+    service: ProgressServiceDep,
+    lesson_id: UUID,
+    status: str = Query(pattern=r"^(in_progress|completed)$"),
+    _actor: CurrentActor = Depends(require_policy("progress.upsert.self")),
+) -> LessonProgressOut:
+    try:
+        item = service.upsert_lesson_progress(
+            user_id=_actor.user_id,
+            lesson_id=lesson_id,
+            status=status,
+        )
+    except ProgressError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    return LessonProgressOut(
+        id=item.id,
+        user_id=item.user_id,
+        lesson_id=item.lesson_id,
+        status=item.status,
+    )
 
 
 @router.get("/overview", response_model=list[ProgressOverviewRowOut])

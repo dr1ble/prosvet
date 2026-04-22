@@ -37,6 +37,7 @@ import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.feature.catalog.api.CatalogIntent
+import com.digitaledu.feature.catalog.api.CourseProgress
 import com.digitaledu.feature.catalog.api.CatalogUiState
 import digital_education_mobile.feature.catalog.impl.generated.resources.Res
 import digital_education_mobile.feature.catalog.impl.generated.resources.catalog_cover_description
@@ -107,6 +108,7 @@ fun CoursesContent(
         ) { course ->
             CourseTile(
                 course = course,
+                progress = uiState.progressByCourseId[course.id],
                 onClick = { onIntent(CatalogIntent.OpenCourse(course.slug)) },
             )
         }
@@ -117,6 +119,7 @@ fun CoursesContent(
 @Composable
 private fun CourseTile(
     course: CatalogCourse,
+    progress: CourseProgress?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -181,6 +184,13 @@ private fun CourseTile(
                     .padding(UiSpacing.sm),
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
             ) {
+                progress?.let {
+                    Text(
+                        text = "${it.completedLessons}/${it.totalLessons}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 Text(
                     text = course.title,
                     style = MaterialTheme.typography.titleSmall,
@@ -228,24 +238,7 @@ private fun CoursePreviewPlaceholder(
 }
 
 private fun CatalogCourse.coverUrlOrNull(): String? {
-    val remote = coverImageUrl?.trim().orEmpty()
-    if (remote.isNotEmpty()) return remote
-
-    return when (slug) {
-        "gosuslugi-basic" ->
-            "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1280&q=80"
-
-        "sberbank-online-security" ->
-            "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=1280&q=80"
-
-        "zhkh-payments-online" ->
-            "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1280&q=80"
-
-        "telemedicine-appointments" ->
-            "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1280&q=80"
-
-        else -> null
-    }
+    return resolveCourseCoverUrl(coverImageUrl)
 }
 
 private fun CatalogCourse.placeholderPalette(colorScheme: ColorScheme): List<Color> {

@@ -7,5 +7,6 @@ data class CatalogScreen(
     val screenKey: String,
     val title: String,
     val orderIndex: Int,
+    val lessonId: String? = null,
     val payload: ScreenPayload,
 )

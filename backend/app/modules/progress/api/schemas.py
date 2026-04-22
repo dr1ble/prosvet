@@ -35,3 +35,20 @@ class LessonProgressOut(BaseModel):
     user_id: UUID
     lesson_id: UUID
     status: str
+
+
+class MyCourseProgressOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    course_id: UUID
+    course_title: str
+    total_lessons: int
+    completed_lessons: int
+    completion_rate: float = Field(ge=0.0, le=1.0)
+
+
+class MyProgressOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: UUID
+    courses: list[MyCourseProgressOut]

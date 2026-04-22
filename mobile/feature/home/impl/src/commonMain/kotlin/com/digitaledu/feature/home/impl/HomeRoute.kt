@@ -10,7 +10,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.digitaledu.core.common.toUserMessage
-import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.ui.ObserveEffects
 import com.digitaledu.core.ui.util.BackHandler
@@ -26,7 +25,7 @@ import com.digitaledu.feature.profile.api.ProfileFeatureHost
 import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiEntry
-import kotlinx.coroutines.flow.collectLatest
+import com.digitaledu.feature.profile.api.ProfileUiState
 
 @Composable
 fun HomeRoute(
@@ -39,7 +38,6 @@ fun HomeRoute(
     catalogUiEntry: CatalogUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
-    authRepository: AuthRepository,
     groupQrRepository: GroupQrRepository,
     modifier: Modifier = Modifier,
 ) {
@@ -50,7 +48,6 @@ fun HomeRoute(
     var selectedTab by remember { mutableStateOf(HomeTab.Home) }
     var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
     var qrHandledToken by remember { mutableStateOf<String?>(null) }
-    var currentUserDisplayName by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val profileErrorMessage = (profileUiState.status as? ProfileStatus.Error)?.message
 
@@ -73,23 +70,13 @@ fun HomeRoute(
 
     LaunchedEffect(Unit) {
         catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
-        currentUserDisplayName = runCatching {
-            authRepository.getCurrentUser().displayName
-        }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
     }
 
-    LaunchedEffect(authRepository) {
-        authRepository.observeTokens().collectLatest { tokens ->
-            if (tokens == null) {
-                currentUserDisplayName = null
-                return@collectLatest
-            }
-
-            catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
-            currentUserDisplayName = runCatching {
-                authRepository.getCurrentUser().displayName
-            }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
-        }
+    LaunchedEffect(profileUiState.courseProgress) {
+        syncCatalogProgressFromProfile(
+            profileUiState = profileUiState,
+            catalogFeatureHost = catalogFeatureHost,
+        )
     }
 
     ObserveEffects(catalogFeatureHost.effects) { effect ->
@@ -139,7 +126,6 @@ fun HomeRoute(
         catalogUiState = catalogUiState,
         playerUiState = playerUiState,
         profileUiState = profileUiState,
-        currentUserDisplayName = currentUserDisplayName,
         catalogUiEntry = catalogUiEntry,
         playerUiEntry = playerUiEntry,
         profileUiEntry = profileUiEntry,
@@ -150,6 +136,21 @@ fun HomeRoute(
         onProfileIntent = profileFeatureHost::processIntent,
         modifier = modifier,
     )
+}
+
+private suspend fun syncCatalogProgressFromProfile(
+    profileUiState: ProfileUiState,
+    catalogFeatureHost: CatalogFeatureHost,
+) {
+    profileUiState.courseProgress.forEach { course ->
+        catalogFeatureHost.processIntent(
+            CatalogIntent.UpdateProgress(
+                courseId = course.courseId,
+                completedLessons = course.completedLessons,
+                totalLessons = course.totalLessons,
+            )
+        )
+    }
 }
 
 private suspend fun SnackbarHostState.showAndDismissIfNeeded(

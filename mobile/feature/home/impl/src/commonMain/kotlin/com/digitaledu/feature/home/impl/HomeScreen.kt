@@ -54,6 +54,7 @@ import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.feature.catalog.api.CatalogIntent
+import com.digitaledu.feature.catalog.api.CourseProgress
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
 import com.digitaledu.feature.catalog.api.CatalogUiState
 import com.digitaledu.feature.player.api.PlayerIntent
@@ -87,7 +88,6 @@ fun HomeScreen(
     catalogUiState: CatalogUiState,
     playerUiState: PlayerUiState,
     profileUiState: ProfileUiState,
-    currentUserDisplayName: String?,
     catalogUiEntry: CatalogUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
@@ -195,8 +195,7 @@ fun HomeScreen(
             HomeTab.Home -> {
                 HomeCoursesContent(
                     uiState = catalogUiState,
-                    playerUiState = playerUiState,
-                    currentUserDisplayName = currentUserDisplayName,
+                    currentUserDisplayName = profileUiState.displayName?.trim()?.takeIf { it.isNotEmpty() },
                     onOpenCourse = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
                     onRefresh = { onCatalogIntent(CatalogIntent.RefreshCourses) },
                     onOpenLearningTab = { onTabSelected(HomeTab.Learning) },
@@ -244,7 +243,6 @@ fun HomeScreen(
 @Composable
 private fun HomeCoursesContent(
     uiState: CatalogUiState,
-    playerUiState: PlayerUiState,
     currentUserDisplayName: String?,
     onOpenCourse: (String) -> Unit,
     onRefresh: () -> Unit,
@@ -322,13 +320,14 @@ private fun HomeCoursesContent(
         }
 
         item {
+            val continueCourse = uiState.resolveContinueCourse()
             ContinueLearningCard(
-                course = uiState.courses.firstOrNull(),
-                playerUiState = playerUiState,
+                course = continueCourse,
+                progress = continueCourse?.let { uiState.progressByCourseId[it.id] },
                 onStart = {
-                    val firstSlug = uiState.courses.firstOrNull()?.slug
-                    if (firstSlug != null) {
-                        onOpenCourse(firstSlug)
+                    val continueSlug = continueCourse?.slug
+                    if (continueSlug != null) {
+                        onOpenCourse(continueSlug)
                     } else {
                         onRefresh()
                     }
@@ -378,6 +377,7 @@ private fun HomeCoursesContent(
             ) { course ->
                 RecommendedCourseCard(
                     course = course,
+                    progress = uiState.progressByCourseId[course.id],
                     onClick = { onOpenCourse(course.slug) },
                 )
             }
@@ -388,24 +388,19 @@ private fun HomeCoursesContent(
 @Composable
 private fun ContinueLearningCard(
     course: CatalogCourse?,
-    playerUiState: PlayerUiState,
+    progress: CourseProgress?,
     onStart: () -> Unit,
 ) {
     val title = course?.title ?: stringResource(Res.string.home_continue_select_course)
-    val isActiveCourse = playerUiState.bundle?.course?.id == course?.id
-    val totalScreens = playerUiState.bundle?.screens?.size ?: 0
-    val currentLesson = if (isActiveCourse && totalScreens > 0) {
-        (playerUiState.currentScreenIndex + 1).coerceAtMost(totalScreens)
-    } else {
-        0
-    }
-    val progressPercent = if (isActiveCourse && totalScreens > 0) {
-        (currentLesson.toFloat() / totalScreens.toFloat()).coerceIn(0f, 1f)
+    val completedLessons = progress?.completedLessons ?: 0
+    val totalLessons = progress?.totalLessons ?: 0
+    val progressPercent = if (totalLessons > 0) {
+        (completedLessons.toFloat() / totalLessons.toFloat()).coerceIn(0f, 1f)
     } else {
         0f
     }
-    val progressLabel = if (totalScreens > 0 && isActiveCourse) {
-        stringResource(Res.string.home_continue_progress_format, currentLesson, totalScreens)
+    val progressLabel = if (totalLessons > 0) {
+        stringResource(Res.string.home_continue_progress_format, completedLessons, totalLessons)
     } else {
         stringResource(Res.string.home_continue_progress_empty)
     }
@@ -530,6 +525,7 @@ private fun ContinueLearningCard(
 @Composable
 private fun RecommendedCourseCard(
     course: CatalogCourse,
+    progress: CourseProgress?,
     onClick: () -> Unit,
 ) {
     val subtitle = course.description?.trim()?.takeIf { it.isNotEmpty() }
@@ -593,6 +589,14 @@ private fun RecommendedCourseCard(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs)) {
+                progress?.let {
+                    Text(
+                        text = "${it.completedLessons}/${it.totalLessons}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
@@ -613,4 +617,11 @@ private fun RecommendedCourseCard(
             }
         }
     }
+}
+
+private fun CatalogUiState.resolveContinueCourse(): CatalogCourse? {
+    val startedCourseIds = progressByCourseId
+        .filterValues { progress -> progress.completedLessons > 0 && progress.completedLessons < progress.totalLessons }
+        .keys
+    return courses.firstOrNull { it.id in startedCourseIds } ?: courses.firstOrNull()
 }

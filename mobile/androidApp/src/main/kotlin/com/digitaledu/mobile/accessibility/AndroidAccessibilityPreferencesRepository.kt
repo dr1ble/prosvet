@@ -38,8 +38,8 @@ class AndroidAccessibilityPreferencesRepository(
                 tremorFilter = preferences[TREMOR_FILTER_KEY] ?: false,
             )
             val updated = transform(current)
-            preferences[FONT_SCALE_KEY] = updated.fontScale.coerceIn(0.9f, 1.6f)
-            preferences[CONTROL_SCALE_KEY] = updated.controlScale.coerceIn(1.0f, 1.6f)
+            preferences[FONT_SCALE_KEY] = updated.fontScale.coerceIn(1.0f, 1.6f)
+            preferences[CONTROL_SCALE_KEY] = updated.controlScale.coerceIn(1.0f, 1.3f)
             preferences[BOLD_TEXT_KEY] = updated.boldText
             preferences[HIGH_CONTRAST_KEY] = updated.highContrast
             preferences[VOICE_SUPPORT_KEY] = updated.voiceSupport

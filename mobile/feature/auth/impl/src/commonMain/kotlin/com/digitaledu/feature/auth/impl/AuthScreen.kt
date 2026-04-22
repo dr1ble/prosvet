@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.digitaledu.core.common.formatOneDecimal
 import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
 import com.digitaledu.core.model.preferences.AccessibilitySettings
 import com.digitaledu.core.ui.ObserveEffects
@@ -130,10 +131,10 @@ internal fun AuthRoute(
             AuthAccessibilityScreen(
                 settings = accessibilitySettings,
                 onSetFontScale = { value: Float ->
-                    viewModel.updateAccessibility { copy(fontScale = value.coerceIn(0.9f, 1.6f)) }
+                    viewModel.updateAccessibility { copy(fontScale = value.coerceIn(1.0f, 1.6f)) }
                 },
                 onSetControlScale = { value: Float ->
-                    viewModel.updateAccessibility { copy(controlScale = value.coerceIn(1.0f, 1.6f)) }
+                    viewModel.updateAccessibility { copy(controlScale = value.coerceIn(1.0f, 1.3f)) }
                 },
                 onSetBoldText = { enabled: Boolean ->
                     viewModel.updateAccessibility { copy(boldText = enabled) }
@@ -217,13 +218,78 @@ private fun AuthAccessibilityScreen(
         }
 
         item {
+            Card(
+                shape = AuthUiShapes.cardLg,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ),
+            ) {
+                Column(modifier = Modifier.padding(AuthUiSpacing.itemMd)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemSm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    AuthUiShapes.pill,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Visibility,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Предпросмотр доступности",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = "Так будет выглядеть интерфейс до входа в приложение",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Проверьте размер текста, читаемость и удобство нажатий до авторизации.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(top = AuthUiSpacing.itemMd),
+                    )
+                    Card(
+                        shape = AuthUiShapes.pill,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        modifier = Modifier
+                            .padding(top = AuthUiSpacing.itemMd)
+                            .accessibilityControlScale
+                            .accessibilityTouchTarget,
+                    ) {
+                        Text(
+                            text = "Кнопка действия",
+                            modifier = Modifier.padding(horizontal = AuthUiSpacing.itemMd, vertical = AuthUiSpacing.itemSm),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
             AccessibilityFontScaleRow(
                 icon = Icons.Rounded.TextFields,
                 title = "Размер шрифта",
                 value = settings.fontScale,
                 onValueChange = {
                     onSetFontScale(it)
-                    feedbackMessage = "Размер шрифта: ${String.format("%.1f", it)}x"
+                    feedbackMessage = "Размер шрифта: ${formatOneDecimal(it)}x"
                 },
             )
         }
@@ -233,10 +299,11 @@ private fun AuthAccessibilityScreen(
                 title = stringResource(Res.string.auth_accessibility_controls_size),
                 value = settings.controlScale,
                 rangeStart = 1.0f,
-                rangeEnd = 1.6f,
-                steps = 5,
+                rangeEnd = 1.3f,
+                steps = 2,
                 onValueChange = {
                     onSetControlScale(it)
+                    feedbackMessage = "Размер элементов управления: ${formatOneDecimal(it)}x"
                 },
             )
         }
@@ -310,9 +377,9 @@ private fun AccessibilityFontScaleRow(
     icon: ImageVector,
     title: String,
     value: Float,
-    rangeStart: Float = 0.9f,
+    rangeStart: Float = 1.0f,
     rangeEnd: Float = 1.6f,
-    steps: Int = 6,
+    steps: Int = 5,
     onValueChange: (Float) -> Unit,
 ) {
     Card(
@@ -340,7 +407,6 @@ private fun AccessibilityFontScaleRow(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = "${String.format("%.1f", value)}x", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Slider(
@@ -365,15 +431,14 @@ private fun AccessibilityToggleRow(
         shape = AuthUiShapes.cardLg,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(AuthUiSpacing.itemMd),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemSm),
         ) {
             Row(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemSm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -402,11 +467,16 @@ private fun AccessibilityToggleRow(
                     )
                 }
             }
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                modifier = Modifier.accessibilityControlScale.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch),
-            )
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Switch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                    modifier = Modifier.accessibilityControlScale.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch),
+                )
+            }
         }
     }
 }

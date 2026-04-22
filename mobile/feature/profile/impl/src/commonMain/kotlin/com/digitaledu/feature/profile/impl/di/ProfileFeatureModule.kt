@@ -15,6 +15,8 @@ fun profileFeatureModule(): Module = module {
         ProfileViewModel(
             logoutUseCase = get(),
             accessibilityPreferencesRepository = get(),
+            profileRepository = get(),
+            progressRepository = get(),
         )
     }
 

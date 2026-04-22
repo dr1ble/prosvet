@@ -12,15 +12,21 @@ import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.data.groups.NetworkGroupQrRepository
 import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
 import com.digitaledu.core.data.preferences.InMemoryAccessibilityPreferencesRepository
+import com.digitaledu.core.data.profile.NetworkProfileRepository
+import com.digitaledu.core.data.profile.ProfileRepository
+import com.digitaledu.core.data.progress.NetworkProgressRepository
+import com.digitaledu.core.data.progress.ProgressRepository
 import com.digitaledu.shared.accessibility.AccessibilitySettingsHost
 import com.digitaledu.shared.accessibility.AccessibilitySettingsHostImpl
 import com.digitaledu.core.network.AuthNetworkDataSource
 import com.digitaledu.core.network.CatalogNetworkDataSource
 import com.digitaledu.core.network.GroupsNetworkDataSource
+import com.digitaledu.core.network.ProgressNetworkDataSource
 import com.digitaledu.core.network.provideHttpClient
 import com.digitaledu.core.network.ktor.KtorAuthNetworkDataSource
 import com.digitaledu.core.network.ktor.KtorCatalogNetworkDataSource
 import com.digitaledu.core.network.ktor.KtorGroupsNetworkDataSource
+import com.digitaledu.core.network.ktor.KtorProgressNetworkDataSource
 import com.digitaledu.feature.auth.impl.DebugQuickLoginConfig
 import com.digitaledu.feature.auth.impl.authFeatureModule
 import com.digitaledu.feature.catalog.impl.di.catalogFeatureModule
@@ -59,6 +65,7 @@ fun createMobileAppModule(
     single<AuthNetworkDataSource> { KtorAuthNetworkDataSource(get()) }
     single<CatalogNetworkDataSource> { KtorCatalogNetworkDataSource(get()) }
     single<GroupsNetworkDataSource> { KtorGroupsNetworkDataSource(get()) }
+    single<ProgressNetworkDataSource> { KtorProgressNetworkDataSource(get()) }
 
     single<AuthSessionStore> { authSessionStore ?: InMemoryAuthSessionStore() }
     single<AccessibilityPreferencesRepository> {
@@ -73,6 +80,8 @@ fun createMobileAppModule(
     single<AccessibilitySettingsHost> { AccessibilitySettingsHostImpl(get()) }
 
     single<AuthRepository> { NetworkAuthRepository(get(), get()) }
+    single<ProfileRepository> { NetworkProfileRepository(get()) }
     single<CatalogRepository> { NetworkCatalogRepository(get(), get()) }
     single<GroupQrRepository> { NetworkGroupQrRepository(get(), get()) }
+    single<ProgressRepository> { NetworkProgressRepository(get(), get()) }
 }

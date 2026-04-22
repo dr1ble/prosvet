@@ -1,5 +1,77 @@
 # Work Log
 
+## Entry: 2026-04-22 (mobile: self progress API + backend-driven profile/home/catalog)
+
+- **Date:** 2026-04-22
+- **Task:** Continue removing mobile stubs by wiring user-facing learning progress from backend into profile, home, and catalog flows.
+- **Decision/Change:**
+  - Added backend self-progress endpoints in `progress` module for regular mobile users:
+    - `GET /api/v1/progress/me`
+    - `POST /api/v1/progress/lesson/self`
+  - Added policy map entries for `progress.view.self` and `progress.upsert.self` so `USER` can access only own progress, while admin/staff policies stay intact.
+  - Extended backend progress service/repository with self-summary aggregation (`get_my_progress(...)`) and added router/service coverage.
+  - Added mobile progress stack:
+    - `ProgressNetworkDataSource` + `KtorProgressNetworkDataSource`
+    - `ProgressRepository` + `NetworkProgressRepository`
+    - shared DI wiring in `mobile/shared/.../AppModule.kt`
+    - shared progress models in `mobile/core/model/.../progress/`
+  - Extended `ProfileUiState` and `ProfileViewModel` to load backend progress on init and clear it on logout.
+  - Replaced profile progress placeholder/stub copy with real course progress cards and empty/loading states.
+  - Synced backend progress from profile state into catalog state in `HomeRoute`, then used it to:
+    - show backend-driven progress in home continue-learning card;
+    - show per-course progress badges in catalog tiles and home recommendations.
+- **Why:** Mobile progress UI was still partially fake/local. The backend already had progress aggregation logic, but it was not exposed to regular mobile users, so the correct next step was a thin self-only API plus repository wiring rather than more UI-local pseudo-state.
+- **Files touched:**
+  - `backend/app/modules/progress/api/*`
+  - `backend/app/modules/progress/domain/services.py`
+  - `backend/app/modules/progress/infra/repository.py`
+  - `backend/app/shared/auth/policies.py`
+  - `backend/tests/test_progress_api_router_branches.py`
+  - `backend/tests/test_progress_service.py`
+  - `mobile/core/model/.../progress/*`
+  - `mobile/core/network/.../ProgressNetworkDataSource.kt`
+  - `mobile/core/network/.../KtorProgressNetworkDataSource.kt`
+  - `mobile/core/data/.../progress/*`
+  - `mobile/shared/src/commonMain/kotlin/com/digitaledu/shared/di/AppModule.kt`
+  - `mobile/feature/profile/api/ProfileUiState.kt`
+  - `mobile/feature/profile/impl/*`
+  - `mobile/feature/home/impl/*`
+  - `mobile/feature/catalog/impl/ui/CoursesContent.kt`
+- **Validation:**
+  - `cd backend && python3 -m py_compile app/modules/progress/api/router.py app/modules/progress/domain/services.py app/modules/progress/infra/repository.py` -> **PASS**
+  - `cd backend && PYTHONPATH=. pytest tests/test_progress_api_router_branches.py tests/test_progress_service.py` -> **8 passed**
+  - `cd mobile && ./gradlew :shared:compileKotlinJvm :feature:profile:api:compileKotlinJvm :feature:profile:impl:compileKotlinJvm :feature:home:impl:compileKotlinJvm :feature:catalog:impl:compileKotlinJvm :feature:player:impl:compileKotlinJvm` -> **PASS**
+  - `cd mobile && ./gradlew :core:data:jvmTest --tests "com.digitaledu.core.data.progress.NetworkProgressRepositoryTest"` -> **PASS**
+- **Open follow-up:** `POST /progress/lesson/self` is now available, but the current mobile player bundle exposes release screens, not backend lesson IDs. Sending authoritative completion updates from player requires either lesson IDs in the mobile bundle contract or a separate progress mapping endpoint.
+
+### Update: 2026-04-22 (player completion sync wired)
+
+- **Date:** 2026-04-22
+- **Task:** Finish the remaining progress migration by wiring player lesson completion back to backend.
+- **Decision/Change:**
+  - Extended catalog release screen contract with optional `lesson_id` derived from published screen payload.
+  - Extended mobile catalog models/network mapping so `CatalogScreen` now carries `lessonId`.
+  - Added `ResolveCompletedLessonIdUseCase` in player domain to detect when a lesson should be marked completed:
+    - when user moves forward from the last screen of one lesson to a screen of another lesson;
+    - when user closes the player while staying on the final screen of the bundle.
+  - Injected `ProgressRepository` into `PlayerViewModel` and now call `upsertLessonProgress(..., status = "completed")` for those transitions.
+- **Why:** Until `lesson_id` was present in the mobile bundle contract, player could only track local screen progress. With lesson identity available, we can now report lesson-level completion to backend without inventing fragile client-side mapping.
+- **Files touched:**
+  - `backend/app/modules/catalog/api/schemas.py`
+  - `backend/app/modules/catalog/api/router.py`
+  - `mobile/core/model/src/commonMain/kotlin/com/digitaledu/core/model/catalog/CatalogScreen.kt`
+  - `mobile/core/network/src/commonMain/kotlin/com/digitaledu/core/network/ktor/ScreenResponse.kt`
+  - `mobile/core/network/src/commonMain/kotlin/com/digitaledu/core/network/ktor/KtorCatalogNetworkDataSource.kt`
+  - `mobile/feature/player/impl/src/commonMain/kotlin/com/digitaledu/feature/player/impl/domain/ResolveCompletedLessonIdUseCase.kt`
+  - `mobile/feature/player/impl/src/commonMain/kotlin/com/digitaledu/feature/player/impl/presentation/PlayerViewModel.kt`
+  - `mobile/feature/player/impl/src/commonMain/kotlin/com/digitaledu/feature/player/impl/di/PlayerFeatureModule.kt`
+  - `mobile/feature/catalog/api/src/jvmTest/kotlin/com/digitaledu/feature/catalog/api/CatalogContractsTest.kt`
+  - `mobile/feature/player/impl/src/jvmTest/kotlin/com/digitaledu/feature/player/impl/domain/PlayerDomainUseCasesTest.kt`
+- **Validation:**
+  - `cd mobile && ./gradlew :feature:catalog:api:jvmTest --tests "com.digitaledu.feature.catalog.api.CatalogContractsTest" :feature:player:impl:jvmTest --tests "com.digitaledu.feature.player.impl.domain.PlayerDomainUseCasesTest"` -> **PASS**
+  - `cd mobile && ./gradlew :shared:compileKotlinJvm :feature:catalog:impl:compileKotlinJvm :feature:home:impl:compileKotlinJvm :feature:player:impl:compileKotlinJvm` -> **PASS**
+  - `cd backend && python3 -m py_compile app/modules/catalog/api/router.py app/modules/catalog/api/schemas.py app/modules/progress/api/router.py` -> **PASS**
+
 ## Entry: 2026-04-21 (run script Docker runtime auto-start hardening)
 
 - **Date:** 2026-04-21
@@ -20,8 +92,41 @@
 - **Why:** Local startup was broken on machines using Colima because `./run` always tried `open -a Docker`, while Docker Desktop was not installed and the active Docker context was `colima`.
 - **Validation:**
   - `cd backend && PYTHONPATH=. pytest tests/test_ensure_docker_script.py` -> **3 passed**.
-  - `./scripts/ensure-docker.sh` -> verified real runtime detection and Colima recovery output.
-  - `./run` -> passed Docker stage, started postgres/backend/web, printed startup summary, and served health checks on `127.0.0.1:8000` and `127.0.0.1:3000`.
+- `./scripts/ensure-docker.sh` -> verified real runtime detection and Colima recovery output.
+- `./run` -> passed Docker stage, started postgres/backend/web, printed startup summary, and served health checks on `127.0.0.1:8000` and `127.0.0.1:3000`.
+
+## Entry: 2026-04-22 (mobile: remove fake covers, add profile repository)
+
+- **Date:** 2026-04-22
+- **Task:** Start incremental migration of mobile app from fake data to backend-driven state without breaking current catalog/player/auth flow.
+- **Decision/Change:**
+  - Added `ProfileRepository` + `NetworkProfileRepository` in `mobile/core/data` to stop fetching current user directly from `HomeRoute`.
+  - Registered `ProfileRepository` in shared DI and injected it into `ProfileViewModel`.
+  - Extended `ProfileUiState` with backend-driven user fields: `displayName`, `role`, `accountStatus`, `permissions`.
+  - Updated `ProfileViewModel` to load current profile on init and clear profile data on logout.
+  - Removed fake remote cover fallbacks from catalog cards and player course previews.
+  - Added pure resolvers for real cover handling:
+    - catalog: trim backend `coverUrl` or return `null`
+    - player: prefer simulation image, fallback to backend course cover, otherwise `null`
+  - Updated home flow to use `profileUiState.displayName` instead of direct `auth/me` call inside `HomeRoute`.
+  - Updated profile header to show backend `displayName/role/status` when available.
+- **Why:** We need to replace misleading hardcoded mobile data gradually, starting from places where backend contracts already exist and keeping the app working after each step.
+- **Files touched:**
+  - `mobile/core/data/src/commonMain/kotlin/com/digitaledu/core/data/profile/*`
+  - `mobile/shared/src/commonMain/kotlin/com/digitaledu/shared/di/AppModule.kt`
+  - `mobile/feature/home/impl/*`
+  - `mobile/feature/profile/api/ProfileUiState.kt`
+  - `mobile/feature/profile/impl/*`
+  - `mobile/feature/catalog/impl/ui/CoursesContent.kt`
+  - `mobile/feature/catalog/impl/ui/CourseCoverResolver.kt`
+  - `mobile/feature/player/impl/ui/LessonContent.kt`
+  - `mobile/feature/player/impl/ui/CoursePreviewCoverResolver.kt`
+  - targeted JVM tests for new repositories/resolvers
+- **Validation:**
+  - `cd mobile && ./gradlew :core:data:jvmTest --tests "com.digitaledu.core.data.profile.NetworkProfileRepositoryTest" :feature:catalog:impl:jvmTest --tests "com.digitaledu.feature.catalog.impl.ui.CourseCoverResolverTest" :feature:player:impl:jvmTest --tests "com.digitaledu.feature.player.impl.ui.CoursePreviewCoverResolverTest"` -> **PASS**
+  - `cd mobile && ./gradlew :shared:compileKotlinJvm :feature:home:impl:compileKotlinJvm :feature:profile:impl:compileKotlinJvm :feature:catalog:impl:compileKotlinJvm :feature:player:impl:compileKotlinJvm` -> **PASS**
+  - `cd mobile && ./gradlew build` -> **FAIL**, blocked by unrelated pre-existing compile error in `feature/auth/impl/src/commonMain/kotlin/com/digitaledu/feature/auth/impl/AuthScreen.kt` (`Unresolved reference 'format'`).
+- **Next step:** Remove fake profile metrics/cards and then add backend student progress API so catalog/profile progress can stop using local pseudo-state.
 
 ## Entry: 2026-04-21 (mobile debug quick-login panel for auth)
 

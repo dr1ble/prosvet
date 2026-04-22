@@ -97,6 +97,7 @@ class ReleaseScreenOut(BaseModel):
 
     id: UUID
     release_id: UUID
+    lesson_id: UUID | None = None
     screen_key: str
     title: str
     order_index: int

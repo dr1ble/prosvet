@@ -9,6 +9,8 @@ import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiState
 import androidx.lifecycle.viewModelScope
 import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
+import com.digitaledu.core.data.profile.ProfileRepository
+import com.digitaledu.core.data.progress.ProgressRepository
 import com.digitaledu.core.model.preferences.AccessibilitySettings
 import com.digitaledu.feature.profile.impl.domain.LogoutUseCase
 import kotlinx.coroutines.flow.collect
@@ -17,6 +19,8 @@ import kotlinx.coroutines.launch
 internal class ProfileViewModel(
     private val logoutUseCase: LogoutUseCase,
     private val accessibilityPreferencesRepository: AccessibilityPreferencesRepository,
+    private val profileRepository: ProfileRepository,
+    private val progressRepository: ProgressRepository,
 ) : BaseViewModel<ProfileUiState, ProfileIntent, ProfileEffect>(ProfileUiState()), ProfileFeatureHost {
 
     init {
@@ -25,6 +29,12 @@ internal class ProfileViewModel(
                 updateState { copy(accessibilitySettings = settings) }
             }
         }
+        viewModelScope.launch {
+            loadProfile()
+        }
+        viewModelScope.launch {
+            loadProgress()
+        }
     }
 
     override suspend fun handleIntent(intent: ProfileIntent) {
@@ -32,8 +42,8 @@ internal class ProfileViewModel(
             ProfileIntent.Logout -> logout()
             ProfileIntent.DismissError -> dismissError()
             ProfileIntent.ResetAccessibility -> resetAccessibility()
-            is ProfileIntent.SetFontScale -> updateAccessibility { copy(fontScale = intent.value.coerceIn(0.9f, 1.6f)) }
-            is ProfileIntent.SetControlScale -> updateAccessibility { copy(controlScale = intent.value.coerceIn(1.0f, 1.6f)) }
+            is ProfileIntent.SetFontScale -> updateAccessibility { copy(fontScale = intent.value.coerceIn(1.0f, 1.6f)) }
+            is ProfileIntent.SetControlScale -> updateAccessibility { copy(controlScale = intent.value.coerceIn(1.0f, 1.3f)) }
             is ProfileIntent.SetBoldText -> updateAccessibility { copy(boldText = intent.enabled) }
             is ProfileIntent.SetHighContrast -> updateAccessibility { copy(highContrast = intent.enabled) }
             is ProfileIntent.SetVoiceSupport -> updateAccessibility { copy(voiceSupport = intent.enabled) }
@@ -47,8 +57,50 @@ internal class ProfileViewModel(
         }
         if (!success) return
 
-        updateState { copy(status = ProfileStatus.Idle) }
+        updateState {
+            copy(
+                status = ProfileStatus.Idle,
+                displayName = null,
+                role = null,
+                accountStatus = null,
+                permissions = emptyList(),
+                courseProgress = emptyList(),
+            )
+        }
         emitEffect(ProfileEffect.LoggedOut)
+    }
+
+    private suspend fun loadProfile() {
+        runCatching {
+            profileRepository.getCurrentProfile()
+        }.onSuccess { profile ->
+            updateState {
+                copy(
+                    displayName = profile.displayName,
+                    role = profile.role,
+                    accountStatus = profile.status,
+                    permissions = profile.permissions,
+                )
+            }
+        }.onFailure { throwable ->
+            setError(throwable)
+        }
+    }
+
+    private suspend fun loadProgress() {
+        updateState { copy(isLoadingProgress = true) }
+        runCatching {
+            progressRepository.getMyProgress()
+        }.onSuccess { courses ->
+            updateState {
+                copy(
+                    courseProgress = courses,
+                    isLoadingProgress = false,
+                )
+            }
+        }.onFailure {
+            updateState { copy(isLoadingProgress = false) }
+        }
     }
 
     private suspend fun runSubmittingAction(block: suspend () -> Unit): Boolean {

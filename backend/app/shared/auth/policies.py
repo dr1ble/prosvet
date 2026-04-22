@@ -37,6 +37,18 @@ POLICY_ROLE_MAP: dict[str, set[UserRole]] = {
         UserRole.MODERATOR,
         UserRole.ASSISTANT,
     },
+    "progress.view.self": {
+        UserRole.USER,
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
+    "progress.upsert.self": {
+        UserRole.USER,
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
     "search.view": {
         UserRole.ADMINISTRATOR,
         UserRole.METHODOLOGIST,
