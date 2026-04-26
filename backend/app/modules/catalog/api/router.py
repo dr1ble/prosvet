@@ -55,6 +55,32 @@ COVER_MEDIA_TYPES = {
     ".webp": "image/webp",
 }
 
+_CATALOG_ERROR_RU: dict[str, str] = {
+    "Course slug is empty after normalization.": "Код курса не должен быть пустым.",
+    "Course slug already exists.": "Курс с таким кодом уже существует.",
+    "Course not found.": "Курс не найден.",
+    "Only archived courses can be deleted.": "Удалить можно только архивный курс.",
+    "Release with this version already exists.": "Релиз с такой версией уже существует.",
+    "Published release not found for this course.": "Опубликованная версия курса не найдена.",
+    "screen_key values must be unique per release.": "Ключи экранов должны быть уникальны внутри релиза.",
+    "order_index values must be unique per release.": "Порядок экранов должен быть уникальным внутри релиза.",
+    "Lesson not found.": "Урок не найден.",
+    "Failed to update lesson.": "Не удалось обновить урок.",
+    "Failed to archive lesson.": "Не удалось архивировать урок.",
+    "Failed to restore lesson.": "Не удалось восстановить урок.",
+    "Task not found.": "Задание не найдено.",
+    "Failed to update task.": "Не удалось обновить задание.",
+    "Failed to duplicate task.": "Не удалось продублировать задание.",
+    "Cannot publish archived course.": "Нельзя опубликовать архивный курс.",
+    "Release version already exists.": "Релиз с такой версией уже существует.",
+    "Release not found for this course.": "Релиз для этого курса не найден.",
+    "Selected release has no screens.": "В выбранном релизе нет экранов.",
+}
+
+
+def _localize_catalog_error(detail: str) -> str:
+    return _CATALOG_ERROR_RU.get(detail, detail)
+
 
 def _catalog_covers_dir() -> Path:
     return Path(settings.simulation_media_dir).resolve().parent / "catalog_covers"
@@ -317,7 +343,7 @@ def create_course(
     try:
         course = service.create_course(payload, author_id=actor.user_id)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     from app.modules.users.models import User
 
     author = db.scalar(select(User).where(User.id == actor.user_id))
@@ -339,7 +365,7 @@ def update_course(
     try:
         course = service.update_course(course_id=course_id, payload=payload)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_course_out(course, request)
 
 
@@ -356,7 +382,7 @@ def delete_course(
         if course is not None:
             _delete_course_cover(course.slug)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
 
 @router.post(
@@ -374,7 +400,7 @@ def create_course_release(
     try:
         release, screens, _ = service.create_release(course_id=course_id, payload=payload)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_release_out(release, screen_count=len(screens))
 
 
@@ -396,7 +422,7 @@ def list_course_releases(
     try:
         releases = service.list_course_releases(course_id=course_id, query=query)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return [
         _to_release_out(release, screen_count=screen_count) for release, screen_count in releases
     ]
@@ -411,7 +437,7 @@ def get_latest_course_release(
     try:
         course, release, screens = service.get_latest_course_bundle(course_slug=course_slug)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
     return CourseBundleOut(
         course=_to_course_out(course, request),
@@ -431,7 +457,7 @@ def list_course_lessons(
     try:
         lessons = service.list_course_lessons(course_id, include_archived=include_archived)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return [_to_lesson_out(lesson) for lesson in lessons]
 
 
@@ -454,7 +480,7 @@ def create_course_lesson(
             description=payload.description,
         )
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_lesson_out(lesson)
 
 
@@ -474,7 +500,7 @@ def update_course_lesson(
             status=payload.status,
         )
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_lesson_out(lesson)
 
 
@@ -488,7 +514,7 @@ def archive_course_lesson(
     try:
         lesson = service.archive_course_lesson(lesson_id)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_lesson_out(lesson)
 
 
@@ -502,7 +528,7 @@ def restore_course_lesson(
     try:
         lesson = service.restore_course_lesson(lesson_id)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_lesson_out(lesson)
 
 
@@ -520,7 +546,7 @@ def reorder_course_lesson(
     try:
         service.reorder_course_lesson(course_id, lesson_id, payload.order_index)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
 
 @router.get("/lessons/{lesson_id}/tasks", response_model=list[LessonTaskOut])
@@ -533,7 +559,7 @@ def list_lesson_tasks(
     try:
         tasks = service.list_lesson_tasks(lesson_id)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return [_to_task_out(task) for task in tasks]
 
 
@@ -556,7 +582,7 @@ def create_lesson_task(
             payload=payload.payload,
         )
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_task_out(task)
 
 
@@ -576,7 +602,7 @@ def update_lesson_task(
             payload=payload.payload,
         )
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_task_out(task)
 
 
@@ -590,7 +616,7 @@ def archive_lesson_task(
     try:
         service.archive_lesson_task(task_id)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
 
 @router.post("/lessons/{lesson_id}/tasks/{task_id}/reorder", status_code=status.HTTP_204_NO_CONTENT)
@@ -606,7 +632,7 @@ def reorder_lesson_task(
     try:
         service.reorder_lesson_task(lesson_id, task_id, payload.order_index)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
 
 @router.post(
@@ -621,7 +647,7 @@ def duplicate_lesson_task(
     try:
         task = service.duplicate_lesson_task(task_id)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_task_out(task)
 
 
@@ -635,7 +661,7 @@ def get_course_structure(
     try:
         return service.get_course_structure(course_id)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
 
 @router.post("/courses/{course_id}/structure/bulk", response_model=BulkCourseStructureOut)
@@ -650,7 +676,7 @@ def update_course_structure_bulk(
         result = service.update_course_structure_bulk(course_id, payload)
         return BulkCourseStructureOut(**result)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
 
 @router.post("/courses/{course_id}/validate")
@@ -663,7 +689,7 @@ def validate_course(
     try:
         return service.validate_course(course_id)
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
 
 @router.post(
@@ -685,7 +711,7 @@ def publish_course(
             changelog=payload.changelog,
         )
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     return _to_release_out(release, screen_count=0)
 
 
@@ -708,7 +734,7 @@ def rollback_course_release(
             changelog=payload.changelog,
         )
     except CatalogError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
     screens = service.repo.list_release_screens(release.id)
     return _to_release_out(release, screen_count=len(screens))
 

@@ -17,6 +17,16 @@ from app.shared.di.services import ProgressServiceDep
 
 router = APIRouter()
 
+_PROGRESS_ERROR_RU: dict[str, str] = {
+    "date_from and date_to are required when period=custom.": "Для произвольного периода укажите даты начала и окончания.",
+    "date_from must be less than or equal to date_to.": "Дата начала должна быть не позже даты окончания.",
+    "Unsupported progress status.": "Неподдерживаемый статус прогресса.",
+}
+
+
+def _localize_progress_error(detail: str) -> str:
+    return _PROGRESS_ERROR_RU.get(detail, detail)
+
 
 @router.get("/me", response_model=MyProgressOut)
 def get_my_progress(
@@ -40,7 +50,7 @@ def upsert_own_lesson_progress(
             status=status,
         )
     except ProgressError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
     return LessonProgressOut(
         id=item.id,
         user_id=item.user_id,
@@ -70,7 +80,7 @@ def get_progress_overview(
             date_to=date_to,
         )
     except ProgressError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
 
 
 @router.post("/lesson", response_model=LessonProgressOut)
@@ -86,7 +96,7 @@ def upsert_lesson_progress(
             status=payload.status,
         )
     except ProgressError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
     return LessonProgressOut(
         id=item.id,
         user_id=item.user_id,

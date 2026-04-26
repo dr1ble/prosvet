@@ -23,6 +23,26 @@ from app.shared.di.services import GroupsServiceDep
 
 router = APIRouter()
 
+_GROUPS_ERROR_RU: dict[str, str] = {
+    "Group with this name already exists.": "Группа с таким названием уже существует.",
+    "Group not found.": "Группа не найдена.",
+    "Some users were not found or are not active.": "Некоторые пользователи не найдены или неактивны.",
+    "Some target users were not found or are not active.": "Некоторые назначенные пользователи не найдены или неактивны.",
+    "Assignment is allowed only for active groups.": "Назначение доступно только для активных групп.",
+    "Course not found.": "Курс не найден.",
+    "Archived course cannot be assigned.": "Архивный курс нельзя назначить группе.",
+    "Assignment not found.": "Назначение не найдено.",
+    "QR is available only for active groups.": "QR-код доступен только для активных групп.",
+    "QR token is invalid or expired.": "QR-код недействителен или истёк.",
+    "Group is unavailable.": "Группа недоступна.",
+    "No active assignment is available for this group.": "Для этой группы нет доступного активного назначения.",
+    "More than one assignment is available. Open a specific assignment manually.": "Для группы доступно несколько назначений. Откройте нужное назначение вручную.",
+}
+
+
+def _localize_groups_error(detail: str) -> str:
+    return _GROUPS_ERROR_RU.get(detail, detail)
+
 
 def _to_group_out(group: LearningGroup) -> GroupOut:
     return GroupOut(
@@ -73,7 +93,7 @@ def create_group(
     try:
         group = service.create_group(payload)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
     return _to_group_out(group)
 
 
@@ -87,7 +107,7 @@ def update_group(
     try:
         group = service.update_group(group_id=group_id, payload=payload)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
     return _to_group_out(group)
 
 
@@ -100,7 +120,7 @@ def archive_group(
     try:
         group = service.archive_group(group_id)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
     return _to_group_out(group)
 
 
@@ -113,7 +133,7 @@ def restore_group(
     try:
         group = service.restore_group(group_id)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
     return _to_group_out(group)
 
 
@@ -126,7 +146,7 @@ def list_group_members(
     try:
         return service.list_group_members(group_id)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
 
 
 @router.get("/users", response_model=list[GroupUserOptionOut])
@@ -147,7 +167,7 @@ def replace_group_members(
     try:
         return service.replace_group_members(group_id=group_id, payload=payload)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
 
 
 @router.get("/{group_id}/assignments", response_model=list[GroupAssignmentOut])
@@ -159,7 +179,7 @@ def list_group_assignments(
     try:
         assignments = service.list_group_assignments(group_id)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
     return [_to_assignment_out(service, item) for item in assignments]
 
 
@@ -177,7 +197,7 @@ def create_group_assignment(
             payload=payload,
         )
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
     return _to_assignment_out(service, assignment)
 
 
@@ -196,7 +216,7 @@ def update_group_assignment(
             payload=payload,
         )
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
     return _to_assignment_out(service, assignment)
 
 
@@ -209,7 +229,7 @@ def create_group_qr(
     try:
         result = service.create_group_qr_link(group_id=group_id, actor_user_id=actor.user_id)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
 
     return GroupQrCodeOut(
         group_id=result.group_id,
@@ -228,7 +248,7 @@ def resolve_group_qr(
     try:
         result = service.resolve_group_qr_link(token=token, actor_user_id=actor.user_id)
     except GroupsError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        raise HTTPException(status_code=exc.status_code, detail=_localize_groups_error(exc.detail)) from exc
 
     return GroupQrResolveOut(
         group_id=result.group_id,
