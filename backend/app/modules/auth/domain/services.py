@@ -4,10 +4,11 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.modules.auth.api.schemas import AuthResponse
+from app.modules.auth.api.schemas import AuthResponse, PasswordRecoveryRequestOut
 from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.infra.repository import AuthRepository
 from app.modules.users.models import User, UserRole, UserStatus
+from app.shared.email import EmailDeliveryError, EmailSender
 from app.shared.security.hashing import stable_hash
 from app.shared.security.passwords import hash_password, verify_password
 from app.shared.security.tokens import generate_token, issue_access_token
@@ -21,10 +22,20 @@ def _normalize_login(login: str) -> str:
     return login.strip().lower()
 
 
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _is_valid_email(email: str) -> bool:
+    local, separator, domain = email.partition("@")
+    return bool(local and separator and "." in domain and not email.startswith("@"))
+
+
 class AuthService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, email_sender: EmailSender | None = None) -> None:
         self.db = db
         self.repo = AuthRepository(db)
+        self.email_sender = email_sender or EmailSender()
 
     def login(self, login: str, password: str) -> AuthResponse:
         now = _utcnow()
@@ -78,6 +89,58 @@ class AuthService:
             role=created_user.role.value,
             now=now,
         )
+
+    def request_password_recovery(self, login_or_email: str) -> PasswordRecoveryRequestOut:
+        now = _utcnow()
+        normalized_value = _normalize_email(login_or_email)
+        if len(normalized_value) < 3:
+            raise AuthError("Invalid recovery data.", status_code=400)
+
+        user = self.repo.get_user_by_login_or_email(normalized_value)
+        if user is None or user.status != UserStatus.ACTIVE:
+            return PasswordRecoveryRequestOut()
+
+        reset_token = generate_token(32)
+        self.repo.create_password_reset_token(
+            user_id=user.id,
+            token_hash=stable_hash(reset_token, settings.security_pepper),
+            expires_at=now + timedelta(minutes=30),
+        )
+        if user.email:
+            try:
+                self.email_sender.send_password_reset(user.email, reset_token)
+            except EmailDeliveryError as exc:
+                raise AuthError("Could not send recovery email.", status_code=503) from exc
+        debug_token = reset_token if settings.environment == "development" else None
+        return PasswordRecoveryRequestOut(debug_reset_token=debug_token)
+
+    def confirm_password_recovery(self, reset_token: str, new_password: str) -> None:
+        now = _utcnow()
+        if len(new_password) < 8:
+            raise AuthError("Invalid recovery data.", status_code=400)
+
+        token_hash = stable_hash(reset_token, settings.security_pepper)
+        token = self.repo.get_active_password_reset_token(token_hash=token_hash, now=now)
+        if token is None:
+            raise AuthError("Reset token is invalid or expired.", status_code=400)
+
+        user = self.repo.get_user_by_id(token.user_id)
+        if user is None or user.status != UserStatus.ACTIVE:
+            raise AuthError("User is inactive or not found.", status_code=400)
+
+        self.repo.update_password_hash(user, hash_password(new_password))
+        self.repo.mark_password_reset_token_used(token, now)
+
+    def bind_email(self, user: User, email: str) -> User:
+        normalized_email = _normalize_email(email)
+        if not _is_valid_email(normalized_email):
+            raise AuthError("Invalid email.", status_code=400)
+
+        existing_user = self.repo.get_user_by_login_or_email(normalized_email)
+        if existing_user is not None and existing_user.id != user.id:
+            raise AuthError("Email is already taken.", status_code=409)
+
+        return self.repo.bind_email(user=user, email=normalized_email)
 
     def activate_qr(self, token: str) -> AuthResponse:
         now = _utcnow()

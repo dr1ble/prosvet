@@ -87,6 +87,111 @@ def test_register_fails_when_login_taken(auth_service, mock_repo):
         )
 
 
+def test_request_password_recovery_accepts_login_or_email(auth_service, mock_repo):
+    user = MagicMock()
+    user.id = uuid.uuid4()
+    user.status = UserStatus.ACTIVE
+    user.email = None
+    mock_repo.get_user_by_login_or_email.return_value = user
+
+    with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.security_pepper = "pepper"
+        mock_settings.environment = "production"
+        response = auth_service.request_password_recovery("User@Example.Test")
+
+    mock_repo.get_user_by_login_or_email.assert_called_once_with("user@example.test")
+    assert response.status == "recovery_requested"
+    assert response.debug_reset_token is None
+    assert mock_repo.create_password_reset_token.called
+
+
+def test_request_password_recovery_sends_email_when_user_has_email(auth_service, mock_repo):
+    user = MagicMock()
+    user.id = uuid.uuid4()
+    user.status = UserStatus.ACTIVE
+    user.email = "user@example.test"
+    mock_repo.get_user_by_login_or_email.return_value = user
+    email_sender = MagicMock()
+    auth_service.email_sender = email_sender
+
+    with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.security_pepper = "pepper"
+        mock_settings.environment = "production"
+        auth_service.request_password_recovery("user@example.test")
+
+    email_sender.send_password_reset.assert_called_once()
+    assert email_sender.send_password_reset.call_args.args[0] == "user@example.test"
+
+
+def test_request_password_recovery_returns_debug_token_in_development(auth_service, mock_repo):
+    user = MagicMock()
+    user.id = uuid.uuid4()
+    user.status = UserStatus.ACTIVE
+    user.email = None
+    mock_repo.get_user_by_login_or_email.return_value = user
+
+    with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.security_pepper = "pepper"
+        mock_settings.environment = "development"
+        response = auth_service.request_password_recovery("testuser")
+
+    assert response.debug_reset_token
+
+
+def test_request_password_recovery_uses_development_debug_token(auth_service, mock_repo):
+    user = MagicMock()
+    user.id = uuid.uuid4()
+    user.status = UserStatus.ACTIVE
+    user.email = None
+    mock_repo.get_user_by_login_or_email.return_value = user
+
+    with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.security_pepper = "pepper"
+        mock_settings.environment = "development"
+        response = auth_service.request_password_recovery("testuser")
+
+    assert response.debug_reset_token is not None
+    assert len(response.debug_reset_token) >= 32
+
+
+def test_confirm_password_recovery_updates_password(auth_service, mock_repo, active_user):
+    token = MagicMock()
+    token.user_id = active_user.id
+    mock_repo.get_active_password_reset_token.return_value = token
+    mock_repo.get_user_by_id.return_value = active_user
+
+    with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.security_pepper = "pepper"
+        auth_service.confirm_password_recovery("reset-token-123456", "password456")
+
+    assert mock_repo.update_password_hash.called
+    assert mock_repo.mark_password_reset_token_used.called
+
+
+def test_confirm_password_recovery_rejects_invalid_token(auth_service, mock_repo):
+    mock_repo.get_active_password_reset_token.return_value = None
+
+    with patch("app.modules.auth.domain.services.settings") as mock_settings:
+        mock_settings.security_pepper = "pepper"
+        with pytest.raises(AuthError, match="Reset token is invalid or expired"):
+            auth_service.confirm_password_recovery("reset-token-123456", "password456")
+
+
+def test_bind_email_updates_current_user(auth_service, mock_repo, active_user):
+    mock_repo.get_user_by_login_or_email.return_value = None
+    mock_repo.bind_email.return_value = active_user
+
+    result = auth_service.bind_email(active_user, "USER@Example.Test")
+
+    assert result is active_user
+    mock_repo.bind_email.assert_called_once_with(user=active_user, email="user@example.test")
+
+
+def test_bind_email_rejects_invalid_email(auth_service, active_user):
+    with pytest.raises(AuthError, match="Invalid email"):
+        auth_service.bind_email(active_user, "not-an-email")
+
+
 def test_register_fails_with_invalid_full_name(auth_service):
     with pytest.raises(AuthError, match="Invalid registration data"):
         auth_service.register(

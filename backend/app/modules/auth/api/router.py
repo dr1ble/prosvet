@@ -7,11 +7,16 @@ from app.modules.auth.api.schemas import (
     AuthMeOut,
     AuthMeUpdateIn,
     AuthResponse,
+    EmailBindIn,
     LoginIn,
     LogoutOut,
+    PasswordRecoveryConfirmIn,
+    PasswordRecoveryRequestIn,
+    PasswordRecoveryRequestOut,
     QrActivateIn,
     RefreshTokenIn,
     RegisterIn,
+    StatusOut,
 )
 from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.domain.permissions import ROLE_PERMISSION_TEMPLATES
@@ -29,6 +34,11 @@ _AUTH_ERROR_RU: dict[str, str] = {
     "Invalid credentials.": "Неверный логин или пароль.",
     "Invalid registration data.": "Некорректные данные регистрации.",
     "Login is already taken.": "Логин уже занят.",
+    "Invalid recovery data.": "Некорректные данные восстановления.",
+    "Reset token is invalid or expired.": "Код восстановления недействителен или истёк.",
+    "Could not send recovery email.": "Не удалось отправить письмо восстановления. Попробуйте позже.",
+    "Invalid email.": "Некорректный адрес электронной почты.",
+    "Email is already taken.": "Эта почта уже привязана к другому аккаунту.",
     "QR token is invalid or expired.": "QR-токен недействителен или истёк.",
     "User is unavailable for QR activation.": "Пользователь недоступен для активации.",
     "Refresh token is invalid or expired.": "Токен обновления недействителен или истёк.",
@@ -85,6 +95,33 @@ def register(payload: RegisterIn, request: Request, service: AuthServiceDep) -> 
         raise HTTPException(status_code=exc.status_code, detail=_localize_auth_error(exc.detail)) from exc
 
 
+@router.post("/password-recovery/request", response_model=PasswordRecoveryRequestOut)
+@limiter.limit("5/minute")
+def request_password_recovery(
+    payload: PasswordRecoveryRequestIn,
+    request: Request,
+    service: AuthServiceDep,
+) -> PasswordRecoveryRequestOut:
+    try:
+        return service.request_password_recovery(payload.login_or_email)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_auth_error(exc.detail)) from exc
+
+
+@router.post("/password-recovery/confirm", response_model=StatusOut)
+@limiter.limit("10/minute")
+def confirm_password_recovery(
+    payload: PasswordRecoveryConfirmIn,
+    request: Request,
+    service: AuthServiceDep,
+) -> StatusOut:
+    try:
+        service.confirm_password_recovery(payload.reset_token, payload.new_password)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_auth_error(exc.detail)) from exc
+    return StatusOut(status="password_reset")
+
+
 @router.post("/qr/activate", response_model=AuthResponse)
 @limiter.limit("10/minute")
 def activate_qr(request: Request, payload: QrActivateIn, service: AuthServiceDep) -> AuthResponse:
@@ -130,6 +167,7 @@ def auth_me(
         role=current_user.role.value,
         status=current_user.status.value,
         display_name=current_user.display_name,
+        email=current_user.email,
         permissions=_compute_permissions_from_db(current_user.role, db),
     )
 
@@ -149,7 +187,29 @@ def update_auth_me(
         role=current_user.role.value,
         status=current_user.status.value,
         display_name=current_user.display_name,
+        email=current_user.email,
         permissions=_compute_permissions_from_db(current_user.role, db),
+    )
+
+
+@router.patch("/me/email", response_model=AuthMeOut)
+def bind_auth_me_email(
+    payload: EmailBindIn,
+    service: AuthServiceDep,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AuthMeOut:
+    try:
+        updated_user = service.bind_email(current_user, payload.email)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_auth_error(exc.detail)) from exc
+    return AuthMeOut(
+        user_id=updated_user.id,
+        role=updated_user.role.value,
+        status=updated_user.status.value,
+        display_name=updated_user.display_name,
+        email=updated_user.email,
+        permissions=_compute_permissions_from_db(updated_user.role, db),
     )
 
 

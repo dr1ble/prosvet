@@ -28,6 +28,16 @@ class Settings(BaseSettings):
 
     debug_mode: bool = False
 
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_from_name: str = "Просвет"
+    smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
+    password_reset_url: str = ""
+
     @field_validator("environment")
     @classmethod
     def validate_environment(cls, v: str) -> str:
@@ -55,6 +65,13 @@ class Settings(BaseSettings):
     def validate_cors_origins(cls, v: str, info) -> str:
         if info.data.get("environment") == "production" and v.strip() == "*":
             raise ValueError("cors_origins must be explicit in production")
+        return v
+
+    @field_validator("smtp_from_email")
+    @classmethod
+    def validate_smtp_from_email(cls, v: str, info) -> str:
+        if info.data.get("environment") == "production" and info.data.get("smtp_host") and not v:
+            raise ValueError("smtp_from_email must be set when SMTP is enabled in production")
         return v
 
     @property
