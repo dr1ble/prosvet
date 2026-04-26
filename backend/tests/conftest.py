@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
@@ -28,11 +29,21 @@ from app.shared.auth.schemas import CurrentActor
 from app.shared.db.base import Base
 from app.shared.security import models as _security_models  # noqa: F401
 
-# Use main database (test database needs pg_hba config for external creation)
-# For isolated tests, use mock repositories instead of real DB
-TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL", settings.database_url.replace("localhost", "127.0.0.1")
-)
+
+def _derive_test_database_url() -> str:
+    explicit_test_url = os.getenv("TEST_DATABASE_URL")
+    app_url = make_url(settings.database_url.replace("localhost", "127.0.0.1"))
+    test_url = make_url(explicit_test_url) if explicit_test_url else app_url.set(database="app_test")
+
+    if test_url.database == app_url.database:
+        raise RuntimeError(
+            "Refusing to run backend tests against the application database. "
+            "Set TEST_DATABASE_URL to an isolated database such as app_test."
+        )
+    return test_url.render_as_string(hide_password=False)
+
+
+TEST_DATABASE_URL = _derive_test_database_url()
 
 
 @pytest.fixture(scope="session", autouse=True)

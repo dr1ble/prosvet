@@ -44,7 +44,7 @@ doctor:
 	@APP_DATABASE_URL='$(MOCK_DB_URL)' PYTHONPATH=backend python3 scripts/doctor.py
 	@echo "doctor: OK"
 
-backend-test:
+backend-test: init-test-db
 	cd backend && PYTHONPATH=. pytest
 
 backend-lint:

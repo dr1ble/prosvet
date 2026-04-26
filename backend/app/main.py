@@ -2,19 +2,50 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy.engine import make_url
 
 from app.api.router import api_router
 from app.core.config import settings
 from app.modules.auth.infra.repository import AuthRepository
 from app.modules.users.models import UserRole
-from app.shared.db.session import SessionLocal
+from app.shared.db.schema_health import SchemaHealthError, ensure_db_schema_healthy
+from app.shared.db.session import SessionLocal, engine
 from app.shared.middleware.logging import LoggingMiddleware
 from app.shared.middleware.security import SecurityHeadersMiddleware
 from app.shared.security.passwords import hash_password
 from app.shared.security.rate_limit import limiter
 
 
+def _ensure_local_dev_schema_ready(
+    *,
+    db_url: str,
+    environment: str,
+    ensure_schema_healthy=ensure_db_schema_healthy,
+) -> None:
+    if environment != "development":
+        return
+
+    host = make_url(db_url).host
+    if host not in {"127.0.0.1", "localhost"}:
+        return
+
+    try:
+        ensure_schema_healthy(engine)
+    except SchemaHealthError as exc:
+        raise RuntimeError(
+            "Local database schema is not initialized. "
+            "Run `cd backend && python3 -m alembic upgrade head` or, for a broken local loopback DB, "
+            "`ALLOW_LOCAL_SCHEMA_REPAIR=1 make db-schema-repair-local`. "
+            f"Details: {exc}"
+        ) from exc
+
+
 def create_app() -> FastAPI:
+    _ensure_local_dev_schema_ready(
+        db_url=settings.database_url,
+        environment=settings.environment,
+    )
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
