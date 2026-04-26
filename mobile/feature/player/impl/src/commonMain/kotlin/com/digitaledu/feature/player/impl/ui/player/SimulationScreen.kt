@@ -38,6 +38,7 @@ import coil3.request.ImageRequest
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
@@ -154,7 +155,9 @@ fun SimulationScreen(
             },
             confirmButton = {
                 TextButton(onClick = onDismissHint) {
-                    Text(stringResource(Res.string.close))
+                    AccessibilityScaledControlContainer {
+                        Text(stringResource(Res.string.close))
+                    }
                 }
             },
         )

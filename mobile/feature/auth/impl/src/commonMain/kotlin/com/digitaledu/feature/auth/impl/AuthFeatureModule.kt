@@ -20,5 +20,5 @@ fun authFeatureModule(): Module = module {
             authRepository = get(),
         )
     }
-    factory { RecoveryViewModel() }
+    factory { RecoveryViewModel(authRepository = get()) }
 }

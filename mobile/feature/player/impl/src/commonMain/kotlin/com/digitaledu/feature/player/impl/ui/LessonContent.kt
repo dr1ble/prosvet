@@ -66,6 +66,7 @@ import com.digitaledu.core.model.content.ScreenPayload
 import com.digitaledu.core.model.content.SimulationPayload
 import com.digitaledu.core.model.content.UnknownPayload
 import com.digitaledu.core.model.content.VideoPayload
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
@@ -325,11 +326,13 @@ private fun LearningCoursesScreen(
                         .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Mic,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                    )
+                    AccessibilityScaledControlContainer {
+                        Icon(
+                            imageVector = Icons.Filled.Mic,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
                 }
             }
         }
@@ -686,10 +689,12 @@ private fun LearningCourseLessonsScreen(
                     ),
                 shape = UiShapes.cardMd,
             ) {
-                Text(
-                    text = stringResource(Res.string.lesson_choose_other_course),
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                AccessibilityScaledControlContainer {
+                    Text(
+                        text = stringResource(Res.string.lesson_choose_other_course),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
             }
         }
     }

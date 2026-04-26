@@ -1,3 +1,7 @@
 <resources>
     <string name="prosvet_brand">Просвет</string>
+    <string name="error_dialog_title">Ошибка</string>
+    <string name="error_dialog_confirm">Понятно</string>
+    <string name="success_dialog_title">Успешно</string>
+    <string name="success_dialog_confirm">Понятно</string>
 </resources>

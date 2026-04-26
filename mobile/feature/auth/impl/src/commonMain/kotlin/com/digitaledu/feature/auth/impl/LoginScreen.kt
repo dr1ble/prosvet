@@ -45,9 +45,9 @@ import com.digitaledu.core.ui.components.AuthUiSize
 import com.digitaledu.core.ui.components.AuthUiSpacing
 import com.digitaledu.core.ui.components.AuthUiStroke
 import com.digitaledu.core.ui.components.AuthUiTypography
+import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.ProsvetTextField
-import com.digitaledu.core.ui.components.SecurityInfoCard
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
@@ -60,7 +60,6 @@ import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_log
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_no_account
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_open_registration
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_qr_button
-import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_security_info
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_show_password
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_welcome_back
 import org.jetbrains.compose.resources.stringResource
@@ -75,6 +74,11 @@ internal fun LoginScreen(
     modifier: Modifier = Modifier,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+
+    ErrorDialog(
+        message = uiState.errorMessage,
+        onDismiss = { onIntent(AuthIntent.DismissError) },
+    )
 
     Scaffold(
         modifier = modifier,
@@ -175,6 +179,7 @@ internal fun LoginScreen(
                 onValueChange = { onIntent(AuthIntent.PasswordChanged(it)) },
                 placeholder = "••••••••",
                 isPassword = !passwordVisible,
+                isError = uiState.passwordValidationMessage != null,
                 enabled = !uiState.isSubmitting,
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -186,6 +191,17 @@ internal fun LoginScreen(
                     }
                 },
             )
+            uiState.passwordValidationMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = AuthUiTypography.labelMd,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(
+                        start = AuthUiSpacing.contentPadding,
+                        top = AuthUiSpacing.item2xs,
+                    ),
+                )
+            }
 
             Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
 
@@ -276,28 +292,6 @@ internal fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
-
-            uiState.errorMessage?.let { message ->
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = AuthUiShapes.cardMd,
-                    color = MaterialTheme.colorScheme.errorContainer,
-                ) {
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = AuthUiTypography.bodyMd,
-                        modifier = Modifier.padding(AuthUiSpacing.contentPadding),
-                    )
-                }
-                Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
-            }
-
-            SecurityInfoCard(
-                text = stringResource(Res.string.auth_security_info),
-                iconTint = MaterialTheme.colorScheme.secondary,
-            )
         }
     }
 }

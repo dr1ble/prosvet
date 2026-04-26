@@ -5,5 +5,6 @@ data class AuthMe(
     val role: String,
     val status: String,
     val displayName: String?,
+    val email: String?,
     val permissions: List<String>,
 )

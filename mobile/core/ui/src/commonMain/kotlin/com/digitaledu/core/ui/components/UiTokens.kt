@@ -1,11 +1,19 @@
 package com.digitaledu.core.ui.components
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -24,6 +32,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -153,6 +162,80 @@ fun ProvideAccessibilityUiState(
             voiceSupport = voiceSupport,
             tremorFilter = tremorFilter,
         ),
+        content = content,
+    )
+}
+
+@Composable
+fun AccessibilitySettingHeader(
+    icon: @Composable BoxScope.() -> Unit,
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 48.dp,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+    ) {
+        Box(
+            modifier = Modifier
+                .sizeIn(minWidth = iconSize, minHeight = iconSize)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh, UiShapes.pill),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+            content = icon,
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
+        ) {
+            androidx.compose.material3.Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            subtitle?.let {
+                androidx.compose.material3.Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AccessibilityStackedControlRow(
+    header: @Composable () -> Unit,
+    trailingControl: (@Composable () -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+    ) {
+        header()
+        trailingControl?.let {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = androidx.compose.ui.Alignment.CenterEnd,
+            ) {
+                it()
+            }
+        }
+    }
+}
+
+@Composable
+fun AccessibilityScaledControlContainer(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .accessibilityControlScale
+            .accessibilityTouchTarget,
         content = content,
     )
 }

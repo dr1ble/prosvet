@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
 import com.digitaledu.core.model.catalog.CatalogCourse
 import com.digitaledu.core.ui.CenteredLoadingIndicator
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
@@ -121,18 +122,19 @@ fun HomeScreen(
                     contentColor = MaterialTheme.colorScheme.onError,
                     shape = UiShapes.pill,
                     modifier = Modifier
-                        .accessibilityControlScale
                         .accessibilityTouchTarget
                         .accessibilitySemantics(
                             label = stringResource(Res.string.home_sos),
                             role = Role.Button,
                         ),
                 ) {
-                    Text(
-                        text = stringResource(Res.string.home_sos),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    AccessibilityScaledControlContainer {
+                        Text(
+                            text = stringResource(Res.string.home_sos),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         },
@@ -155,7 +157,6 @@ fun HomeScreen(
 
                     Column(
                         modifier = Modifier
-                            .accessibilityControlScale
                             .clip(if (selected) UiShapes.cardXl else UiShapes.pill)
                             .background(
                                 if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -168,24 +169,31 @@ fun HomeScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
                     ) {
-                        Icon(
-                            imageVector = tab.icon,
-                            contentDescription = label,
-                            tint = if (selected) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                        )
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                        )
+                        AccessibilityScaledControlContainer {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
+                            ) {
+                                Icon(
+                                    imageVector = tab.icon,
+                                    contentDescription = label,
+                                    tint = if (selected) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                )
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -310,11 +318,13 @@ private fun HomeCoursesContent(
                         .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Mic,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                    )
+                    AccessibilityScaledControlContainer {
+                        Icon(
+                            imageVector = Icons.Filled.Mic,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
                 }
             }
         }
@@ -505,18 +515,25 @@ private fun ContinueLearningCard(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = stringResource(Res.string.home_continue_start),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(modifier = Modifier.width(UiSpacing.xs))
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
+                AccessibilityScaledControlContainer {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.home_continue_start),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(modifier = Modifier.width(UiSpacing.xs))
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                }
             }
         }
     }
@@ -536,7 +553,6 @@ private fun RecommendedCourseCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         ),
         modifier = Modifier
-            .accessibilityControlScale
             .fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UiOpacity.border), UiShapes.cardLg)
             .accessibilityTouchTarget

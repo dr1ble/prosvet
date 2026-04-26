@@ -46,6 +46,7 @@ import com.digitaledu.core.ui.components.AuthUiSize
 import com.digitaledu.core.ui.components.AuthUiSpacing
 import com.digitaledu.core.ui.components.AuthUiStroke
 import com.digitaledu.core.ui.components.AuthUiTypography
+import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
@@ -62,6 +63,11 @@ internal fun QrLoginScreen(
 ) {
     var scanStatus by rememberSaveable { mutableStateOf<String?>(null) }
     var scanError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    ErrorDialog(
+        message = scanError,
+        onDismiss = { scanError = null },
+    )
 
     Scaffold(
         modifier = modifier,
@@ -152,16 +158,6 @@ internal fun QrLoginScreen(
                         textAlign = TextAlign.Center,
                     )
                 }
-                scanError?.let {
-                    Spacer(modifier = Modifier.height(AuthUiSpacing.itemSm))
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        style = AuthUiTypography.labelSm,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(AuthUiSpacing.sectionXl))
 
                 Button(

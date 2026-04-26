@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
 import com.digitaledu.core.model.catalog.CatalogCourse
 import com.digitaledu.core.ui.CenteredLoadingIndicator
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
+import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
@@ -53,6 +55,11 @@ fun CoursesContent(
     onIntent: (CatalogIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    ErrorDialog(
+        message = uiState.errorMessage,
+        onDismiss = { onIntent(CatalogIntent.DismissError) },
+    )
+
     if (uiState.isLoading && uiState.courses.isEmpty()) {
         CenteredLoadingIndicator(modifier = modifier)
         return
@@ -73,13 +80,6 @@ fun CoursesContent(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            uiState.errorMessage?.takeIf { it.isNotBlank() }?.let { error ->
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
             Button(
                 onClick = { onIntent(CatalogIntent.RefreshCourses) },
                 modifier = Modifier
@@ -89,7 +89,9 @@ fun CoursesContent(
                         role = Role.Button,
                     ),
             ) {
-                Text(text = stringResource(Res.string.catalog_refresh))
+                AccessibilityScaledControlContainer {
+                    Text(text = stringResource(Res.string.catalog_refresh))
+                }
             }
         }
         return

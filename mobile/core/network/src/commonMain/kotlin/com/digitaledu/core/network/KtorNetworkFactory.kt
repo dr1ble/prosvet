@@ -14,6 +14,7 @@ fun provideHttpClient(
     enableNetworkLogs: Boolean,
 ): HttpClient {
     return HttpClient {
+        expectSuccess = true
         install(ContentNegotiation) {
             json(
                 Json {

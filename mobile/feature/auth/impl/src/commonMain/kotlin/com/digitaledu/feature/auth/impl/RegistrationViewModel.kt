@@ -28,6 +28,7 @@ class RegistrationViewModel(
             }
 
             RegistrationIntent.SubmitClicked -> submit()
+            RegistrationIntent.DismissError -> dismissError()
         }
     }
 
@@ -53,5 +54,9 @@ class RegistrationViewModel(
                 )
             }
         }
+    }
+
+    private fun dismissError() {
+        updateState { copy(infoMessage = null) }
     }
 }

@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,16 +32,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.digitaledu.core.ui.ObserveEffects
 import com.digitaledu.core.ui.components.AuthHeader
-import com.digitaledu.core.ui.components.AuthUiOpacity
-import com.digitaledu.core.ui.components.AuthUiShapes
 import com.digitaledu.core.ui.components.AuthUiSize
 import com.digitaledu.core.ui.components.AuthUiSpacing
 import com.digitaledu.core.ui.components.AuthUiTypography
+import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.components.FieldLabel
 import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.PasswordToggle
 import com.digitaledu.core.ui.components.ProsvetTextField
-import com.digitaledu.core.ui.components.SecurityInfoCard
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
@@ -55,7 +52,6 @@ import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_lab
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_label_password
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_label_repeat_password
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_password_mismatch
-import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_security_info_register
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_sign_in_link
 import org.jetbrains.compose.resources.stringResource
 import org.koin.mp.KoinPlatform
@@ -74,6 +70,11 @@ internal fun RegistrationScreen(
     ObserveEffects(viewModel.effects) { effect ->
         if (effect is RegistrationEffect.Registered) onRegistered()
     }
+
+    ErrorDialog(
+        message = uiState.infoMessage,
+        onDismiss = { viewModel.processIntent(RegistrationIntent.DismissError) },
+    )
 
     Scaffold(
         modifier = modifier,
@@ -135,6 +136,7 @@ internal fun RegistrationScreen(
                     onValueChange = { viewModel.processIntent(RegistrationIntent.PasswordChanged(it)) },
                     placeholder = "Пароль",
                     isPassword = !passwordVisible,
+                    isError = uiState.passwordValidationMessage != null,
                     enabled = !uiState.isSubmitting,
                     trailingIcon = {
                         PasswordToggle(
@@ -144,6 +146,17 @@ internal fun RegistrationScreen(
                         )
                     },
                 )
+                uiState.passwordValidationMessage?.let { message ->
+                    Text(
+                        text = message,
+                        style = AuthUiTypography.labelMd,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(
+                            start = AuthUiSpacing.contentPadding,
+                            top = AuthUiSpacing.item2xs,
+                        ),
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(AuthUiSpacing.sectionSm))
 
@@ -175,14 +188,6 @@ internal fun RegistrationScreen(
                         ),
                     )
                 }
-
-                Spacer(modifier = Modifier.height(AuthUiSpacing.cardPadding))
-
-                SecurityInfoCard(
-                    text = stringResource(Res.string.auth_security_info_register),
-                    iconTint = MaterialTheme.colorScheme.secondary,
-                    textStyle = AuthUiTypography.bodyLg,
-                )
 
                 Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
 
@@ -222,22 +227,6 @@ internal fun RegistrationScreen(
                             fontWeight = FontWeight.Medium,
                             style = AuthUiTypography.bodyLg,
                             color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-
-                uiState.infoMessage?.let { msg ->
-                    Spacer(modifier = Modifier.height(AuthUiSpacing.sectionSm))
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = AuthUiShapes.cardMd,
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    ) {
-                        Text(
-                            text = msg,
-                            style = AuthUiTypography.bodyLg,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(AuthUiSpacing.contentPadding),
                         )
                     }
                 }

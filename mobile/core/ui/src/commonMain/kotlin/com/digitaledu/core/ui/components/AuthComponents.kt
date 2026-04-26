@@ -54,29 +54,30 @@ fun GradientPrimaryButton(
                 color = colors.primary,
                 shape = AuthUiShapes.pill,
             )
-            .accessibilityControlScale
             .accessibilityTouchTarget
             .accessibilitySemantics(label = text, role = Role.Button, enabled = enabled)
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemSm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(AuthUiSize.iconMd),
+        AccessibilityScaledControlContainer {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemSm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(AuthUiSize.iconMd),
+                        color = colors.onPrimary,
+                        strokeWidth = AuthUiStroke.thin,
+                    )
+                }
+                Text(
+                    text = text,
                     color = colors.onPrimary,
-                    strokeWidth = AuthUiStroke.thin,
+                    style = AuthUiTypography.bodyLg,
                 )
+                icon?.invoke()
             }
-            Text(
-                text = text,
-                color = colors.onPrimary,
-                style = AuthUiTypography.bodyLg,
-            )
-            icon?.invoke()
         }
     }
 }
@@ -107,7 +108,7 @@ fun ProsvetTextField(
             focusedPlaceholderColor = colors.outline,
             unfocusedTextColor = colors.onSurface,
             focusedTextColor = colors.onSurface,
-            errorBorderColor = Color.Transparent,
+            errorBorderColor = colors.error,
             errorContainerColor = colors.surfaceContainerHighest,
         ),
         placeholder = { Text(placeholder) },
@@ -228,17 +229,18 @@ fun PasswordToggle(
     IconButton(
         onClick = { onToggle(!visible) },
         modifier = Modifier
-            .accessibilityControlScale
             .accessibilityTouchTarget
             .accessibilitySemantics(
                 label = contentDescription ?: "Переключить видимость пароля",
                 role = Role.Button,
             ),
     ) {
-        Icon(
-            imageVector = if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-            contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.outline,
-        )
+        AccessibilityScaledControlContainer {
+            Icon(
+                imageVector = if (visible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.outline,
+            )
+        }
     }
 }

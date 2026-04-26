@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.content.QuizPayload
@@ -138,7 +139,9 @@ fun QuizStory(
                                     role = Role.Button,
                                 ),
                         ) {
-                            Text(stringResource(Res.string.quiz_previous))
+                            AccessibilityScaledControlContainer {
+                                Text(stringResource(Res.string.quiz_previous))
+                            }
                         }
                     } else {
                         // First question: "Previous" means Previous Screen in Course
@@ -151,8 +154,10 @@ fun QuizStory(
                                     role = Role.Button,
                                 ),
                          ) {
-                            Text(stringResource(Res.string.quiz_back))
-                         }
+                             AccessibilityScaledControlContainer {
+                                 Text(stringResource(Res.string.quiz_back))
+                             }
+                          }
 
                     }
 
@@ -166,7 +171,9 @@ fun QuizStory(
                                     role = Role.Button,
                                 ),
                         ) {
-                            Text(stringResource(Res.string.quiz_next))
+                            AccessibilityScaledControlContainer {
+                                Text(stringResource(Res.string.quiz_next))
+                            }
                         }
                     } else {
                         Button(
@@ -178,7 +185,9 @@ fun QuizStory(
                                     role = Role.Button,
                                 ),
                         ) {
-                            Text(stringResource(Res.string.quiz_finish))
+                            AccessibilityScaledControlContainer {
+                                Text(stringResource(Res.string.quiz_finish))
+                            }
                         }
                     }
                 }
@@ -193,9 +202,11 @@ fun QuizStory(
                          label = stringResource(Res.string.quiz_continue),
                          role = Role.Button,
                      ),
-             ) {
-                 Text(stringResource(Res.string.quiz_continue))
-             }
+              ) {
+                  AccessibilityScaledControlContainer {
+                      Text(stringResource(Res.string.quiz_continue))
+                  }
+              }
         }
     }
 }

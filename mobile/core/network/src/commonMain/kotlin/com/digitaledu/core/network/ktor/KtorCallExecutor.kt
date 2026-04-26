@@ -4,19 +4,26 @@ import com.digitaledu.core.network.NetworkException
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.RedirectResponseException
 import io.ktor.client.plugins.ServerResponseException
+import io.ktor.client.statement.bodyAsText
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 internal suspend fun <T> executeCall(block: suspend () -> T): T {
     return try {
         block()
     } catch (e: ClientRequestException) {
+        val detail = extractErrorDetail(e.response.bodyAsText())
         throw NetworkException(
-            message = "Ошибка клиента: ${e.response.status.value}",
+            message = detail ?: "Ошибка клиента: ${e.response.status.value}",
             statusCode = e.response.status.value,
             cause = e,
         )
     } catch (e: ServerResponseException) {
+        val detail = extractErrorDetail(e.response.bodyAsText())
         throw NetworkException(
-            message = "Ошибка сервера: ${e.response.status.value}",
+            message = detail ?: "Ошибка сервера: ${e.response.status.value}",
             statusCode = e.response.status.value,
             cause = e,
         )
@@ -32,4 +39,11 @@ internal suspend fun <T> executeCall(block: suspend () -> T): T {
             cause = e,
         )
     }
+}
+
+internal fun extractErrorDetail(body: String): String? {
+    return runCatching {
+        val json = Json.parseToJsonElement(body) as? JsonObject ?: return null
+        json["detail"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+    }.getOrNull()
 }

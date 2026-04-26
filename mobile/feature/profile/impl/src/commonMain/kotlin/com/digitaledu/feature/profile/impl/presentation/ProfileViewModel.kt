@@ -41,6 +41,8 @@ internal class ProfileViewModel(
         when (intent) {
             ProfileIntent.Logout -> logout()
             ProfileIntent.DismissError -> dismissError()
+            ProfileIntent.DismissSuccess -> dismissSuccess()
+            is ProfileIntent.BindEmail -> bindEmail(intent.email)
             ProfileIntent.ResetAccessibility -> resetAccessibility()
             is ProfileIntent.SetFontScale -> updateAccessibility { copy(fontScale = intent.value.coerceIn(1.0f, 1.6f)) }
             is ProfileIntent.SetControlScale -> updateAccessibility { copy(controlScale = intent.value.coerceIn(1.0f, 1.3f)) }
@@ -61,6 +63,7 @@ internal class ProfileViewModel(
             copy(
                 status = ProfileStatus.Idle,
                 displayName = null,
+                email = null,
                 role = null,
                 accountStatus = null,
                 permissions = emptyList(),
@@ -77,6 +80,7 @@ internal class ProfileViewModel(
             updateState {
                 copy(
                     displayName = profile.displayName,
+                    email = profile.email,
                     role = profile.role,
                     accountStatus = profile.status,
                     permissions = profile.permissions,
@@ -100,6 +104,28 @@ internal class ProfileViewModel(
             }
         }.onFailure {
             updateState { copy(isLoadingProgress = false) }
+        }
+    }
+
+    private suspend fun bindEmail(email: String) {
+        val normalizedEmail = email.trim()
+        if (normalizedEmail.isEmpty() || currentState.isBindingEmail) return
+
+        updateState { copy(isBindingEmail = true, successMessage = null) }
+        runCatching {
+            profileRepository.bindEmail(normalizedEmail)
+        }.onSuccess { profile ->
+            updateState {
+                copy(
+                    email = profile.email,
+                    isBindingEmail = false,
+                    status = ProfileStatus.Idle,
+                    successMessage = "Почта успешно привязана.",
+                )
+            }
+        }.onFailure { throwable ->
+            updateState { copy(isBindingEmail = false) }
+            setError(throwable)
         }
     }
 
@@ -137,6 +163,12 @@ internal class ProfileViewModel(
     private fun dismissError() {
         if (currentState.status is ProfileStatus.Error) {
             updateState { copy(status = ProfileStatus.Idle) }
+        }
+    }
+
+    private fun dismissSuccess() {
+        if (!currentState.successMessage.isNullOrBlank()) {
+            updateState { copy(successMessage = null) }
         }
     }
 }

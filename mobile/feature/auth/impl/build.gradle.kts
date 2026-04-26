@@ -52,5 +52,9 @@ kotlin {
             implementation(libs.androidx.camera.view)
             implementation(libs.mlkit.barcode.scanning)
         }
+
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }

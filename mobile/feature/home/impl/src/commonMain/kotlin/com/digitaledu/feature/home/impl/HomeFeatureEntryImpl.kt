@@ -11,9 +11,9 @@ import com.digitaledu.feature.profile.api.ProfileFeatureHost
 import com.digitaledu.feature.profile.api.ProfileUiEntry
 
 internal class HomeFeatureEntryImpl(
-    private val catalogFeatureHost: CatalogFeatureHost,
-    private val playerFeatureHost: PlayerFeatureHost,
-    private val profileFeatureHost: ProfileFeatureHost,
+    private val catalogFeatureHostProvider: () -> CatalogFeatureHost,
+    private val playerFeatureHostProvider: () -> PlayerFeatureHost,
+    private val profileFeatureHostProvider: () -> ProfileFeatureHost,
     private val catalogUiEntry: CatalogUiEntry,
     private val playerUiEntry: PlayerUiEntry,
     private val profileUiEntry: ProfileUiEntry,
@@ -29,9 +29,9 @@ internal class HomeFeatureEntryImpl(
             onLoggedOut = onLoggedOut,
             initialGroupQrToken = initialGroupQrToken,
             onGroupQrTokenConsumed = onGroupQrTokenConsumed,
-            catalogFeatureHost = catalogFeatureHost,
-            playerFeatureHost = playerFeatureHost,
-            profileFeatureHost = profileFeatureHost,
+            catalogFeatureHostProvider = catalogFeatureHostProvider,
+            playerFeatureHostProvider = playerFeatureHostProvider,
+            profileFeatureHostProvider = profileFeatureHostProvider,
             catalogUiEntry = catalogUiEntry,
             playerUiEntry = playerUiEntry,
             profileUiEntry = profileUiEntry,

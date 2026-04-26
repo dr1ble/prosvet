@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PersonSearch
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.icons.rounded.TextFields
@@ -52,6 +53,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,9 +74,13 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.digitaledu.core.common.formatOneDecimal
+import com.digitaledu.core.ui.components.SuccessDialog
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
+import com.digitaledu.core.ui.components.AccessibilitySettingHeader
+import com.digitaledu.core.ui.components.AccessibilityStackedControlRow
 import com.digitaledu.core.ui.components.accessibilityControlScale
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
@@ -95,9 +101,12 @@ import digital_education_mobile.feature.profile.`impl`.generated.resources.profi
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_voice
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_bind
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_bound_label
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_cancel
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_change
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_save
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_email
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_placeholder
-import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_error_dismiss
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_featured
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_logout
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_logout_loading
@@ -121,8 +130,12 @@ fun ProfileContent(
     modifier: Modifier = Modifier,
 ) {
     val isLoggingOut = uiState.status is ProfileStatus.LoggingOut
-    val errorMessage = (uiState.status as? ProfileStatus.Error)?.message
     var section by rememberSaveable { mutableStateOf(ProfileSection.Main) }
+
+    SuccessDialog(
+        message = uiState.successMessage,
+        onDismiss = { onIntent(ProfileIntent.DismissSuccess) },
+    )
 
     when (section) {
         ProfileSection.Main -> {
@@ -131,14 +144,12 @@ fun ProfileContent(
                 role = uiState.role,
                 accountStatus = uiState.accountStatus,
                 isLoggingOut = isLoggingOut,
-                errorMessage = errorMessage,
                 accessibilitySettings = uiState.accessibilitySettings,
                 courseProgress = uiState.courseProgress,
                 isLoadingProgress = uiState.isLoadingProgress,
                 onOpenAccessibility = { section = ProfileSection.Accessibility },
                 onOpenAccount = { section = ProfileSection.Account },
                 onLogout = { onIntent(ProfileIntent.Logout) },
-                onDismissError = { onIntent(ProfileIntent.DismissError) },
                 modifier = modifier,
             )
         }
@@ -160,6 +171,9 @@ fun ProfileContent(
 
         ProfileSection.Account -> {
             AccountSettings(
+                boundEmail = uiState.email,
+                isBindingEmail = uiState.isBindingEmail,
+                onBindEmail = { email -> onIntent(ProfileIntent.BindEmail(email)) },
                 onBack = { section = ProfileSection.Main },
                 modifier = modifier,
             )
@@ -173,14 +187,12 @@ private fun ProfileMain(
     role: String?,
     accountStatus: String?,
     isLoggingOut: Boolean,
-    errorMessage: String?,
     accessibilitySettings: com.digitaledu.core.model.preferences.AccessibilitySettings,
     courseProgress: List<CourseProgressInfo>,
     isLoadingProgress: Boolean,
     onOpenAccessibility: () -> Unit,
     onOpenAccount: () -> Unit,
     onLogout: () -> Unit,
-    onDismissError: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -297,7 +309,7 @@ private fun ProfileMain(
             SettingsRow(
                 icon = Icons.Rounded.Visibility,
                 title = stringResource(Res.string.profile_accessibility),
-                subtitle = accessibilitySubtitle(accessibilitySettings),
+                subtitle = "",
                 onClick = onOpenAccessibility,
                 voiceSupport = accessibilitySettings.voiceSupport,
                 tremorFilter = accessibilitySettings.tremorFilter,
@@ -308,7 +320,7 @@ private fun ProfileMain(
             SettingsRow(
                 icon = Icons.Rounded.Settings,
                 title = stringResource(Res.string.profile_account),
-                subtitle = "Почта для восстановления доступа",
+                subtitle = "",
                 onClick = onOpenAccount,
                 voiceSupport = accessibilitySettings.voiceSupport,
                 tremorFilter = accessibilitySettings.tremorFilter,
@@ -359,35 +371,6 @@ private fun ProfileMain(
             }
         }
 
-        if (errorMessage != null) {
-            item {
-                Card(
-                    shape = UiShapes.cardMd,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                    ),
-                ) {
-                    Column(modifier = Modifier.padding(UiSpacing.md)) {
-                        Text(
-                            text = errorMessage,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                        Text(
-                            text = stringResource(Res.string.profile_error_dismiss),
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier
-                                .padding(top = UiSpacing.xs)
-                                .accessibilityTouchTarget
-                                .accessibilitySemantics(
-                                    label = stringResource(Res.string.profile_error_dismiss),
-                                    role = Role.Button,
-                                )
-                                .clickable(onClick = onDismissError),
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -497,11 +480,12 @@ fun AccessibilitySettingsContent(
                         shape = UiShapes.pill,
                         modifier = Modifier
                             .padding(top = UiSpacing.md)
-                            .accessibilityControlScale
                             .accessibilityTouchTarget
                             .accessibilitySemantics(label = "Кнопка действия", role = Role.Button),
                     ) {
-                        Text("Кнопка действия")
+                        AccessibilityScaledControlContainer {
+                            Text("Кнопка действия")
+                        }
                     }
                 }
             }
@@ -604,10 +588,21 @@ fun AccessibilitySettingsContent(
 
 @Composable
 private fun AccountSettings(
+    boundEmail: String?,
+    isBindingEmail: Boolean,
+    onBindEmail: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var email by rememberSaveable { mutableStateOf("") }
+    val normalizedBoundEmail = boundEmail?.trim().orEmpty()
+    val hasBoundEmail = normalizedBoundEmail.isNotEmpty()
+    var isEditingEmail by rememberSaveable { mutableStateOf(!hasBoundEmail) }
+    var email by rememberSaveable { mutableStateOf(normalizedBoundEmail) }
+
+    LaunchedEffect(normalizedBoundEmail) {
+        email = normalizedBoundEmail
+        isEditingEmail = normalizedBoundEmail.isEmpty()
+    }
 
     LazyColumn(
         modifier = modifier,
@@ -665,11 +660,32 @@ private fun AccountSettings(
                                 tint = MaterialTheme.colorScheme.secondary,
                             )
                         }
-                        Text(
-                            text = stringResource(Res.string.profile_account_email),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(Res.string.profile_account_email),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            if (hasBoundEmail && !isEditingEmail) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.CheckCircle,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Text(
+                                        text = stringResource(Res.string.profile_account_bound_label),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Text(
@@ -682,7 +698,17 @@ private fun AccountSettings(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
+                        enabled = isEditingEmail && !isBindingEmail,
                         label = { Text(stringResource(Res.string.profile_account_placeholder)) },
+                        trailingIcon = {
+                            if (hasBoundEmail && !isEditingEmail) {
+                                Icon(
+                                    imageVector = Icons.Rounded.CheckCircle,
+                                    contentDescription = stringResource(Res.string.profile_account_bound_label),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
                         modifier = Modifier
@@ -690,25 +716,88 @@ private fun AccountSettings(
                             .padding(top = UiSpacing.md),
                     )
 
-                    Button(
-                        onClick = { },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = UiSpacing.md)
-                            .accessibilityTouchTarget
-                            .accessibilitySemantics(
-                                label = stringResource(Res.string.profile_account_bind),
-                                role = Role.Button,
+                    if (hasBoundEmail && !isEditingEmail) {
+                        Button(
+                            onClick = { isEditingEmail = true },
+                            enabled = !isBindingEmail,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = UiSpacing.md)
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.profile_account_change),
+                                    role = Role.Button,
+                                    enabled = !isBindingEmail,
+                                ),
+                            shape = UiShapes.cardLg,
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.profile_account_change),
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = { onBindEmail(email) },
+                            enabled = !isBindingEmail && email.isNotBlank() && email != normalizedBoundEmail,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = UiSpacing.md)
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = if (hasBoundEmail) {
+                                        stringResource(Res.string.profile_account_save)
+                                    } else {
+                                        stringResource(Res.string.profile_account_bind)
+                                    },
+                                    role = Role.Button,
+                                    enabled = !isBindingEmail && email.isNotBlank() && email != normalizedBoundEmail,
+                                ),
+                            shape = UiShapes.cardLg,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
                             ),
-                        shape = UiShapes.cardLg,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.profile_account_bind),
-                            fontWeight = FontWeight.Bold,
-                        )
+                        ) {
+                            Text(
+                                text = if (isBindingEmail) {
+                                    "Сохраняем..."
+                                } else if (hasBoundEmail) {
+                                    stringResource(Res.string.profile_account_save)
+                                } else {
+                                    stringResource(Res.string.profile_account_bind)
+                                },
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+
+                        if (hasBoundEmail) {
+                            Button(
+                                onClick = {
+                                    email = normalizedBoundEmail
+                                    isEditingEmail = false
+                                },
+                                enabled = !isBindingEmail,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = UiSpacing.sm)
+                                    .accessibilityTouchTarget
+                                    .accessibilitySemantics(
+                                        label = stringResource(Res.string.profile_account_cancel),
+                                        role = Role.Button,
+                                        enabled = !isBindingEmail,
+                                    ),
+                                shape = UiShapes.cardLg,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                ),
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.profile_account_cancel),
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -774,23 +863,18 @@ private fun FontScaleRow(
                 .padding(UiSpacing.md),
             verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(UiShapes.pill)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-            }
+            AccessibilitySettingHeader(
+                icon = {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp),
+                    )
+                },
+                title = title,
+                iconSize = 52.dp,
+            )
             Slider(
                 value = value,
                 onValueChange = { onValueChange((it * 10).toInt() / 10f) },
@@ -848,11 +932,13 @@ private fun SettingsRow(
                 }
                 Column {
                     Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (subtitle.isNotBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
             Icon(
@@ -875,60 +961,35 @@ private fun ToggleRow(
     Card(
         shape = UiShapes.cardLg,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-        modifier = Modifier
-            .accessibilityControlScale
-            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary),
+        modifier = Modifier.accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(UiSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(UiShapes.pill)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp),
-                    )
-                }
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Start,
-                    )
-                }
-            }
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Switch(
-                    checked = checked,
-                    onCheckedChange = onCheckedChange,
-                    modifier = Modifier.accessibilityControlScale.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch),
+        AccessibilityStackedControlRow(
+            modifier = Modifier.padding(UiSpacing.md),
+            header = {
+                AccessibilitySettingHeader(
+                    icon = {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    },
+                    title = title,
+                    subtitle = subtitle,
+                    iconSize = 52.dp,
                 )
-            }
-        }
+            },
+            trailingControl = {
+                AccessibilityScaledControlContainer {
+                    Switch(
+                        checked = checked,
+                        onCheckedChange = onCheckedChange,
+                        modifier = Modifier.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch),
+                    )
+                }
+            },
+        )
     }
 }
 

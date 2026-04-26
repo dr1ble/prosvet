@@ -44,6 +44,7 @@ import com.digitaledu.core.ui.components.AuthUiSize
 import com.digitaledu.core.ui.components.AuthUiSpacing
 import com.digitaledu.core.ui.components.AuthUiStroke
 import com.digitaledu.core.ui.components.AuthUiTypography
+import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.ProsvetTextField
 import com.digitaledu.core.ui.components.accessibilitySemantics
@@ -54,6 +55,9 @@ import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_for
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_forgot_password_input
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_forgot_password_send
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_forgot_password_sent
+import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_label_password
+import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_label_repeat_password
+import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_password_mismatch
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_recovery_info
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_recovery_support
 import org.jetbrains.compose.resources.stringResource
@@ -67,6 +71,12 @@ internal fun PasswordRecoveryScreen(
     val viewModel = remember { KoinPlatform.getKoin().get<RecoveryViewModel>() }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sentMessage = stringResource(Res.string.auth_forgot_password_sent)
+    val resetDoneMessage = "Пароль изменён. Теперь можно войти с новым паролем."
+
+    ErrorDialog(
+        message = uiState.errorMessage,
+        onDismiss = { viewModel.processIntent(RecoveryIntent.DismissError) },
+    )
 
     Scaffold(
         modifier = modifier,
@@ -152,6 +162,63 @@ internal fun PasswordRecoveryScreen(
                                 .padding(AuthUiSpacing.contentPadding),
                         )
                     }
+                }
+
+                if (uiState.isResetRequested) {
+                    Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
+
+                    Text(
+                        text = "Введите код восстановления и новый пароль",
+                        style = AuthUiTypography.bodyLg,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Spacer(modifier = Modifier.height(AuthUiSpacing.itemSm))
+                    ProsvetTextField(
+                        value = uiState.resetToken,
+                        onValueChange = { viewModel.processIntent(RecoveryIntent.ResetTokenChanged(it)) },
+                        placeholder = "Код восстановления",
+                        enabled = !uiState.isSubmitting,
+                    )
+
+                    Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+                    ProsvetTextField(
+                        value = uiState.newPassword,
+                        onValueChange = { viewModel.processIntent(RecoveryIntent.NewPasswordChanged(it)) },
+                        placeholder = stringResource(Res.string.auth_label_password),
+                        isPassword = true,
+                        enabled = !uiState.isSubmitting,
+                    )
+
+                    Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+                    ProsvetTextField(
+                        value = uiState.confirmPassword,
+                        onValueChange = { viewModel.processIntent(RecoveryIntent.ConfirmPasswordChanged(it)) },
+                        placeholder = stringResource(Res.string.auth_label_repeat_password),
+                        isPassword = true,
+                        isError = uiState.confirmPassword.isNotEmpty() && !uiState.passwordsMatch,
+                        enabled = !uiState.isSubmitting,
+                    )
+                    if (uiState.confirmPassword.isNotEmpty() && !uiState.passwordsMatch) {
+                        Text(
+                            text = stringResource(Res.string.auth_password_mismatch),
+                            style = AuthUiTypography.labelMd,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = AuthUiSpacing.item2xs),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+                    GradientPrimaryButton(
+                        text = "Сменить пароль",
+                        onClick = {
+                            viewModel.processIntent(RecoveryIntent.ConfirmClicked(resetDoneMessage))
+                        },
+                        enabled = uiState.canConfirm,
+                        isLoading = uiState.isSubmitting,
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(AuthUiSpacing.sectionXl))

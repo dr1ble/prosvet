@@ -7,9 +7,12 @@ data class ProfileUiState(
     val status: ProfileStatus = ProfileStatus.Idle,
     val accessibilitySettings: AccessibilitySettings = AccessibilitySettings(),
     val displayName: String? = null,
+    val email: String? = null,
     val role: String? = null,
     val accountStatus: String? = null,
     val permissions: List<String> = emptyList(),
     val courseProgress: List<CourseProgressInfo> = emptyList(),
     val isLoadingProgress: Boolean = false,
+    val isBindingEmail: Boolean = false,
+    val successMessage: String? = null,
 )

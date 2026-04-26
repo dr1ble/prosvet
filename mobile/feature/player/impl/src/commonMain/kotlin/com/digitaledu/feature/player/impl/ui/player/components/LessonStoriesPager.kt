@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import com.digitaledu.core.ui.components.UiSize
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.catalog.CatalogBundle
@@ -179,11 +180,13 @@ fun LessonStoriesPager(
                                     role = Role.Button,
                                 ),
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Info,
-                                contentDescription = stringResource(Res.string.theory),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
+                            AccessibilityScaledControlContainer {
+                                Icon(
+                                    imageVector = Icons.Outlined.Info,
+                                    contentDescription = stringResource(Res.string.theory),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     } else {
                         Spacer(modifier = Modifier.size(UiSize.touchTarget))
@@ -198,11 +201,13 @@ fun LessonStoriesPager(
                                 role = Role.Button,
                             ),
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(Res.string.close),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        AccessibilityScaledControlContainer {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(Res.string.close),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
 

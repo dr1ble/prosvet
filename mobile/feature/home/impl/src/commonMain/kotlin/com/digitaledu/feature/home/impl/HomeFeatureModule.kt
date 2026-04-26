@@ -7,9 +7,9 @@ import org.koin.dsl.module
 fun homeFeatureModule(): Module = module {
     single<HomeFeatureEntry> {
         HomeFeatureEntryImpl(
-            catalogFeatureHost = get(),
-            playerFeatureHost = get(),
-            profileFeatureHost = get(),
+            catalogFeatureHostProvider = { get() },
+            playerFeatureHostProvider = { get() },
+            profileFeatureHostProvider = { get() },
             catalogUiEntry = get(),
             playerUiEntry = get(),
             profileUiEntry = get(),

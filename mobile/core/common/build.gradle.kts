@@ -16,5 +16,9 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.jetbrains.lifecycle.viewmodel)
         }
+
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }

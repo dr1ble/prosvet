@@ -25,6 +25,7 @@ class AuthViewModel(
                 password = intent.preset.password,
             )
             AuthIntent.LoginClicked -> login()
+            AuthIntent.DismissError -> dismissError()
         }
     }
 
@@ -56,7 +57,7 @@ class AuthViewModel(
         login: String = currentState.login,
         password: String = currentState.password,
     ) {
-        if (login.isBlank() || password.length < 6 || currentState.isSubmitting) return
+        if (login.isBlank() || password.length < MIN_PASSWORD_LENGTH || currentState.isSubmitting) return
 
         updateState {
             copy(
@@ -83,5 +84,9 @@ class AuthViewModel(
                 )
             }
         }
+    }
+
+    private fun dismissError() {
+        updateState { copy(errorMessage = null) }
     }
 }

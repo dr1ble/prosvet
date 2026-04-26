@@ -33,6 +33,7 @@ import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSize
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.reference.CodeSnippet
@@ -165,11 +166,13 @@ fun CodeSnippetCard(
                             role = Role.Button,
                         ),
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = stringResource(Res.string.cheat_sheet_copy_code),
-                        modifier = Modifier.size(UiSpacing.md),
-                    )
+                    AccessibilityScaledControlContainer {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringResource(Res.string.cheat_sheet_copy_code),
+                            modifier = Modifier.size(UiSpacing.md),
+                        )
+                    }
                 }
             }
             

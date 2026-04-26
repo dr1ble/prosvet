@@ -9,5 +9,6 @@ internal data class AuthMeResponse(
     @SerialName("role") val role: String,
     @SerialName("status") val status: String,
     @SerialName("display_name") val displayName: String? = null,
+    @SerialName("email") val email: String? = null,
     @SerialName("permissions") val permissions: List<String> = emptyList(),
 )

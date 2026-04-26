@@ -6,4 +6,5 @@ sealed interface RegistrationIntent {
     data class PasswordChanged(val value: String) : RegistrationIntent
     data class ConfirmPasswordChanged(val value: String) : RegistrationIntent
     data object SubmitClicked : RegistrationIntent
+    data object DismissError : RegistrationIntent
 }

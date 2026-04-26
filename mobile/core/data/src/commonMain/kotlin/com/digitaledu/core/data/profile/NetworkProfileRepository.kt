@@ -9,4 +9,8 @@ class NetworkProfileRepository(
     override suspend fun getCurrentProfile(): AuthMe {
         return authRepository.getCurrentUser()
     }
+
+    override suspend fun bindEmail(email: String): AuthMe {
+        return authRepository.bindEmail(email = email)
+    }
 }

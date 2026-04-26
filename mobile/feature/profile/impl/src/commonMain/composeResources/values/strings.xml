@@ -17,6 +17,10 @@
     <string name="profile_account_email">Электронная почта</string>
     <string name="profile_account_placeholder">Адрес почты</string>
     <string name="profile_account_bind">Привязать почту</string>
+    <string name="profile_account_change">Изменить</string>
+    <string name="profile_account_save">Сохранить</string>
+    <string name="profile_account_cancel">Отмена</string>
+    <string name="profile_account_bound_label">Почта привязана</string>
     <string name="profile_featured">Избранное</string>
     <string name="profile_logout_loading">Выходим...</string>
     <string name="profile_logout">Выйти из аккаунта</string>

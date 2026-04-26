@@ -2,11 +2,13 @@ package com.digitaledu.core.network.ktor
 
 import com.digitaledu.core.model.auth.AuthTokens
 import com.digitaledu.core.model.auth.AuthMe
+import com.digitaledu.core.model.auth.PasswordRecoveryRequest
 import com.digitaledu.core.network.AuthNetworkDataSource
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.headers
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -40,6 +42,31 @@ class KtorAuthNetworkDataSource(
         }
     }
 
+    override suspend fun requestPasswordRecovery(loginOrEmail: String): PasswordRecoveryRequest {
+        return executeCall {
+            client.post {
+                url("api/v1/auth/password-recovery/request")
+                contentType(ContentType.Application.Json)
+                setBody(PasswordRecoveryRequestPayload(loginOrEmail = loginOrEmail))
+            }.body<PasswordRecoveryRequestResponse>().toPasswordRecoveryRequest()
+        }
+    }
+
+    override suspend fun confirmPasswordRecovery(resetToken: String, newPassword: String) {
+        executeCall {
+            client.post {
+                url("api/v1/auth/password-recovery/confirm")
+                contentType(ContentType.Application.Json)
+                setBody(
+                    PasswordRecoveryConfirmPayload(
+                        resetToken = resetToken,
+                        newPassword = newPassword,
+                    )
+                )
+            }
+        }
+    }
+
     override suspend fun refreshSession(refreshToken: String): AuthTokens {
         return executeCall {
             postJson<AuthResponse>(
@@ -70,6 +97,19 @@ class KtorAuthNetworkDataSource(
         }
     }
 
+    override suspend fun bindEmail(accessToken: String, email: String): AuthMe {
+        return executeCall {
+            client.patch {
+                url("api/v1/auth/me/email")
+                contentType(ContentType.Application.Json)
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
+                setBody(EmailBindPayload(email = email))
+            }.body<AuthMeResponse>().toAuthMe()
+        }
+    }
+
     private suspend inline fun <reified T> postJson(path: String, payload: Any): T {
         return client.post {
             url(path)
@@ -92,6 +132,11 @@ private fun AuthMeResponse.toAuthMe(): AuthMe {
         role = role,
         status = status,
         displayName = displayName,
+        email = email,
         permissions = permissions,
     )
+}
+
+private fun PasswordRecoveryRequestResponse.toPasswordRecoveryRequest(): PasswordRecoveryRequest {
+    return PasswordRecoveryRequest(debugResetToken = debugResetToken)
 }

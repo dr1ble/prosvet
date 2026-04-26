@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,9 +51,9 @@ import com.digitaledu.core.common.formatOneDecimal
 import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
 import com.digitaledu.core.model.preferences.AccessibilitySettings
 import com.digitaledu.core.ui.ObserveEffects
+import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.AuthUiShapes
 import com.digitaledu.core.ui.components.AuthUiSpacing
-import com.digitaledu.core.ui.components.accessibilityControlScale
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
@@ -210,11 +212,8 @@ private fun AuthAccessibilityScreen(
             }
         }
 
-        item {
-            feedbackMessage?.let { message ->
-                SnackbarHost(hostState = snackbarHostState)
-                Text(text = message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-            }
+        item{
+            Spacer(modifier.height(8.dp))
         }
 
         item {
@@ -268,7 +267,6 @@ private fun AuthAccessibilityScreen(
                         ),
                         modifier = Modifier
                             .padding(top = AuthUiSpacing.itemMd)
-                            .accessibilityControlScale
                             .accessibilityTouchTarget,
                     ) {
                         Text(
@@ -471,11 +469,13 @@ private fun AccessibilityToggleRow(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Switch(
-                    checked = checked,
-                    onCheckedChange = onCheckedChange,
-                    modifier = Modifier.accessibilityControlScale.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch),
-                )
+                AccessibilityScaledControlContainer {
+                    Switch(
+                        checked = checked,
+                        onCheckedChange = onCheckedChange,
+                        modifier = Modifier.accessibilitySemantics(label = title, state = if (checked) "включено" else "выключено", role = Role.Switch),
+                    )
+                }
             }
         }
     }

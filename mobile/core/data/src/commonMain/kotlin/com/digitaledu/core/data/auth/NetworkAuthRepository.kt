@@ -2,6 +2,7 @@ package com.digitaledu.core.data.auth
 
 import com.digitaledu.core.model.auth.AuthTokens
 import com.digitaledu.core.model.auth.AuthMe
+import com.digitaledu.core.model.auth.PasswordRecoveryRequest
 import com.digitaledu.core.network.AuthNetworkDataSource
 import com.digitaledu.core.network.NetworkException
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +29,17 @@ class NetworkAuthRepository(
         )
         authSessionStore.update(tokens)
         return tokens
+    }
+
+    override suspend fun requestPasswordRecovery(loginOrEmail: String): PasswordRecoveryRequest {
+        return networkDataSource.requestPasswordRecovery(loginOrEmail = loginOrEmail)
+    }
+
+    override suspend fun confirmPasswordRecovery(resetToken: String, newPassword: String) {
+        networkDataSource.confirmPasswordRecovery(
+            resetToken = resetToken,
+            newPassword = newPassword,
+        )
     }
 
     override suspend fun refreshSession(): Boolean {
@@ -58,6 +70,12 @@ class NetworkAuthRepository(
     override suspend fun getCurrentUser(): AuthMe {
         return withFreshAccessToken { accessToken ->
             networkDataSource.getCurrentUser(accessToken = accessToken)
+        }
+    }
+
+    override suspend fun bindEmail(email: String): AuthMe {
+        return withFreshAccessToken { accessToken ->
+            networkDataSource.bindEmail(accessToken = accessToken, email = email)
         }
     }
 

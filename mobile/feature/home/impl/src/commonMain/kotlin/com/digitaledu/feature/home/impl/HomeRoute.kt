@@ -2,9 +2,9 @@ package com.digitaledu.feature.home.impl
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import com.digitaledu.core.common.toUserMessage
 import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.ui.ObserveEffects
+import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.util.BackHandler
 import com.digitaledu.feature.catalog.api.CatalogEffect
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
@@ -48,24 +49,26 @@ fun HomeRoute(
     var selectedTab by remember { mutableStateOf(HomeTab.Home) }
     var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
     var qrHandledToken by remember { mutableStateOf<String?>(null) }
+    var groupQrErrorMessage by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val profileErrorMessage = (profileUiState.status as? ProfileStatus.Error)?.message
+    val routeErrorMessage = catalogUiState.errorMessage ?: profileErrorMessage ?: groupQrErrorMessage
+
+    ErrorDialog(
+        message = routeErrorMessage,
+        onDismiss = {
+            when (routeErrorMessage) {
+                catalogUiState.errorMessage -> catalogFeatureHost.processIntent(CatalogIntent.DismissError)
+                profileErrorMessage -> profileFeatureHost.processIntent(ProfileIntent.DismissError)
+                groupQrErrorMessage -> groupQrErrorMessage = null
+            }
+        },
+    )
 
     LaunchedEffect(initialGroupQrToken) {
         if (initialGroupQrToken.isNullOrBlank()) return@LaunchedEffect
         if (initialGroupQrToken == qrHandledToken) return@LaunchedEffect
         pendingGroupQrToken = initialGroupQrToken
-    }
-
-    LaunchedEffect(catalogUiState.errorMessage, profileErrorMessage) {
-        snackbarHostState.showAndDismissIfNeeded(
-            message = catalogUiState.errorMessage,
-            dismiss = { catalogFeatureHost.processIntent(CatalogIntent.DismissError) },
-        )
-        snackbarHostState.showAndDismissIfNeeded(
-            message = profileErrorMessage,
-            dismiss = { profileFeatureHost.processIntent(ProfileIntent.DismissError) },
-        )
     }
 
     LaunchedEffect(Unit) {
@@ -112,7 +115,7 @@ fun HomeRoute(
             catalogFeatureHost.processIntent(CatalogIntent.OpenCourse(resolution.courseSlug))
             snackbarHostState.showSnackbar("${resolution.groupName}: course opened")
         }.onFailure { throwable ->
-            snackbarHostState.showSnackbar(throwable.toUserMessage())
+            groupQrErrorMessage = throwable.toUserMessage()
         }
 
         qrHandledToken = token
@@ -150,17 +153,5 @@ private suspend fun syncCatalogProgressFromProfile(
                 totalLessons = course.totalLessons,
             )
         )
-    }
-}
-
-private suspend fun SnackbarHostState.showAndDismissIfNeeded(
-    message: String?,
-    dismiss: () -> Unit,
-) {
-    message ?: return
-    try {
-        showSnackbar(message = message)
-    } finally {
-        dismiss()
     }
 }
