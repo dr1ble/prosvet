@@ -27,10 +27,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.digitaledu.core.ui.components.AuthUiOpacity
 import com.digitaledu.core.ui.components.AuthUiShapes
 import com.digitaledu.core.ui.components.AuthUiSize
@@ -44,6 +47,8 @@ import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_sta
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_start_subtitle
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_start_title
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_terms_hint
+import digital_education_mobile.feature.auth.`impl`.generated.resources.ic_app_logo
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -52,125 +57,144 @@ internal fun OnboardingScreen(
     onOpenAccessibility: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surface,
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = AuthUiSpacing.screenHorizontal)
-                .padding(top = AuthUiSpacing.sectionMd, bottom = AuthUiSpacing.sectionSm),
-        ) {
-            Box(
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = AuthUiOpacity.subtle),
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = AuthUiOpacity.subtle),
+                        MaterialTheme.colorScheme.surface,
+                    ),
+                ),
+            ),
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(AuthUiSize.badgeContainer),
-                contentAlignment = Alignment.Center,
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = AuthUiSpacing.screenHorizontal)
+                    .padding(top = AuthUiSpacing.sectionMd, bottom = AuthUiSpacing.sectionSm),
             ) {
-                Text(
-                    text = "ПРОСВЕТ",
-                    fontWeight = FontWeight.ExtraBold,
-                    style = AuthUiTypography.hero,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
-
-            Text(
-                text = stringResource(Res.string.auth_start_title),
-                fontWeight = FontWeight.ExtraBold,
-                style = AuthUiTypography.hero,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(modifier = Modifier.height(AuthUiSpacing.sectionSm))
-
-            Text(
-                text = stringResource(Res.string.auth_start_subtitle),
-                style = AuthUiTypography.bodyLg,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
-
-            Column(verticalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemMd)) {
-                BenefitCard(
-                    icon = Icons.Filled.Book,
-                    title = "Интерактивные курсы",
-                    description = "Видео, симуляции и квизы для эффективного обучения",
-                    iconTintColor = MaterialTheme.colorScheme.primary,
-                    iconBackgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = AuthUiOpacity.subtle),
-                )
-                BenefitCard(
-                    icon = Icons.Filled.Schedule,
-                    title = "Удобное обучение",
-                    description = "Учись в своём ритме, в любое время и в любом месте",
-                    iconTintColor = MaterialTheme.colorScheme.secondary,
-                    iconBackgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = AuthUiOpacity.subtle),
-                )
-                BenefitCard(
-                    icon = Icons.Filled.SmartToy,
-                    title = "Практика навыков",
-                    description = "Симуляторы и интерактивные сценарии для закрепления знаний",
-                    iconTintColor = MaterialTheme.colorScheme.tertiary,
-                    iconBackgroundColor = MaterialTheme.colorScheme.tertiary.copy(alpha = AuthUiOpacity.subtle),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(AuthUiSpacing.sectionLg))
-
-            GradientPrimaryButton(
-                text = stringResource(Res.string.auth_start_learning),
-                onClick = onStartLearning,
-            )
-
-            Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
-
-            Surface(
-                onClick = onOpenAccessibility,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(AuthUiSize.buttonHeight),
-                shape = AuthUiShapes.pill,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.SettingsAccessibility,
-                        contentDescription = null,
-                        modifier = Modifier.size(AuthUiSize.iconMd),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(modifier = Modifier.width(AuthUiSpacing.itemSm))
-                    Text(
-                        text = stringResource(Res.string.auth_start_accessibility),
-                        fontWeight = FontWeight.Medium,
-                        style = AuthUiTypography.bodyLg,
-                        color = MaterialTheme.colorScheme.primary,
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(Res.drawable.ic_app_logo),
+                        contentDescription = "Просвет",
+                        modifier = Modifier.size(136.dp),
+                        contentScale = ContentScale.Fit,
                     )
                 }
+
+                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
+
+                Text(
+                    text = stringResource(Res.string.auth_start_title),
+                    fontWeight = FontWeight.ExtraBold,
+                    style = AuthUiTypography.hero,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionSm))
+
+                Text(
+                    text = stringResource(Res.string.auth_start_subtitle),
+                    style = AuthUiTypography.bodyLg,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
+
+                Column(verticalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemMd)) {
+                    BenefitCard(
+                        icon = Icons.Filled.Book,
+                        title = "Интерактивные курсы",
+                        description = "Видео, симуляции и квизы для эффективного обучения",
+                        iconTintColor = MaterialTheme.colorScheme.primary,
+                        iconBackgroundColor = MaterialTheme.colorScheme.primary.copy(
+                            alpha = AuthUiOpacity.subtle,
+                        ),
+                    )
+                    BenefitCard(
+                        icon = Icons.Filled.Schedule,
+                        title = "Удобное обучение",
+                        description = "Учись в своём ритме, в любое время и в любом месте",
+                        iconTintColor = MaterialTheme.colorScheme.secondary,
+                        iconBackgroundColor = MaterialTheme.colorScheme.secondary.copy(
+                            alpha = AuthUiOpacity.subtle,
+                        ),
+                    )
+                    BenefitCard(
+                        icon = Icons.Filled.SmartToy,
+                        title = "Практика навыков",
+                        description = "Симуляторы и интерактивные сценарии для закрепления знаний",
+                        iconTintColor = MaterialTheme.colorScheme.tertiary,
+                        iconBackgroundColor = MaterialTheme.colorScheme.tertiary.copy(
+                            alpha = AuthUiOpacity.subtle,
+                        ),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionLg))
+
+                GradientPrimaryButton(
+                    text = stringResource(Res.string.auth_start_learning),
+                    onClick = onStartLearning,
+                )
+
+                Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+
+                Surface(
+                    onClick = onOpenAccessibility,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(AuthUiSize.buttonHeight),
+                    shape = AuthUiShapes.pill,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.SettingsAccessibility,
+                            contentDescription = null,
+                            modifier = Modifier.size(AuthUiSize.iconMd),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.width(AuthUiSpacing.itemSm))
+                        Text(
+                            text = stringResource(Res.string.auth_start_accessibility),
+                            fontWeight = FontWeight.Medium,
+                            style = AuthUiTypography.bodyLg,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionSm))
+
+                Text(
+                    text = stringResource(Res.string.auth_terms_hint),
+                    style = AuthUiTypography.labelSm,
+                    color = MaterialTheme.colorScheme.outline,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
-
-            Spacer(modifier = Modifier.height(AuthUiSpacing.sectionSm))
-
-            Text(
-                text = stringResource(Res.string.auth_terms_hint),
-                style = AuthUiTypography.labelSm,
-                color = MaterialTheme.colorScheme.outline,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
     }
 }
