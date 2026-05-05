@@ -1,14 +1,16 @@
 package com.digitaledu.feature.root.impl
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.navigation.compose.rememberNavController
 import com.digitaledu.core.data.auth.AuthRepository
-import com.digitaledu.core.ui.CenteredLoadingIndicator
 import com.digitaledu.feature.auth.api.AUTH_ROUTE
 import com.digitaledu.feature.auth.api.AuthFeatureEntry
 import com.digitaledu.feature.home.api.HOME_ROUTE
@@ -51,7 +53,7 @@ fun RootRoute(
 
     when (sessionBootstrapState) {
         SessionBootstrapState.Loading -> {
-            CenteredLoadingIndicator(
+            BootstrapSplash(
                 modifier = modifier.fillMaxSize(),
             )
         }
@@ -80,6 +82,31 @@ fun RootRoute(
             )
         }
     }
+}
+
+@Composable
+private fun BootstrapSplash(
+    modifier: Modifier = Modifier,
+) {
+    val baseBrush = remember {
+        Brush.linearGradient(
+            colors = listOf(
+                androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer,
+                androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer,
+                androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer,
+                androidx.compose.material3.MaterialTheme.colorScheme.surface,
+            ),
+            start = androidx.compose.ui.geometry.Offset(
+                x = -240f,
+                y = -120f,
+            ),
+            end = androidx.compose.ui.geometry.Offset(
+                x = 980f,
+                y = 1480f,
+            ),
+        )
+    }
+    Box(modifier = modifier.background(baseBrush))
 }
 
 private enum class SessionBootstrapState {

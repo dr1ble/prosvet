@@ -18,7 +18,7 @@
     <string name="auth_benefit_communication_desc">Будьте на связи с близкими через мессенджеры.</string>
 
     <!-- Login -->
-    <string name="auth_welcome_back">Добро пожаловать</string>
+    <string name="auth_welcome_back">Начнём обучение</string>
     <string name="auth_login_subtitle">Введите логин и пароль для доступа к обучению</string>
     <string name="auth_label_login">Логин или почта</string>
     <string name="auth_label_password">Пароль</string>
@@ -51,9 +51,9 @@
 
     <!-- Recovery -->
     <string name="auth_forgot_password">Восстановление пароля</string>
-    <string name="auth_forgot_password_input">Логин или почта</string>
+    <string name="auth_forgot_password_input">Введите логин или привязанную почту</string>
     <string name="auth_forgot_password_send">Отправить код</string>
-    <string name="auth_forgot_password_sent">Инструкция отправлена. Проверьте почту.</string>
+    <string name="auth_forgot_password_sent">Код отправлен. Проверьте почту.</string>
     <string name="auth_recovery_info">Вам придет письмо с инструкциями. Если не получается —</string>
     <string name="auth_recovery_support">обратитесь в поддержку</string>
     <string name="auth_back_to_login_full">Вернуться ко входу</string>

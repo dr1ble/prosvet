@@ -38,7 +38,6 @@ import com.digitaledu.core.ui.components.AuthUiOpacity
 import com.digitaledu.core.ui.components.AuthUiShapes
 import com.digitaledu.core.ui.components.AuthUiSize
 import com.digitaledu.core.ui.components.AuthUiSpacing
-import com.digitaledu.core.ui.components.AuthUiStroke
 import com.digitaledu.core.ui.components.AuthUiTypography
 import com.digitaledu.core.ui.components.GradientPrimaryButton
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
@@ -63,8 +62,9 @@ internal fun OnboardingScreen(
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = AuthUiOpacity.subtle),
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = AuthUiOpacity.subtle),
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.secondaryContainer,
+                        MaterialTheme.colorScheme.tertiaryContainer,
                         MaterialTheme.colorScheme.surface,
                     ),
                 ),
@@ -79,23 +79,23 @@ internal fun OnboardingScreen(
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = AuthUiSpacing.screenHorizontal)
-                    .padding(top = AuthUiSpacing.sectionMd, bottom = AuthUiSpacing.sectionSm),
+                    .padding(top = AuthUiSpacing.sectionSm, bottom = AuthUiSpacing.sectionSm),
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp),
+                        .height(112.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     androidx.compose.foundation.Image(
                         painter = painterResource(Res.drawable.ic_app_logo),
                         contentDescription = "Просвет",
-                        modifier = Modifier.size(136.dp),
+                        modifier = Modifier.size(104.dp),
                         contentScale = ContentScale.Fit,
                     )
                 }
 
-                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
+                Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
 
                 Text(
                     text = stringResource(Res.string.auth_start_title),
@@ -106,7 +106,7 @@ internal fun OnboardingScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionSm))
+                Spacer(modifier = Modifier.height(AuthUiSpacing.itemSm))
 
                 Text(
                     text = stringResource(Res.string.auth_start_subtitle),
@@ -116,52 +116,62 @@ internal fun OnboardingScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
+                Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
 
-                Column(verticalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemMd)) {
-                    BenefitCard(
-                        icon = Icons.Filled.Book,
-                        title = "Интерактивные курсы",
-                        description = "Видео, симуляции и квизы для эффективного обучения",
-                        iconTintColor = MaterialTheme.colorScheme.primary,
-                        iconBackgroundColor = MaterialTheme.colorScheme.primary.copy(
-                            alpha = AuthUiOpacity.subtle,
-                        ),
-                    )
-                    BenefitCard(
-                        icon = Icons.Filled.Schedule,
-                        title = "Удобное обучение",
-                        description = "Учись в своём ритме, в любое время и в любом месте",
-                        iconTintColor = MaterialTheme.colorScheme.secondary,
-                        iconBackgroundColor = MaterialTheme.colorScheme.secondary.copy(
-                            alpha = AuthUiOpacity.subtle,
-                        ),
-                    )
-                    BenefitCard(
-                        icon = Icons.Filled.SmartToy,
-                        title = "Практика навыков",
-                        description = "Симуляторы и интерактивные сценарии для закрепления знаний",
-                        iconTintColor = MaterialTheme.colorScheme.tertiary,
-                        iconBackgroundColor = MaterialTheme.colorScheme.tertiary.copy(
-                            alpha = AuthUiOpacity.subtle,
-                        ),
-                    )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = AuthUiShapes.cardLg,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shadowElevation = 2.dp,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(AuthUiSpacing.itemMd),
+                        verticalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemMd),
+                    ) {
+                        BenefitRow(
+                            icon = Icons.Filled.Book,
+                            title = "Интерактивные курсы",
+                            description = "Видео, симуляции и квизы для эффективного обучения",
+                            iconTintColor = MaterialTheme.colorScheme.primary,
+                            iconBackgroundColor = MaterialTheme.colorScheme.primary.copy(
+                                alpha = AuthUiOpacity.subtle,
+                            ),
+                        )
+                        BenefitRow(
+                            icon = Icons.Filled.Schedule,
+                            title = "Удобное обучение",
+                            description = "Учись в своём ритме, в любое время и в любом месте",
+                            iconTintColor = MaterialTheme.colorScheme.secondary,
+                            iconBackgroundColor = MaterialTheme.colorScheme.secondary.copy(
+                                alpha = AuthUiOpacity.subtle,
+                            ),
+                        )
+                        BenefitRow(
+                            icon = Icons.Filled.SmartToy,
+                            title = "Практика навыков",
+                            description = "Симуляторы и интерактивные сценарии для закрепления знаний",
+                            iconTintColor = MaterialTheme.colorScheme.tertiary,
+                            iconBackgroundColor = MaterialTheme.colorScheme.tertiary.copy(
+                                alpha = AuthUiOpacity.subtle,
+                            ),
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionLg))
+                Spacer(modifier = Modifier.height(AuthUiSpacing.sectionSm))
 
                 GradientPrimaryButton(
                     text = stringResource(Res.string.auth_start_learning),
                     onClick = onStartLearning,
                 )
 
-                Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+                Spacer(modifier = Modifier.height(AuthUiSpacing.itemSm))
 
                 Surface(
                     onClick = onOpenAccessibility,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(AuthUiSize.buttonHeight),
+                        .height(48.dp),
                     shape = AuthUiShapes.pill,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
@@ -200,7 +210,7 @@ internal fun OnboardingScreen(
 }
 
 @Composable
-private fun BenefitCard(
+private fun BenefitRow(
     icon: ImageVector,
     title: String,
     description: String,
@@ -208,46 +218,39 @@ private fun BenefitCard(
     iconBackgroundColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = AuthUiShapes.cardLg,
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-        shadowElevation = AuthUiStroke.thin,
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = AuthUiSpacing.itemSm),
+        horizontalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemMd),
+        verticalAlignment = Alignment.Top,
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(AuthUiSpacing.cardPadding),
-            horizontalArrangement = Arrangement.spacedBy(AuthUiSpacing.contentPadding),
-            verticalAlignment = Alignment.Top,
+                .size(42.dp)
+                .background(iconBackgroundColor, AuthUiShapes.pill),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(AuthUiSize.iconContainer)
-                    .background(iconBackgroundColor, AuthUiShapes.pill),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(AuthUiSize.iconLg),
-                    tint = iconTintColor,
-                )
-            }
-            Column {
-                Text(
-                    text = title,
-                    fontWeight = FontWeight.Bold,
-                    style = AuthUiTypography.bodyLg,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(AuthUiSpacing.item2xs))
-                Text(
-                    text = description,
-                    style = AuthUiTypography.bodyMd,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(AuthUiSize.iconMd),
+                tint = iconTintColor,
+            )
+        }
+        Column {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                style = AuthUiTypography.bodyLg,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(AuthUiSpacing.item2xs))
+            Text(
+                text = description,
+                style = AuthUiTypography.bodyMd,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

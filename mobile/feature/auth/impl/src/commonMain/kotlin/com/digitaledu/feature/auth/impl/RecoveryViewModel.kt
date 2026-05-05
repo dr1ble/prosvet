@@ -17,13 +17,17 @@ class RecoveryViewModel(
 
             is RecoveryIntent.SubmitClicked -> submit(intent.infoMessage)
             is RecoveryIntent.ResetTokenChanged -> updateState {
-                copy(resetToken = intent.value, infoMessage = null, errorMessage = null)
+                copy(
+                    resetToken = intent.value.filter(Char::isDigit).take(RESET_CODE_LENGTH),
+                    infoMessage = null,
+                    errorMessage = null,
+                )
             }
             is RecoveryIntent.NewPasswordChanged -> updateState {
                 copy(newPassword = intent.value, infoMessage = null, errorMessage = null)
             }
             is RecoveryIntent.ConfirmPasswordChanged -> updateState {
-                copy(confirmPassword = intent.value, infoMessage = null, errorMessage = null)
+                copy(infoMessage = null, errorMessage = null)
             }
             is RecoveryIntent.ConfirmClicked -> confirm(intent.infoMessage)
             RecoveryIntent.DismissError -> updateState { copy(errorMessage = null) }
@@ -36,12 +40,12 @@ class RecoveryViewModel(
         updateState { copy(isSubmitting = true, infoMessage = null, errorMessage = null) }
         runCatching {
             authRepository.requestPasswordRecovery(currentState.loginOrEmail)
-        }.onSuccess { request ->
+        }.onSuccess {
             updateState {
                 copy(
                     isSubmitting = false,
                     isResetRequested = true,
-                    resetToken = request.debugResetToken.orEmpty(),
+                    resetToken = "",
                     infoMessage = infoMessage,
                 )
             }
@@ -72,7 +76,6 @@ class RecoveryViewModel(
                     isResetRequested = false,
                     resetToken = "",
                     newPassword = "",
-                    confirmPassword = "",
                     infoMessage = infoMessage,
                 )
             }

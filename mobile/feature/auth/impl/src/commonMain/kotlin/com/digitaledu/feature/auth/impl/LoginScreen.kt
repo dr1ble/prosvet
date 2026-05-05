@@ -103,7 +103,7 @@ internal fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+            Spacer(modifier = Modifier.height(AuthUiSpacing.itemSm))
 
             Text(
                 text = stringResource(Res.string.auth_login_subtitle),
