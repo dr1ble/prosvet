@@ -67,4 +67,20 @@ POLICY_ROLE_MAP: dict[str, set[UserRole]] = {
         UserRole.ADMINISTRATOR,
         UserRole.MODERATOR,
     },
+    "support.request.create": {
+        UserRole.USER,
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
+    "support.request.view": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
+    "support.request.manage": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
 }

@@ -9,6 +9,7 @@ from app.modules.groups.domain.services import GroupsService
 from app.modules.moderation.domain.services import ModerationService
 from app.modules.progress.domain.services import ProgressService
 from app.modules.simulation.domain.services import SimulationService
+from app.modules.support.domain.services import SupportService
 from app.modules.users.domain.services import UsersService
 from app.shared.db.deps import get_db
 
@@ -33,6 +34,10 @@ def _create_simulation_service(db: Session = Depends(get_db)) -> SimulationServi
     return SimulationService(db)
 
 
+def _create_support_service(db: Session = Depends(get_db)) -> SupportService:
+    return SupportService(db)
+
+
 def _create_moderation_service(db: Session = Depends(get_db)) -> ModerationService:
     return ModerationService(db)
 
@@ -48,4 +53,5 @@ GroupsServiceDep = Annotated[GroupsService, Depends(_create_groups_service)]
 ModerationServiceDep = Annotated[ModerationService, Depends(_create_moderation_service)]
 ProgressServiceDep = Annotated[ProgressService, Depends(_create_progress_service)]
 SimulationServiceDep = Annotated[SimulationService, Depends(_create_simulation_service)]
+SupportServiceDep = Annotated[SupportService, Depends(_create_support_service)]
 UsersServiceDep = Annotated[UsersService, Depends(_create_users_service)]

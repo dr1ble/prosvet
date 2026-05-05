@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -52,3 +53,51 @@ class MyProgressOut(BaseModel):
 
     user_id: UUID
     courses: list[MyCourseProgressOut]
+
+
+class GlossaryTermOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    lesson_id: UUID
+    course_id: UUID
+    course_title: str
+    term: str
+    definition: str
+    example: str | None = None
+    is_bookmarked: bool = False
+    unlocked_at: datetime
+
+
+class MyGlossaryOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: UUID
+    terms: list[GlossaryTermOut]
+
+
+class LessonNoteCreateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lesson_id: UUID
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class LessonNoteOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    lesson_id: UUID
+    course_id: UUID
+    course_title: str
+    lesson_title: str
+    content: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class MyLessonNotesOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: UUID
+    notes: list[LessonNoteOut]

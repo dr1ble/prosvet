@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Date, DateTime, Enum, String
+from sqlalchemy import Boolean, Date, DateTime, Enum, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,6 +44,11 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    avatar_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    avatar_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    learning_reminders_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    security_alerts_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    profile_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False

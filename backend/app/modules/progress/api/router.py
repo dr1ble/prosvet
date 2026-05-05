@@ -5,8 +5,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.modules.progress.api.schemas import (
+    LessonNoteCreateIn,
+    LessonNoteOut,
     LessonProgressOut,
     LessonProgressUpsertIn,
+    MyGlossaryOut,
+    MyLessonNotesOut,
     MyProgressOut,
     ProgressOverviewRowOut,
 )
@@ -21,6 +25,10 @@ _PROGRESS_ERROR_RU: dict[str, str] = {
     "date_from and date_to are required when period=custom.": "Для произвольного периода укажите даты начала и окончания.",
     "date_from must be less than or equal to date_to.": "Дата начала должна быть не позже даты окончания.",
     "Unsupported progress status.": "Неподдерживаемый статус прогресса.",
+    "Glossary term not unlocked.": "Термин еще не открыт в вашем словаре.",
+    "Lesson not found.": "Урок не найден.",
+    "Note content is empty.": "Заметка не должна быть пустой.",
+    "Note not found.": "Заметка не найдена.",
 }
 
 
@@ -34,6 +42,67 @@ def get_my_progress(
     _actor: CurrentActor = Depends(require_policy("progress.view.self")),
 ) -> MyProgressOut:
     return service.get_my_progress(user_id=_actor.user_id)
+
+
+@router.get("/glossary/self", response_model=MyGlossaryOut)
+def get_my_glossary(
+    service: ProgressServiceDep,
+    _actor: CurrentActor = Depends(require_policy("progress.view.self")),
+) -> MyGlossaryOut:
+    return service.get_my_glossary(user_id=_actor.user_id)
+
+
+@router.patch("/glossary/self/{term_id}/bookmark", status_code=204)
+def set_my_glossary_bookmark(
+    term_id: UUID,
+    is_bookmarked: bool,
+    service: ProgressServiceDep,
+    _actor: CurrentActor = Depends(require_policy("progress.upsert.self")),
+) -> None:
+    try:
+        service.set_my_glossary_bookmark(
+            user_id=_actor.user_id,
+            term_id=term_id,
+            is_bookmarked=is_bookmarked,
+        )
+    except ProgressError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
+
+
+@router.get("/notes/self", response_model=MyLessonNotesOut)
+def get_my_notes(
+    service: ProgressServiceDep,
+    _actor: CurrentActor = Depends(require_policy("progress.view.self")),
+) -> MyLessonNotesOut:
+    return service.get_my_notes(user_id=_actor.user_id)
+
+
+@router.post("/notes/self", response_model=LessonNoteOut)
+def create_my_note(
+    payload: LessonNoteCreateIn,
+    service: ProgressServiceDep,
+    _actor: CurrentActor = Depends(require_policy("progress.upsert.self")),
+) -> LessonNoteOut:
+    try:
+        return service.create_my_note(
+            user_id=_actor.user_id,
+            lesson_id=payload.lesson_id,
+            content=payload.content,
+        )
+    except ProgressError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
+
+
+@router.delete("/notes/self/{note_id}", status_code=204)
+def delete_my_note(
+    note_id: UUID,
+    service: ProgressServiceDep,
+    _actor: CurrentActor = Depends(require_policy("progress.upsert.self")),
+) -> None:
+    try:
+        service.delete_my_note(user_id=_actor.user_id, note_id=note_id)
+    except ProgressError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
 
 
 @router.post("/lesson/self", response_model=LessonProgressOut)

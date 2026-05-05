@@ -74,6 +74,7 @@ class CourseOut(BaseModel):
     title: str
     description: str | None
     cover_url: str | None = None
+    is_favorite: bool = False
     status: str
     created_at: datetime
     updated_at: datetime

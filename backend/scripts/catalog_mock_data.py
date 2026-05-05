@@ -14,18 +14,23 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from app.modules.catalog.infra.models import (  # noqa: E402
     Course,
+    CourseLesson,
     CourseRelease,
     CourseReleaseScreen,
     CourseStatus,
+    LessonStatus,
     ReleaseStatus,
 )
+from app.modules.progress.infra.models import LessonGlossaryTerm  # noqa: E402
+from app.modules.users import models as _user_models  # noqa: E402, F401
 from app.shared.db.session import SessionLocal  # noqa: E402
 
 TARGET_SLUGS = [
-    "gosuslugi-basic",
-    "sberbank-online-security",
-    "zhkh-payments-online",
-    "telemedicine-appointments",
+    "gosuslugi-doctor-appointment",
+    "online-bank-safe-transfer",
+    "messengers-messages-and-calls",
+    "zhkh-payments-and-meters",
+    "cybersecurity-scam-protection",
 ]
 
 
@@ -38,336 +43,286 @@ def _checksum_payload(payload: dict[str, Any]) -> str:
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
+def _article(screen_key: str, title: str, order_index: int, markdown: str) -> dict[str, Any]:
+    return {
+        "screen_key": screen_key,
+        "title": title,
+        "order_index": order_index,
+        "payload": {"type": "article", "markdown_content": markdown, "assets": []},
+    }
+
+
+def _video(screen_key: str, title: str, order_index: int, transcript: str) -> dict[str, Any]:
+    return {
+        "screen_key": screen_key,
+        "title": title,
+        "order_index": order_index,
+        "payload": {
+            "type": "video",
+            "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+            "duration_sec": 90,
+            "transcript": transcript,
+        },
+    }
+
+
+def _simulation(
+    screen_key: str,
+    title: str,
+    image_url: str,
+    hotspots: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "screen_key": screen_key,
+        "title": title,
+        "order_index": 3,
+        "payload": {
+            "type": "simulation",
+            "image_url": image_url,
+            "hotspots": hotspots,
+            "is_start": True,
+            "is_completion": True,
+        },
+    }
+
+
+def _quiz(
+    screen_key: str,
+    title: str,
+    question_id: str,
+    question: str,
+    correct_text: str,
+) -> dict[str, Any]:
+    return {
+        "screen_key": screen_key,
+        "title": title,
+        "order_index": 4,
+        "payload": {
+            "type": "quiz",
+            "questions": [
+                {
+                    "id": question_id,
+                    "type": "single_choice",
+                    "text": question,
+                    "explanation": "Главное правило: не спешить и проверять данные перед нажатием.",
+                    "options": [
+                        {"id": "a", "text": "Нажать сразу, чтобы быстрее закончить"},
+                        {"id": "b", "text": correct_text},
+                        {"id": "c", "text": "Закрыть приложение без проверки"},
+                    ],
+                    "correct_option_id": "b",
+                }
+            ],
+        },
+    }
+
+
+def _course(
+    slug: str,
+    title: str,
+    description: str,
+    prefix: str,
+    intro: str,
+    video_transcript: str,
+    simulation_title: str,
+    image_url: str,
+    hotspots: list[dict[str, Any]],
+    quiz_question: str,
+    quiz_answer: str,
+    summary: str,
+) -> dict[str, Any]:
+    return {
+        "slug": slug,
+        "title": title,
+        "description": description,
+        "status": CourseStatus.ACTIVE.value,
+        "version": "1.0.0",
+        "changelog": "Первая публикация: полный мобильный демо-флоу курса.",
+        "screens": [
+            _article(f"{prefix}-intro", "Что вы научитесь делать", 1, intro),
+            _video(f"{prefix}-video", "Короткая демонстрация", 2, video_transcript),
+            _simulation(f"{prefix}-simulation", simulation_title, image_url, hotspots),
+            _quiz(f"{prefix}-quiz", "Мини-проверка", f"{prefix}-q1", quiz_question, quiz_answer),
+            _article(f"{prefix}-summary", "Итоги и памятка", 5, summary),
+        ],
+    }
+
+
+def _hotspot(
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    label: str,
+    hint: str,
+) -> dict[str, Any]:
+    return {
+        "x": x,
+        "y": y,
+        "width": width,
+        "height": height,
+        "label": label,
+        "hint": hint,
+        "target_screen_key": None,
+    }
+
+
+def _glossary_terms_for_screen(slug: str, order_index: int) -> list[dict[str, str]]:
+    terms_by_course: dict[str, list[dict[str, str]]] = {
+        "gosuslugi-doctor-appointment": [
+            {
+                "term": "Госуслуги",
+                "definition": "Государственный портал, где можно получить услуги онлайн.",
+                "example": "Через Госуслуги можно записаться к врачу или проверить заявление.",
+            },
+            {
+                "term": "Подтверждение записи",
+                "definition": "Финальная проверка данных перед отправкой заявки.",
+                "example": "Перед подтверждением сверяют врача, дату и время приема.",
+            },
+        ],
+        "online-bank-safe-transfer": [
+            {
+                "term": "CVV",
+                "definition": "Трехзначный код на карте, который нельзя сообщать другим людям.",
+                "example": "Сотрудник банка не имеет права спрашивать CVV по телефону.",
+            },
+            {
+                "term": "Код из SMS",
+                "definition": "Одноразовый код подтверждения операции.",
+                "example": "Код из SMS вводят только в приложении банка, если сами начали операцию.",
+            },
+        ],
+        "messengers-messages-and-calls": [
+            {
+                "term": "Чат",
+                "definition": "Окно переписки с человеком или группой людей.",
+                "example": "В чате можно отправить текст, фото или голосовое сообщение.",
+            },
+            {
+                "term": "Подозрительная ссылка",
+                "definition": "Ссылка от неизвестного отправителя или с обещанием срочной выгоды.",
+                "example": "Подозрительную ссылку лучше не открывать и проверить отправителя.",
+            },
+        ],
+        "zhkh-payments-and-meters": [
+            {
+                "term": "Лицевой счет",
+                "definition": "Номер, по которому сервис понимает, за какую квартиру или услугу идет оплата.",
+                "example": "Лицевой счет сверяют с бумажной квитанцией перед оплатой.",
+            },
+            {
+                "term": "Показания счетчика",
+                "definition": "Текущие числа на приборе учета воды, газа или электричества.",
+                "example": "Показания счетчика передают за текущий месяц.",
+            },
+        ],
+        "cybersecurity-scam-protection": [
+            {
+                "term": "Мошеннический звонок",
+                "definition": "Звонок, где вас торопят сообщить данные или перевести деньги.",
+                "example": "Если звонящий давит и пугает, лучше положить трубку и перезвонить самому.",
+            },
+            {
+                "term": "Проверка отправителя",
+                "definition": "Сравнение сообщения с известным номером или другим каналом связи.",
+                "example": "Если близкий просит деньги в сообщении, перезвоните ему по знакомому номеру.",
+            },
+        ],
+    }
+    terms = terms_by_course.get(slug, [])
+    if order_index <= len(terms):
+        return [terms[order_index - 1]]
+    return []
+
+
 def _course_blueprints() -> list[dict[str, Any]]:
     return [
-        {
-            "slug": "gosuslugi-basic",
-            "title": "Госуслуги: базовые услуги без ошибок",
-            "description": "Практика записи к врачу, проверки штрафов и подачи заявлений через Госуслуги.",
-            "version": "1.0.0",
-            "changelog": "Первая публикация: базовые операции в Госуслугах.",
-            "screens": [
-                {
-                    "screen_key": "gosuslugi-intro",
-                    "title": "Зачем нужен аккаунт",
-                    "order_index": 1,
-                    "payload": {
-                        "type": "article",
-                        "markdown_content": "# Госуслуги без стресса\n\nВ этом уроке вы пройдете безопасный путь: вход -> выбор услуги -> подтверждение действия.",
-                        "assets": [],
-                    },
-                },
-                {
-                    "screen_key": "gosuslugi-video",
-                    "title": "Навигация по главной странице",
-                    "order_index": 2,
-                    "payload": {
-                        "type": "video",
-                        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-                        "duration_sec": 185,
-                        "transcript": "Показываем, как найти популярные услуги и проверить статус заявлений.",
-                    },
-                },
-                {
-                    "screen_key": "gosuslugi-sim",
-                    "title": "Симуляция: запись к врачу",
-                    "order_index": 3,
-                    "payload": {
-                        "type": "simulation",
-                        "image_url": "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1280&q=80",
-                        "hotspots": [
-                            {
-                                "x": 18,
-                                "y": 24,
-                                "width": 30,
-                                "height": 10,
-                                "label": "Выбрать регион",
-                                "hint": "Сначала проверьте регион и ФИО пациента.",
-                                "target_screen_key": None,
-                            },
-                            {
-                                "x": 62,
-                                "y": 78,
-                                "width": 24,
-                                "height": 9,
-                                "label": "Подтвердить запись",
-                                "hint": "Убедитесь в корректности даты и времени перед подтверждением.",
-                                "target_screen_key": None,
-                            },
-                        ],
-                        "is_start": True,
-                        "is_completion": True,
-                    },
-                },
-                {
-                    "screen_key": "gosuslugi-quiz",
-                    "title": "Проверка знаний",
-                    "order_index": 4,
-                    "payload": {
-                        "type": "quiz",
-                        "questions": [
-                            {
-                                "id": "gs-q1",
-                                "type": "single_choice",
-                                "text": "Что нужно проверить перед подтверждением записи?",
-                                "options": [
-                                    {"id": "a", "text": "Только номер телефона"},
-                                    {"id": "b", "text": "Дату, время и получателя услуги"},
-                                    {"id": "c", "text": "Только адрес поликлиники"},
-                                ],
-                                "correct_option_id": "b",
-                            }
-                        ],
-                    },
-                },
+        _course(
+            slug="gosuslugi-doctor-appointment",
+            title="Госуслуги: запись к врачу",
+            description="Пошаговая тренировка записи к врачу через цифровой сервис без риска ошибки.",
+            prefix="gosuslugi",
+            intro="# Запись к врачу\n\nВы научитесь выбрать услугу, проверить пациента, дату и подтвердить запись.",
+            video_transcript="Показываем, где искать медицинские услуги и как не перепутать дату приема.",
+            simulation_title="Симуляция: подтверждение записи",
+            image_url="https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1280&q=80",
+            hotspots=[
+                _hotspot(18, 24, 30, 10, "Проверить регион", "Сначала убедитесь, что выбран ваш регион."),
+                _hotspot(62, 78, 24, 9, "Подтвердить запись", "Проверьте врача, дату и время перед подтверждением."),
             ],
-        },
-        {
-            "slug": "sberbank-online-security",
-            "title": "СберБанк Онлайн: безопасные платежи",
-            "description": "Как оплачивать счета, переводить деньги и распознавать мошеннические сценарии.",
-            "version": "1.0.0",
-            "changelog": "Первая публикация: базовая финансовая грамотность в мобильном банке.",
-            "screens": [
-                {
-                    "screen_key": "sber-intro",
-                    "title": "Правило трех проверок",
-                    "order_index": 1,
-                    "payload": {
-                        "type": "article",
-                        "markdown_content": "# Безопасные операции\n\nПеред оплатой всегда проверьте получателя, сумму и назначение платежа.",
-                        "assets": [],
-                    },
-                },
-                {
-                    "screen_key": "sber-video",
-                    "title": "Оплата по QR-коду",
-                    "order_index": 2,
-                    "payload": {
-                        "type": "video",
-                        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-                        "duration_sec": 210,
-                        "transcript": "Пошагово показываем оплату без ручного ввода реквизитов.",
-                    },
-                },
-                {
-                    "screen_key": "sber-sim",
-                    "title": "Симуляция: перевод по номеру",
-                    "order_index": 3,
-                    "payload": {
-                        "type": "simulation",
-                        "image_url": "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=1280&q=80",
-                        "hotspots": [
-                            {
-                                "x": 14,
-                                "y": 29,
-                                "width": 34,
-                                "height": 11,
-                                "label": "Проверить получателя",
-                                "hint": "Сверьте имя получателя до отправки.",
-                                "target_screen_key": None,
-                            },
-                            {
-                                "x": 59,
-                                "y": 74,
-                                "width": 27,
-                                "height": 10,
-                                "label": "Подтвердить перевод",
-                                "hint": "Подтверждайте только если данные верны.",
-                                "target_screen_key": None,
-                            },
-                        ],
-                        "is_start": True,
-                        "is_completion": True,
-                    },
-                },
-                {
-                    "screen_key": "sber-quiz",
-                    "title": "Мини-тест",
-                    "order_index": 4,
-                    "payload": {
-                        "type": "quiz",
-                        "questions": [
-                            {
-                                "id": "sb-q1",
-                                "type": "single_choice",
-                                "text": "Что нельзя сообщать даже сотруднику банка по телефону?",
-                                "options": [
-                                    {"id": "a", "text": "ФИО"},
-                                    {"id": "b", "text": "CVV и коды из SMS"},
-                                    {"id": "c", "text": "Номер карты"},
-                                ],
-                                "correct_option_id": "b",
-                            }
-                        ],
-                    },
-                },
+            quiz_question="Что важно проверить перед подтверждением записи?",
+            quiz_answer="Врача, дату, время и получателя услуги",
+            summary="# Готово\n\nПеред подтверждением всегда сверяйте регион, пациента, врача и время записи.",
+        ),
+        _course(
+            slug="online-bank-safe-transfer",
+            title="Онлайн-банк: безопасный перевод",
+            description="Практика перевода денег с проверкой получателя, суммы и защиты от мошенников.",
+            prefix="bank",
+            intro="# Перевод без тревоги\n\nРазберем безопасный путь: выбрать получателя, проверить сумму, подтвердить перевод.",
+            video_transcript="Объясняем три проверки перед переводом и почему нельзя сообщать коды из SMS.",
+            simulation_title="Симуляция: перевод по номеру",
+            image_url="https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=1280&q=80",
+            hotspots=[
+                _hotspot(14, 29, 34, 11, "Проверить получателя", "Сверьте имя получателя до отправки."),
+                _hotspot(59, 74, 27, 10, "Подтвердить перевод", "Подтверждайте только если сумма и имя верны."),
             ],
-        },
-        {
-            "slug": "zhkh-payments-online",
-            "title": "ЖКХ онлайн: платежи и показания",
-            "description": "Научитесь передавать показания счетчиков и оплачивать коммунальные услуги онлайн.",
-            "version": "1.0.0",
-            "changelog": "Первая публикация: сценарии ежемесячной оплаты ЖКХ.",
-            "screens": [
-                {
-                    "screen_key": "zhkh-intro",
-                    "title": "Что подготовить заранее",
-                    "order_index": 1,
-                    "payload": {
-                        "type": "article",
-                        "markdown_content": "# Платежи без ошибок\n\nПодготовьте номер лицевого счета, актуальные показания и сумму последнего платежа.",
-                        "assets": [],
-                    },
-                },
-                {
-                    "screen_key": "zhkh-video",
-                    "title": "Передача показаний",
-                    "order_index": 2,
-                    "payload": {
-                        "type": "video",
-                        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-                        "duration_sec": 240,
-                        "transcript": "Показываем, как вносить показания воды и электричества в личном кабинете.",
-                    },
-                },
-                {
-                    "screen_key": "zhkh-sim",
-                    "title": "Симуляция: оплата квитанции",
-                    "order_index": 3,
-                    "payload": {
-                        "type": "simulation",
-                        "image_url": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1280&q=80",
-                        "hotspots": [
-                            {
-                                "x": 13,
-                                "y": 31,
-                                "width": 36,
-                                "height": 12,
-                                "label": "Проверить лицевой счет",
-                                "hint": "Сверьте номер счета с бумажной квитанцией.",
-                                "target_screen_key": None,
-                            },
-                            {
-                                "x": 61,
-                                "y": 77,
-                                "width": 26,
-                                "height": 10,
-                                "label": "Оплатить",
-                                "hint": "Перед оплатой проверьте период начисления.",
-                                "target_screen_key": None,
-                            },
-                        ],
-                        "is_start": True,
-                        "is_completion": True,
-                    },
-                },
-                {
-                    "screen_key": "zhkh-quiz",
-                    "title": "Проверка знаний",
-                    "order_index": 4,
-                    "payload": {
-                        "type": "quiz",
-                        "questions": [
-                            {
-                                "id": "zhkh-q1",
-                                "type": "single_choice",
-                                "text": "Как снизить риск ошибки при оплате ЖКХ?",
-                                "options": [
-                                    {"id": "a", "text": "Оплачивать сразу без проверки"},
-                                    {"id": "b", "text": "Сверять лицевой счет и период"},
-                                    {"id": "c", "text": "Округлять сумму вручную"},
-                                ],
-                                "correct_option_id": "b",
-                            }
-                        ],
-                    },
-                },
+            quiz_question="Что нельзя сообщать по телефону даже якобы сотруднику банка?",
+            quiz_answer="CVV и коды из SMS",
+            summary="# Памятка\n\nНе называйте коды. Перед переводом проверьте получателя, сумму и назначение.",
+        ),
+        _course(
+            slug="messengers-messages-and-calls",
+            title="Мессенджеры: сообщения и звонки",
+            description="Как писать сообщения, звонить близким и распознавать подозрительные ссылки.",
+            prefix="messenger",
+            intro="# Общение онлайн\n\nВы потренируетесь открыть чат, отправить сообщение и начать видеозвонок.",
+            video_transcript="Показываем, чем отличаются личные сообщения, группы и видеозвонки.",
+            simulation_title="Симуляция: отправка сообщения",
+            image_url="https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1280&q=80",
+            hotspots=[
+                _hotspot(19, 30, 36, 10, "Выбрать чат", "Откройте нужный чат по имени человека."),
+                _hotspot(58, 78, 28, 9, "Отправить сообщение", "Проверьте текст перед отправкой."),
             ],
-        },
-        {
-            "slug": "telemedicine-appointments",
-            "title": "Телемедицина: запись и онлайн-консультации",
-            "description": "Практика записи на онлайн-прием и подготовки к консультации с врачом.",
-            "version": "1.0.0",
-            "changelog": "Первая публикация: цифровые медицинские сервисы для ежедневной практики.",
-            "screens": [
-                {
-                    "screen_key": "med-intro",
-                    "title": "Подготовка к консультации",
-                    "order_index": 1,
-                    "payload": {
-                        "type": "article",
-                        "markdown_content": "# Онлайн-прием\n\nПодготовьте документы, список симптомов и вопросы, чтобы консультация была полезной.",
-                        "assets": [],
-                    },
-                },
-                {
-                    "screen_key": "med-video",
-                    "title": "Как выбрать удобное время",
-                    "order_index": 2,
-                    "payload": {
-                        "type": "video",
-                        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                        "duration_sec": 225,
-                        "transcript": "Разбираем календарь врача, подтверждение записи и напоминания.",
-                    },
-                },
-                {
-                    "screen_key": "med-sim",
-                    "title": "Симуляция: подтверждение приема",
-                    "order_index": 3,
-                    "payload": {
-                        "type": "simulation",
-                        "image_url": "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=1280&q=80",
-                        "hotspots": [
-                            {
-                                "x": 17,
-                                "y": 27,
-                                "width": 33,
-                                "height": 12,
-                                "label": "Проверить данные пациента",
-                                "hint": "ФИО и дата рождения должны совпадать с документом.",
-                                "target_screen_key": None,
-                            },
-                            {
-                                "x": 60,
-                                "y": 76,
-                                "width": 24,
-                                "height": 10,
-                                "label": "Подтвердить прием",
-                                "hint": "Проверьте дату, время и выбранного врача.",
-                                "target_screen_key": None,
-                            },
-                        ],
-                        "is_start": True,
-                        "is_completion": True,
-                    },
-                },
-                {
-                    "screen_key": "med-quiz",
-                    "title": "Контрольный вопрос",
-                    "order_index": 4,
-                    "payload": {
-                        "type": "quiz",
-                        "questions": [
-                            {
-                                "id": "med-q1",
-                                "type": "single_choice",
-                                "text": "Что лучше сделать до начала онлайн-приема?",
-                                "options": [
-                                    {"id": "a", "text": "Подготовить документы и список вопросов"},
-                                    {"id": "b", "text": "Открыть сразу несколько приложений"},
-                                    {"id": "c", "text": "Отключить звук"},
-                                ],
-                                "correct_option_id": "a",
-                            }
-                        ],
-                    },
-                },
+            quiz_question="Что лучше сделать с незнакомой ссылкой в чате?",
+            quiz_answer="Не открывать сразу и проверить отправителя",
+            summary="# Теперь вы умеете\n\nОткрывать чат, писать сообщение, начинать звонок и осторожно относиться к ссылкам.",
+        ),
+        _course(
+            slug="zhkh-payments-and-meters",
+            title="ЖКХ онлайн: показания и оплата",
+            description="Тренировка передачи показаний счетчиков и оплаты коммунальных услуг онлайн.",
+            prefix="zhkh",
+            intro="# ЖКХ без очередей\n\nПодготовьте лицевой счет, показания и квитанцию перед оплатой.",
+            video_transcript="Показываем, как сверять лицевой счет и период начисления.",
+            simulation_title="Симуляция: оплата квитанции",
+            image_url="https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1280&q=80",
+            hotspots=[
+                _hotspot(13, 31, 36, 12, "Проверить лицевой счет", "Сверьте номер счета с бумажной квитанцией."),
+                _hotspot(61, 77, 26, 10, "Оплатить", "Перед оплатой проверьте период и сумму."),
             ],
-        },
+            quiz_question="Как снизить риск ошибки при оплате ЖКХ?",
+            quiz_answer="Сверять лицевой счет, период и сумму",
+            summary="# Чек-лист\n\nПеред оплатой проверьте лицевой счет, месяц, сумму и способ оплаты.",
+        ),
+        _course(
+            slug="cybersecurity-scam-protection",
+            title="Кибербезопасность: защита от мошенников",
+            description="Как распознавать опасные звонки, ссылки и просьбы перевести деньги.",
+            prefix="security",
+            intro="# Безопасность каждый день\n\nНаучимся замечать красные флаги и не поддаваться давлению мошенников.",
+            video_transcript="Разбираем типичные фразы мошенников и безопасный порядок действий.",
+            simulation_title="Симуляция: подозрительное сообщение",
+            image_url="https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1280&q=80",
+            hotspots=[
+                _hotspot(20, 28, 38, 11, "Проверить отправителя", "Не доверяйте просьбам о деньгах без проверки."),
+                _hotspot(61, 76, 23, 9, "Сообщить близким", "Перезвоните человеку по знакомому номеру."),
+            ],
+            quiz_question="Что делать, если вас торопят перевести деньги?",
+            quiz_answer="Остановиться и проверить информацию через другой канал",
+            summary="# Главное правило\n\nНе спешите. Проверяйте отправителя, не сообщайте коды и советуйтесь с близкими.",
+        ),
     ]
 
 
@@ -431,9 +386,40 @@ def seed_mock_catalog_courses() -> None:
             db.execute(
                 delete(CourseReleaseScreen).where(CourseReleaseScreen.release_id == release.id)
             )
+            db.execute(delete(CourseLesson).where(CourseLesson.course_id == course.id))
 
             for screen_data in blueprint["screens"]:
-                payload = screen_data["payload"]
+                lesson = CourseLesson(
+                    id=uuid.uuid4(),
+                    course_id=course.id,
+                    title=screen_data["title"],
+                    description=None,
+                    order_index=screen_data["order_index"],
+                    status=LessonStatus.ACTIVE.value,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(lesson)
+                db.flush()
+
+                for term_index, term_data in enumerate(
+                    _glossary_terms_for_screen(slug, screen_data["order_index"]),
+                    start=1,
+                ):
+                    db.add(
+                        LessonGlossaryTerm(
+                            id=uuid.uuid4(),
+                            lesson_id=lesson.id,
+                            term=term_data["term"],
+                            definition=term_data["definition"],
+                            example=term_data["example"],
+                            order_index=term_index,
+                            created_at=now,
+                        )
+                    )
+
+                payload = dict(screen_data["payload"])
+                payload["lesson_id"] = str(lesson.id)
                 db.add(
                     CourseReleaseScreen(
                         id=uuid.uuid4(),

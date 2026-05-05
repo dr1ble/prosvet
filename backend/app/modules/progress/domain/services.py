@@ -5,7 +5,11 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.modules.progress.api.schemas import (
+    GlossaryTermOut,
+    LessonNoteOut,
     MyCourseProgressOut,
+    MyGlossaryOut,
+    MyLessonNotesOut,
     MyProgressOut,
     ProgressOverviewRowOut,
 )
@@ -140,7 +144,10 @@ class ProgressService:
     def upsert_lesson_progress(self, user_id: UUID, lesson_id: UUID, status: str):
         if status not in {"in_progress", "completed"}:
             raise ProgressError("Unsupported progress status.", status_code=422)
-        return self.repo.upsert_lesson_progress(user_id=user_id, lesson_id=lesson_id, status=status)
+        item = self.repo.upsert_lesson_progress(user_id=user_id, lesson_id=lesson_id, status=status)
+        if status == "completed":
+            self.repo.unlock_glossary_terms(user_id=user_id, lesson_id=lesson_id)
+        return item
 
     def get_my_progress(self, user_id: UUID) -> MyProgressOut:
         course_ids = self.repo.get_courses_with_progress_for_user(user_id)
@@ -170,3 +177,73 @@ class ProgressService:
                 )
             )
         return MyProgressOut(user_id=user_id, courses=rows)
+
+    def get_my_glossary(self, user_id: UUID) -> MyGlossaryOut:
+        rows = self.repo.list_user_glossary_terms(user_id=user_id)
+        return MyGlossaryOut(
+            user_id=user_id,
+            terms=[
+                GlossaryTermOut(
+                    id=row.id,
+                    lesson_id=row.lesson_id,
+                    course_id=row.course_id,
+                    course_title=row.course_title,
+                    term=row.term,
+                    definition=row.definition,
+                    example=row.example,
+                    is_bookmarked=row.is_bookmarked,
+                    unlocked_at=row.unlocked_at,
+                )
+                for row in rows
+            ],
+        )
+
+    def set_my_glossary_bookmark(self, user_id: UUID, term_id: UUID, is_bookmarked: bool):
+        item = self.repo.set_glossary_term_bookmark(
+            user_id=user_id,
+            term_id=term_id,
+            is_bookmarked=is_bookmarked,
+        )
+        if item is None:
+            raise ProgressError("Glossary term not unlocked.", status_code=404)
+        return item
+
+    def create_my_note(self, user_id: UUID, lesson_id: UUID, content: str):
+        normalized = content.strip()
+        if not normalized:
+            raise ProgressError("Note content is empty.", status_code=422)
+        item = self.repo.create_user_note(
+            user_id=user_id,
+            lesson_id=lesson_id,
+            content=normalized,
+        )
+        if item is None:
+            raise ProgressError("Lesson not found.", status_code=404)
+        row = self.repo.get_user_note_row(user_id=user_id, note_id=item.id)
+        if row is None:
+            raise ProgressError("Note not found.", status_code=404)
+        return self._to_note_out(row)
+
+    def get_my_notes(self, user_id: UUID) -> MyLessonNotesOut:
+        rows = self.repo.list_user_notes(user_id=user_id)
+        return MyLessonNotesOut(
+            user_id=user_id,
+            notes=[self._to_note_out(row) for row in rows],
+        )
+
+    def delete_my_note(self, user_id: UUID, note_id: UUID) -> None:
+        deleted = self.repo.delete_user_note(user_id=user_id, note_id=note_id)
+        if not deleted:
+            raise ProgressError("Note not found.", status_code=404)
+
+    def _to_note_out(self, row) -> LessonNoteOut:
+        return LessonNoteOut(
+            id=row.id,
+            lesson_id=row.lesson_id,
+            course_id=row.course_id,
+            course_title=row.course_title,
+            lesson_title=row.lesson_title,
+            content=row.content,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )

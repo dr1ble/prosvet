@@ -106,6 +106,24 @@ class AuthRepository:
         self.db.flush()
         return user
 
+    def update_account_settings(
+        self,
+        user: User,
+        *,
+        learning_reminders_enabled: bool | None = None,
+        security_alerts_enabled: bool | None = None,
+        profile_visible: bool | None = None,
+    ) -> User:
+        if learning_reminders_enabled is not None:
+            user.learning_reminders_enabled = learning_reminders_enabled
+        if security_alerts_enabled is not None:
+            user.security_alerts_enabled = security_alerts_enabled
+        if profile_visible is not None:
+            user.profile_visible = profile_visible
+        self.db.add(user)
+        self.db.flush()
+        return user
+
     def create_session(
         self,
         user_id: UUID,

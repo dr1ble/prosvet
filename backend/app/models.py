@@ -17,6 +17,7 @@ from app.modules.groups.infra.models import (
 from app.modules.moderation.infra.models import ReleaseReview, ReleaseStatusHistory
 from app.modules.progress.infra.models import LessonProgress
 from app.modules.simulation.infra.models import SimulationDraft, SimulationMediaAsset
+from app.modules.support.infra.models import CourseHelpRequest
 from app.modules.users.models import User
 from app.shared.auth.policy_models import RbacPolicyRule
 
@@ -38,5 +39,6 @@ __all__ = [
     "LessonProgress",
     "SimulationDraft",
     "SimulationMediaAsset",
+    "CourseHelpRequest",
     "RbacPolicyRule",
 ]

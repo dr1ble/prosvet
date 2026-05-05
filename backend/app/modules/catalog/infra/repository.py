@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.catalog.infra.models import (
     Course,
+    CourseFavorite,
     CourseLesson,
     CourseRelease,
     CourseReleaseScreen,
@@ -44,6 +45,45 @@ class CatalogRepository:
     def get_course_by_slug(self, slug: str) -> Course | None:
         stmt = select(Course).where(Course.slug == slug)
         return self.db.scalar(stmt)
+
+    def list_favorite_course_ids(self, user_id: UUID) -> set[UUID]:
+        stmt = select(CourseFavorite.course_id).where(CourseFavorite.user_id == user_id)
+        return set(self.db.scalars(stmt).all())
+
+    def list_favorite_courses(self, user_id: UUID) -> list[Course]:
+        stmt = (
+            select(Course)
+            .join(CourseFavorite, CourseFavorite.course_id == Course.id)
+            .where(
+                CourseFavorite.user_id == user_id,
+                Course.status != CourseStatus.DRAFT.value,
+                Course.status != CourseStatus.ARCHIVED.value,
+            )
+            .order_by(desc(CourseFavorite.created_at))
+        )
+        return list(self.db.scalars(stmt).all())
+
+    def add_favorite_course(self, user_id: UUID, course_id: UUID) -> None:
+        existing = self.db.scalar(
+            select(CourseFavorite).where(
+                CourseFavorite.user_id == user_id,
+                CourseFavorite.course_id == course_id,
+            )
+        )
+        if existing is None:
+            self.db.add(CourseFavorite(user_id=user_id, course_id=course_id))
+            self.db.flush()
+
+    def remove_favorite_course(self, user_id: UUID, course_id: UUID) -> None:
+        favorite = self.db.scalar(
+            select(CourseFavorite).where(
+                CourseFavorite.user_id == user_id,
+                CourseFavorite.course_id == course_id,
+            )
+        )
+        if favorite is not None:
+            self.db.delete(favorite)
+            self.db.flush()
 
     def create_course(
         self, slug: str, title: str, description: str | None, status: str,

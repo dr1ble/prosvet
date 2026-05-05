@@ -10,6 +10,7 @@ from app.modules.progress.api.router import router as progress_router
 from app.modules.rbac.api.router import router as rbac_router
 from app.modules.search.api.router import router as search_router
 from app.modules.simulation.api.router import router as simulation_router
+from app.modules.support.api.router import router as support_router
 from app.modules.users.api.router import router as users_router
 
 api_router = APIRouter()
@@ -24,3 +25,4 @@ api_router.include_router(simulation_router, prefix="/simulation", tags=["simula
 api_router.include_router(users_router, prefix="/users", tags=["users"])
 api_router.include_router(rbac_router, prefix="/rbac", tags=["rbac"])
 api_router.include_router(search_router, prefix="/search", tags=["search"])
+api_router.include_router(support_router, prefix="/support", tags=["support"])

@@ -32,12 +32,23 @@ class PasswordRecoveryRequestOut(BaseModel):
 
 
 class PasswordRecoveryConfirmIn(BaseModel):
-    reset_token: str = Field(min_length=16, max_length=255)
+    reset_token: str = Field(min_length=6, max_length=6)
     new_password: str = Field(min_length=8, max_length=256)
 
 
 class EmailBindIn(BaseModel):
     email: str = Field(min_length=5, max_length=255)
+
+
+class PasswordChangeIn(BaseModel):
+    current_password: str = Field(min_length=8, max_length=256)
+    new_password: str = Field(min_length=8, max_length=256)
+
+
+class AccountSettingsIn(BaseModel):
+    learning_reminders_enabled: bool | None = None
+    security_alerts_enabled: bool | None = None
+    profile_visible: bool | None = None
 
 
 class StatusOut(BaseModel):
@@ -57,11 +68,17 @@ class AuthMeOut(BaseModel):
     status: str
     display_name: str | None = None
     email: str | None = None
+    avatar_key: str | None = None
+    avatar_url: str | None = None
+    learning_reminders_enabled: bool = True
+    security_alerts_enabled: bool = True
+    profile_visible: bool = False
     permissions: list[str] = Field(default_factory=list)
 
 
 class AuthMeUpdateIn(BaseModel):
     display_name: str | None = Field(default=None, max_length=255)
+    avatar_key: str | None = Field(default=None, max_length=64)
 
 
 class LogoutOut(BaseModel):

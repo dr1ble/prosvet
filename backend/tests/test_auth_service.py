@@ -91,8 +91,9 @@ def test_request_password_recovery_accepts_login_or_email(auth_service, mock_rep
     user = MagicMock()
     user.id = uuid.uuid4()
     user.status = UserStatus.ACTIVE
-    user.email = None
+    user.email = "user@example.test"
     mock_repo.get_user_by_login_or_email.return_value = user
+    auth_service.email_sender = MagicMock()
 
     with patch("app.modules.auth.domain.services.settings") as mock_settings:
         mock_settings.security_pepper = "pepper"
@@ -103,6 +104,28 @@ def test_request_password_recovery_accepts_login_or_email(auth_service, mock_rep
     assert response.status == "recovery_requested"
     assert response.debug_reset_token is None
     assert mock_repo.create_password_reset_token.called
+
+
+def test_request_password_recovery_rejects_unknown_user(auth_service, mock_repo):
+    mock_repo.get_user_by_login_or_email.return_value = None
+
+    with pytest.raises(AuthError, match="Recovery user not found or email missing"):
+        auth_service.request_password_recovery("missing-user")
+
+    assert not mock_repo.create_password_reset_token.called
+
+
+def test_request_password_recovery_rejects_user_without_email(auth_service, mock_repo):
+    user = MagicMock()
+    user.id = uuid.uuid4()
+    user.status = UserStatus.ACTIVE
+    user.email = None
+    mock_repo.get_user_by_login_or_email.return_value = user
+
+    with pytest.raises(AuthError, match="Recovery user not found or email missing"):
+        auth_service.request_password_recovery("testuser")
+
+    assert not mock_repo.create_password_reset_token.called
 
 
 def test_request_password_recovery_sends_email_when_user_has_email(auth_service, mock_repo):
@@ -127,8 +150,9 @@ def test_request_password_recovery_returns_debug_token_in_development(auth_servi
     user = MagicMock()
     user.id = uuid.uuid4()
     user.status = UserStatus.ACTIVE
-    user.email = None
+    user.email = "user@example.test"
     mock_repo.get_user_by_login_or_email.return_value = user
+    auth_service.email_sender = MagicMock()
 
     with patch("app.modules.auth.domain.services.settings") as mock_settings:
         mock_settings.security_pepper = "pepper"
@@ -138,12 +162,13 @@ def test_request_password_recovery_returns_debug_token_in_development(auth_servi
     assert response.debug_reset_token
 
 
-def test_request_password_recovery_uses_development_debug_token(auth_service, mock_repo):
+def test_request_password_recovery_uses_six_digit_code(auth_service, mock_repo):
     user = MagicMock()
     user.id = uuid.uuid4()
     user.status = UserStatus.ACTIVE
-    user.email = None
+    user.email = "user@example.test"
     mock_repo.get_user_by_login_or_email.return_value = user
+    auth_service.email_sender = MagicMock()
 
     with patch("app.modules.auth.domain.services.settings") as mock_settings:
         mock_settings.security_pepper = "pepper"
@@ -151,7 +176,8 @@ def test_request_password_recovery_uses_development_debug_token(auth_service, mo
         response = auth_service.request_password_recovery("testuser")
 
     assert response.debug_reset_token is not None
-    assert len(response.debug_reset_token) >= 32
+    assert response.debug_reset_token.isdigit()
+    assert len(response.debug_reset_token) == 6
 
 
 def test_confirm_password_recovery_updates_password(auth_service, mock_repo, active_user):
@@ -190,6 +216,69 @@ def test_bind_email_updates_current_user(auth_service, mock_repo, active_user):
 def test_bind_email_rejects_invalid_email(auth_service, active_user):
     with pytest.raises(AuthError, match="Invalid email"):
         auth_service.bind_email(active_user, "not-an-email")
+
+
+def test_change_password_updates_hash(auth_service, mock_repo, active_user):
+    active_user.password_hash = "old-hash"
+    mock_repo.update_password_hash.return_value = active_user
+
+    with patch("app.modules.auth.domain.services.verify_password", side_effect=[True, False]):
+        with patch("app.modules.auth.domain.services.hash_password", return_value="new-hash"):
+            result = auth_service.change_password(
+                active_user,
+                current_password="password123",
+                new_password="password456",
+            )
+
+    assert result is active_user
+    mock_repo.update_password_hash.assert_called_once_with(active_user, "new-hash")
+
+
+def test_change_password_rejects_wrong_current_password(auth_service, mock_repo, active_user):
+    active_user.password_hash = "old-hash"
+
+    with patch("app.modules.auth.domain.services.verify_password", return_value=False):
+        with pytest.raises(AuthError, match="Current password is incorrect"):
+            auth_service.change_password(
+                active_user,
+                current_password="password123",
+                new_password="password456",
+            )
+
+    assert not mock_repo.update_password_hash.called
+
+
+def test_change_password_rejects_same_password(auth_service, mock_repo, active_user):
+    active_user.password_hash = "old-hash"
+
+    with patch("app.modules.auth.domain.services.verify_password", side_effect=[True, True]):
+        with pytest.raises(AuthError, match="New password must be different"):
+            auth_service.change_password(
+                active_user,
+                current_password="password123",
+                new_password="password123",
+            )
+
+    assert not mock_repo.update_password_hash.called
+
+
+def test_update_account_settings_persists_selected_flags(auth_service, mock_repo, active_user):
+    mock_repo.update_account_settings.return_value = active_user
+
+    result = auth_service.update_account_settings(
+        active_user,
+        learning_reminders_enabled=False,
+        security_alerts_enabled=True,
+        profile_visible=True,
+    )
+
+    assert result is active_user
+    mock_repo.update_account_settings.assert_called_once_with(
+        active_user,
+        learning_reminders_enabled=False,
+        security_alerts_enabled=True,
+        profile_visible=True,
+    )
 
 
 def test_register_fails_with_invalid_full_name(auth_service):

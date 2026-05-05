@@ -129,7 +129,12 @@ def _delete_course_cover(course_slug: str) -> bool:
     return True
 
 
-def _to_course_out(course: Course, request: Request, author_display_name: str | None = None) -> CourseOut:
+def _to_course_out(
+    course: Course,
+    request: Request,
+    author_display_name: str | None = None,
+    favorite_course_ids: set[UUID] | None = None,
+) -> CourseOut:
     cover_url = None
     if _resolve_course_cover_path(course.slug) is not None:
         cover_url = str(request.url_for("catalog_course_cover", course_slug=course.slug))
@@ -142,6 +147,7 @@ def _to_course_out(course: Course, request: Request, author_display_name: str | 
         title=course.title,
         description=course.description,
         cover_url=cover_url,
+        is_favorite=favorite_course_ids is not None and course.id in favorite_course_ids,
         status=course.status,
         created_at=course.created_at,
         updated_at=course.updated_at,
@@ -159,6 +165,13 @@ def _to_release_out(release: CourseRelease, screen_count: int) -> CourseReleaseO
         created_at=release.created_at,
         screen_count=screen_count,
     )
+
+
+def _favorite_course_ids(service: CatalogServiceDep, actor: CurrentActor) -> set[UUID]:
+    list_favorite_course_ids = getattr(service.repo, "list_favorite_course_ids", None)
+    if list_favorite_course_ids is None:
+        return set()
+    return list_favorite_course_ids(actor.user_id)
 
 
 def _to_screen_out(screen: CourseReleaseScreen) -> ReleaseScreenOut:
@@ -274,6 +287,7 @@ def list_courses(
 ) -> list[CourseOut]:
     query = CourseListQuery(include_drafts=include_drafts, include_archived=include_archived)
     courses = service.list_courses(query)
+    favorite_course_ids = _favorite_course_ids(service, actor)
 
     author_ids = {c.author_id for c in courses if c.author_id}
     author_names: dict[UUID, str] = {}
@@ -286,9 +300,51 @@ def list_courses(
             course,
             request,
             author_names.get(course.author_id) if course.author_id is not None else None,
+            favorite_course_ids,
         )
         for course in courses
     ]
+
+
+@router.get("/courses/favorites", response_model=list[CourseOut])
+def list_favorite_courses(
+    request: Request,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
+) -> list[CourseOut]:
+    favorite_course_ids = _favorite_course_ids(service, actor)
+    return [
+        _to_course_out(course, request, favorite_course_ids=favorite_course_ids)
+        for course in service.repo.list_favorite_courses(actor.user_id)
+    ]
+
+
+@router.put("/courses/{course_id}/favorite", response_model=CourseOut)
+def add_favorite_course(
+    course_id: UUID,
+    request: Request,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
+) -> CourseOut:
+    course = service.repo.get_course_by_id(course_id)
+    if course is None or course.status in {"draft", "archived"}:
+        raise HTTPException(status_code=404, detail="Курс не найден.")
+    service.repo.add_favorite_course(actor.user_id, course_id)
+    return _to_course_out(course, request, favorite_course_ids={course_id})
+
+
+@router.delete("/courses/{course_id}/favorite", response_model=CourseOut)
+def remove_favorite_course(
+    course_id: UUID,
+    request: Request,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
+) -> CourseOut:
+    course = service.repo.get_course_by_id(course_id)
+    if course is None or course.status in {"draft", "archived"}:
+        raise HTTPException(status_code=404, detail="Курс не найден.")
+    service.repo.remove_favorite_course(actor.user_id, course_id)
+    return _to_course_out(course, request, favorite_course_ids=set())
 
 
 @router.get("/courses/{course_slug}/cover", include_in_schema=False, name="catalog_course_cover")
@@ -433,6 +489,7 @@ def get_latest_course_release(
     course_slug: str,
     service: CatalogServiceDep,
     request: Request,
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
 ) -> CourseBundleOut:
     try:
         course, release, screens = service.get_latest_course_bundle(course_slug=course_slug)
@@ -440,7 +497,11 @@ def get_latest_course_release(
         raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
 
     return CourseBundleOut(
-        course=_to_course_out(course, request),
+        course=_to_course_out(
+            course,
+            request,
+            favorite_course_ids=_favorite_course_ids(service, actor),
+        ),
         release=_to_release_out(release, screen_count=len(screens)),
         screens=[_to_screen_out(screen) for screen in screens],
     )

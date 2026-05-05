@@ -20,6 +20,8 @@ ROLE_PERMISSION_TEMPLATES: dict[UserRole, tuple[str, ...]] = {
         "rbac.manage",
         "progress.view",
         "search.view",
+        "support.request.view",
+        "support.request.manage",
     ),
     UserRole.METHODOLOGIST: (
         "dashboard.view",
@@ -41,6 +43,8 @@ ROLE_PERMISSION_TEMPLATES: dict[UserRole, tuple[str, ...]] = {
         "groups.manage",
         "progress.view",
         "search.view",
+        "support.request.view",
+        "support.request.manage",
     ),
     UserRole.ASSISTANT: (
         "dashboard.view",
@@ -49,10 +53,13 @@ ROLE_PERMISSION_TEMPLATES: dict[UserRole, tuple[str, ...]] = {
         "groups.manage",
         "progress.view",
         "search.view",
+        "support.request.view",
+        "support.request.manage",
     ),
     UserRole.USER: (
         "dashboard.view",
         "progress.view.self",
+        "support.request.create",
     ),
 }
 

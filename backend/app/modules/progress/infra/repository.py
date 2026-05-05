@@ -13,7 +13,13 @@ from app.modules.groups.infra.models import (
     GroupMembership,
     LearningGroup,
 )
-from app.modules.progress.infra.models import LessonProgress, LessonProgressStatus
+from app.modules.progress.infra.models import (
+    LessonGlossaryTerm,
+    LessonProgress,
+    LessonProgressStatus,
+    UserGlossaryTerm,
+    UserLessonNote,
+)
 from app.modules.users.models import User
 
 
@@ -21,6 +27,31 @@ from app.modules.users.models import User
 class AssignmentTarget:
     assignment: GroupCourseAssignment
     user_ids: set[UUID]
+
+
+@dataclass(frozen=True)
+class UserGlossaryTermRow:
+    id: UUID
+    lesson_id: UUID
+    course_id: UUID
+    course_title: str
+    term: str
+    definition: str
+    example: str | None
+    is_bookmarked: bool
+    unlocked_at: datetime
+
+
+@dataclass(frozen=True)
+class UserLessonNoteRow:
+    id: UUID
+    lesson_id: UUID
+    course_id: UUID
+    course_title: str
+    lesson_title: str
+    content: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class ProgressRepository:
@@ -152,6 +183,150 @@ class ProgressRepository:
             item.completed_at = completed_at
         self.db.flush()
         return item
+
+    def unlock_glossary_terms(self, user_id: UUID, lesson_id: UUID) -> None:
+        term_ids_stmt = select(LessonGlossaryTerm.id).where(LessonGlossaryTerm.lesson_id == lesson_id)
+        term_ids = [row[0] for row in self.db.execute(term_ids_stmt).all()]
+        if not term_ids:
+            return
+
+        existing_stmt = select(UserGlossaryTerm.term_id).where(
+            UserGlossaryTerm.user_id == user_id,
+            UserGlossaryTerm.term_id.in_(term_ids),
+        )
+        existing_ids = {row[0] for row in self.db.execute(existing_stmt).all()}
+
+        for term_id in term_ids:
+            if term_id not in existing_ids:
+                self.db.add(UserGlossaryTerm(user_id=user_id, term_id=term_id))
+        self.db.flush()
+
+    def list_user_glossary_terms(self, user_id: UUID) -> list[UserGlossaryTermRow]:
+        stmt = (
+            select(
+                LessonGlossaryTerm.id,
+                LessonGlossaryTerm.lesson_id,
+                CourseLesson.course_id,
+                Course.title,
+                LessonGlossaryTerm.term,
+                LessonGlossaryTerm.definition,
+                LessonGlossaryTerm.example,
+                UserGlossaryTerm.is_bookmarked,
+                UserGlossaryTerm.unlocked_at,
+            )
+            .join(UserGlossaryTerm, UserGlossaryTerm.term_id == LessonGlossaryTerm.id)
+            .join(CourseLesson, CourseLesson.id == LessonGlossaryTerm.lesson_id)
+            .join(Course, Course.id == CourseLesson.course_id)
+            .where(UserGlossaryTerm.user_id == user_id)
+            .order_by(LessonGlossaryTerm.term.asc(), LessonGlossaryTerm.order_index.asc())
+        )
+        return [
+            UserGlossaryTermRow(
+                id=term_id,
+                lesson_id=lesson_id,
+                course_id=course_id,
+                course_title=course_title,
+                term=term,
+                definition=definition,
+                example=example,
+                is_bookmarked=is_bookmarked,
+                unlocked_at=unlocked_at,
+            )
+            for (
+                term_id,
+                lesson_id,
+                course_id,
+                course_title,
+                term,
+                definition,
+                example,
+                is_bookmarked,
+                unlocked_at,
+            ) in self.db.execute(stmt).all()
+        ]
+
+    def set_glossary_term_bookmark(
+        self,
+        user_id: UUID,
+        term_id: UUID,
+        is_bookmarked: bool,
+    ) -> UserGlossaryTerm | None:
+        stmt = select(UserGlossaryTerm).where(
+            UserGlossaryTerm.user_id == user_id,
+            UserGlossaryTerm.term_id == term_id,
+        )
+        item = self.db.scalar(stmt)
+        if item is None:
+            return None
+        item.is_bookmarked = is_bookmarked
+        self.db.flush()
+        return item
+
+    def create_user_note(self, user_id: UUID, lesson_id: UUID, content: str) -> UserLessonNote | None:
+        lesson = self.db.scalar(select(CourseLesson).where(CourseLesson.id == lesson_id))
+        if lesson is None:
+            return None
+        item = UserLessonNote(user_id=user_id, lesson_id=lesson_id, content=content)
+        self.db.add(item)
+        self.db.flush()
+        return item
+
+    def list_user_notes(self, user_id: UUID) -> list[UserLessonNoteRow]:
+        stmt = (
+            select(
+                UserLessonNote.id,
+                UserLessonNote.lesson_id,
+                CourseLesson.course_id,
+                Course.title,
+                CourseLesson.title,
+                UserLessonNote.content,
+                UserLessonNote.created_at,
+                UserLessonNote.updated_at,
+            )
+            .join(CourseLesson, CourseLesson.id == UserLessonNote.lesson_id)
+            .join(Course, Course.id == CourseLesson.course_id)
+            .where(UserLessonNote.user_id == user_id)
+            .order_by(UserLessonNote.updated_at.desc())
+        )
+        return [
+            UserLessonNoteRow(
+                id=note_id,
+                lesson_id=lesson_id,
+                course_id=course_id,
+                course_title=course_title,
+                lesson_title=lesson_title,
+                content=content,
+                created_at=created_at,
+                updated_at=updated_at,
+            )
+            for (
+                note_id,
+                lesson_id,
+                course_id,
+                course_title,
+                lesson_title,
+                content,
+                created_at,
+                updated_at,
+            ) in self.db.execute(stmt).all()
+        ]
+
+    def get_user_note_row(self, user_id: UUID, note_id: UUID) -> UserLessonNoteRow | None:
+        rows = [row for row in self.list_user_notes(user_id=user_id) if row.id == note_id]
+        return rows[0] if rows else None
+
+    def delete_user_note(self, user_id: UUID, note_id: UUID) -> bool:
+        item = self.db.scalar(
+            select(UserLessonNote).where(
+                UserLessonNote.user_id == user_id,
+                UserLessonNote.id == note_id,
+            )
+        )
+        if item is None:
+            return False
+        self.db.delete(item)
+        self.db.flush()
+        return True
 
     def get_courses_with_progress_for_user(self, user_id: UUID) -> set[UUID]:
         stmt = (

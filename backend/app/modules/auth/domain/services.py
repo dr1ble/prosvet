@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -97,10 +98,10 @@ class AuthService:
             raise AuthError("Invalid recovery data.", status_code=400)
 
         user = self.repo.get_user_by_login_or_email(normalized_value)
-        if user is None or user.status != UserStatus.ACTIVE:
-            return PasswordRecoveryRequestOut()
+        if user is None or user.status != UserStatus.ACTIVE or not user.email:
+            raise AuthError("Recovery user not found or email missing.", status_code=404)
 
-        reset_token = generate_token(32)
+        reset_token = f"{secrets.randbelow(1_000_000):06d}"
         self.repo.create_password_reset_token(
             user_id=user.id,
             token_hash=stable_hash(reset_token, settings.security_pepper),
@@ -141,6 +142,30 @@ class AuthService:
             raise AuthError("Email is already taken.", status_code=409)
 
         return self.repo.bind_email(user=user, email=normalized_email)
+
+    def change_password(self, user: User, current_password: str, new_password: str) -> User:
+        if len(current_password) < 8 or len(new_password) < 8:
+            raise AuthError("Invalid password change data.", status_code=400)
+        if not user.password_hash or not verify_password(current_password, user.password_hash):
+            raise AuthError("Current password is incorrect.", status_code=400)
+        if verify_password(new_password, user.password_hash):
+            raise AuthError("New password must be different.", status_code=400)
+        return self.repo.update_password_hash(user, hash_password(new_password))
+
+    def update_account_settings(
+        self,
+        user: User,
+        *,
+        learning_reminders_enabled: bool | None = None,
+        security_alerts_enabled: bool | None = None,
+        profile_visible: bool | None = None,
+    ) -> User:
+        return self.repo.update_account_settings(
+            user,
+            learning_reminders_enabled=learning_reminders_enabled,
+            security_alerts_enabled=security_alerts_enabled,
+            profile_visible=profile_visible,
+        )
 
     def activate_qr(self, token: str) -> AuthResponse:
         now = _utcnow()

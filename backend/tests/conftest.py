@@ -22,6 +22,7 @@ from app.modules.groups.infra import models as _groups_models  # noqa: F401
 from app.modules.moderation.infra import models as _moderation_models  # noqa: F401
 from app.modules.progress.infra import models as _progress_models  # noqa: F401
 from app.modules.simulation.infra import models as _simulation_models  # noqa: F401
+from app.modules.support.infra import models as _support_models  # noqa: F401
 from app.modules.users import models as _user_models  # noqa: F401
 from app.modules.users.models import UserRole
 from app.shared.auth import policy_models as _policy_models  # noqa: F401

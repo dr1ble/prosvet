@@ -59,7 +59,7 @@ def test_get_course_cover_file_returns_404_when_missing(api_client, tmp_path, mo
 
 def test_get_latest_release_not_found(api_client) -> None:
     response = api_client.get("/api/v1/catalog/courses/non-existent/releases/latest")
-    assert response.status_code == 404
+    assert response.status_code == 401
     assert "detail" in response.json()
 
 

@@ -69,6 +69,30 @@ class Course(Base):
     )
 
 
+class CourseFavorite(Base):
+    __tablename__ = "course_favorites"
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_id", name="uq_course_favorite_user_course"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    course_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+
 class CourseLesson(Base):
     __tablename__ = "course_lessons"
     __table_args__ = (
