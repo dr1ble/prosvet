@@ -12,8 +12,22 @@ run_start_command() {
   shift
 
   local output
-  if output="$("$@" 2>&1)"; then
-    return 0
+  local timeout_cmd=""
+  if command -v gtimeout >/dev/null 2>&1; then
+    timeout_cmd="gtimeout"
+  elif command -v timeout >/dev/null 2>&1; then
+    timeout_cmd="timeout"
+  fi
+
+  echo "$PREFIX Running: $*"
+  if [[ -n "$timeout_cmd" ]]; then
+    if output="$($timeout_cmd "$TIMEOUT_SECONDS" "$@" 2>&1)"; then
+      return 0
+    fi
+  else
+    if output="$("$@" 2>&1)"; then
+      return 0
+    fi
   fi
 
   echo "$PREFIX Failed to start $label automatically."
@@ -24,13 +38,24 @@ run_start_command() {
 }
 
 start_colima_with_recovery() {
+  local status_output
+  status_output="$(colima status 2>&1 || true)"
+
+  if [[ "$status_output" == *"empty value"* ]]; then
+    echo "$PREFIX Colima runtime is not configured. Starting with Docker runtime..."
+    colima stop --force >/dev/null 2>&1 || true
+    if run_start_command "Colima" colima start --runtime docker; then
+      return 0
+    fi
+  fi
+
   if run_start_command "Colima" colima start; then
     return 0
   fi
 
-  echo "$PREFIX Retrying Colima startup after forced stop..."
+  echo "$PREFIX Retrying Colima startup after forced stop with Docker runtime..."
   colima stop --force >/dev/null 2>&1 || true
-  run_start_command "Colima" colima start
+  run_start_command "Colima" colima start --runtime docker
 }
 
 if docker info >/dev/null 2>&1; then

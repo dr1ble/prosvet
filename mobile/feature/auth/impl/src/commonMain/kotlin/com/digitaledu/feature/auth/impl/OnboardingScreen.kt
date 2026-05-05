@@ -67,6 +67,14 @@ internal fun OnboardingScreen(
                         MaterialTheme.colorScheme.tertiaryContainer,
                         MaterialTheme.colorScheme.surface,
                     ),
+                    start = androidx.compose.ui.geometry.Offset(
+                        x = -520f,
+                        y = -120f,
+                    ),
+                    end = androidx.compose.ui.geometry.Offset(
+                        x = 520f,
+                        y = 1480f,
+                    ),
                 ),
             ),
     ) {

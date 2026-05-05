@@ -9,6 +9,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.material3.MaterialTheme
 import androidx.navigation.compose.rememberNavController
 import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.feature.auth.api.AUTH_ROUTE
@@ -88,25 +89,23 @@ fun RootRoute(
 private fun BootstrapSplash(
     modifier: Modifier = Modifier,
 ) {
-    val baseBrush = remember {
-        Brush.linearGradient(
-            colors = listOf(
-                androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer,
-                androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer,
-                androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer,
-                androidx.compose.material3.MaterialTheme.colorScheme.surface,
-            ),
-            start = androidx.compose.ui.geometry.Offset(
-                x = -240f,
-                y = -120f,
-            ),
-            end = androidx.compose.ui.geometry.Offset(
-                x = 980f,
-                y = 1480f,
-            ),
-        )
-    }
-    Box(modifier = modifier.background(baseBrush))
+    val backgroundBrush = Brush.linearGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.surface,
+        ),
+        start = androidx.compose.ui.geometry.Offset(
+            x = -520f,
+            y = -120f,
+        ),
+        end = androidx.compose.ui.geometry.Offset(
+            x = 520f,
+            y = 1480f,
+        ),
+    )
+    Box(modifier = modifier.background(backgroundBrush))
 }
 
 private enum class SessionBootstrapState {

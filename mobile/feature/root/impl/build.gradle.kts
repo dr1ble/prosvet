@@ -24,10 +24,12 @@ kotlin {
             implementation(projects.feature.home.api)
             implementation(projects.core.data)
             implementation(projects.core.model)
+            implementation(projects.core.designsystem)
             implementation(projects.core.ui)
 
             implementation(compose.runtime)
             implementation(compose.foundation)
+            implementation(compose.material3)
             implementation(compose.ui)
             implementation(libs.androidx.navigation.runtime)
             implementation(libs.androidx.navigation.compose)

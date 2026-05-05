@@ -10,20 +10,15 @@ Starts local development stack:
 - PostgreSQL (Docker Compose)
 - Backend (FastAPI + Uvicorn, autoreload)
 - Web admin (Next.js dev server)
-- CodeGraphContext watcher (auto reindex on file changes)
 
 After startup, prints localhost + LAN URLs for browser access.
 
 Environment overrides:
-- BACKEND_HOST (default: 127.0.0.1)
+- BACKEND_HOST (default: 0.0.0.0)
 - BACKEND_PORT (default: 8000)
-- WEB_HOST (default: 127.0.0.1)
+- WEB_HOST (default: 0.0.0.0)
 - WEB_PORT (default: 3000)
 - WEB_DIR_NAME (default: web-admin if present, otherwise web)
-- CGC_WATCH (default: 1, set 0 to disable)
-- CGC_DATABASE (default: falkordb)
-- CGC_WATCH_PATH (default: project root)
-- CGC_LOG_FILE (default: .run/codegraph-watch.log)
 - KG_MEMORY_SYNC (default: 1, set 0 to disable auto sync)
 - KG_MEMORY_SYNC_MODE (default: auto, values: auto|force)
 - KG_MEMORY_FILE (default: .context/operations/kg_memory.jsonl)
@@ -34,6 +29,7 @@ Environment overrides:
 - DB_BACKUP_BEFORE_DESTRUCTIVE (default: 1, set 0 to skip backup before destructive reset)
 - DB_BACKUP_DIR (default: .backups/db)
 - HEALTH_POLL_INTERVAL (default: 10, seconds between post-start health checks)
+- ADB_REVERSE (default: 1, set 0 to disable USB reverse for physical Android)
 USAGE
   exit 0
 fi
@@ -53,16 +49,11 @@ COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 STATE_DIR="$ROOT_DIR/.run"
 BACKEND_PID_FILE="$STATE_DIR/backend.pid"
 WEB_PID_FILE="$STATE_DIR/web.pid"
-CGC_PID_FILE="$STATE_DIR/codegraph-watch.pid"
-CGC_LOG_FILE="${CGC_LOG_FILE:-$STATE_DIR/codegraph-watch.log}"
 
-BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
+BACKEND_HOST="${BACKEND_HOST:-0.0.0.0}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
-WEB_HOST="${WEB_HOST:-127.0.0.1}"
+WEB_HOST="${WEB_HOST:-0.0.0.0}"
 WEB_PORT="${WEB_PORT:-3000}"
-CGC_WATCH="${CGC_WATCH:-1}"
-CGC_DATABASE="${CGC_DATABASE:-falkordb}"
-CGC_WATCH_PATH="${CGC_WATCH_PATH:-$ROOT_DIR}"
 KG_MEMORY_SYNC="${KG_MEMORY_SYNC:-1}"
 KG_MEMORY_SYNC_MODE="${KG_MEMORY_SYNC_MODE:-auto}"
 KG_MEMORY_FILE="${KG_MEMORY_FILE:-$ROOT_DIR/.context/operations/kg_memory.jsonl}"
@@ -75,14 +66,9 @@ ALLOW_DB_SCHEMA_RESET="${ALLOW_DB_SCHEMA_RESET:-1}"
 CONFIRM_DB_RESET="${CONFIRM_DB_RESET:-YES_I_UNDERSTAND_DATA_LOSS}"
 HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-60}"
 HEALTH_POLL_INTERVAL="${HEALTH_POLL_INTERVAL:-10}"
-
-if [[ "$CGC_WATCH_PATH" != /* ]]; then
-  CGC_WATCH_PATH="$ROOT_DIR/$CGC_WATCH_PATH"
-fi
-
-if [[ "$CGC_LOG_FILE" != /* ]]; then
-  CGC_LOG_FILE="$ROOT_DIR/$CGC_LOG_FILE"
-fi
+BACKEND_CHECK_HOST="${BACKEND_CHECK_HOST:-127.0.0.1}"
+WEB_CHECK_HOST="${WEB_CHECK_HOST:-127.0.0.1}"
+ADB_REVERSE="${ADB_REVERSE:-1}"
 
 if [[ "$KG_MEMORY_FILE" != /* ]]; then
   KG_MEMORY_FILE="$ROOT_DIR/$KG_MEMORY_FILE"
@@ -195,28 +181,6 @@ kill_matching_processes() {
   done
 }
 
-kill_codegraph_watch_for_path() {
-  local watch_path="$1"
-  local pids
-
-  pids="$(ps -ax -o pid= -o command= | awk -v p="$watch_path" 'index($0, "codegraphcontext watch") && index($0, p) {print $1}')"
-  if [[ -z "$pids" ]]; then
-    return
-  fi
-
-  echo "[run] Found existing CodeGraphContext watcher(s) for $watch_path: $pids. Stopping..."
-  for pid in $pids; do
-    kill "$pid" 2>/dev/null || true
-  done
-  sleep 1
-  for pid in $pids; do
-    if kill -0 "$pid" 2>/dev/null; then
-      echo "[run] Force stopping CodeGraphContext watcher: $pid"
-      kill -9 "$pid" 2>/dev/null || true
-    fi
-  done
-}
-
 cleanup_stale_processes() {
   kill_listening_on_port "$BACKEND_PORT" "backend"
   if [[ "$WEB_PORT" != "$BACKEND_PORT" ]]; then
@@ -225,18 +189,9 @@ cleanup_stale_processes() {
 
   kill_pid_from_file "$BACKEND_PID_FILE" "backend"
   kill_pid_from_file "$WEB_PID_FILE" "web"
-  kill_pid_from_file "$CGC_PID_FILE" "codegraphcontext-watch"
   kill_matching_processes "uvicorn app.main:app" "backend"
   kill_matching_processes "next dev -- --hostname" "web"
   kill_matching_processes "next dev --hostname" "web"
-
-  if [[ "$CGC_WATCH" == "1" ]]; then
-    if [[ ! -d "$CGC_WATCH_PATH" ]]; then
-      echo "[run] CGC_WATCH_PATH does not exist: $CGC_WATCH_PATH"
-      exit 1
-    fi
-    kill_codegraph_watch_for_path "$CGC_WATCH_PATH"
-  fi
 }
 
 has_newer_context_than_memory() {
@@ -410,9 +365,30 @@ http_is_ready() {
   curl -fsS "$url" >/dev/null 2>&1
 }
 
+setup_adb_reverse() {
+  if [[ "$ADB_REVERSE" != "1" ]]; then
+    return
+  fi
+
+  if ! command -v adb >/dev/null 2>&1; then
+    return
+  fi
+
+  local devices
+  devices="$(adb devices | awk 'NR>1 && $2=="device" {print $1}')"
+  if [[ -z "$devices" ]]; then
+    return
+  fi
+
+  local serial
+  for serial in $devices; do
+    adb -s "$serial" reverse "tcp:$BACKEND_PORT" "tcp:$BACKEND_PORT" >/dev/null 2>&1 || true
+  done
+}
+
 print_access_urls() {
-  local backend_url="http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health"
-  local web_url="http://$WEB_HOST:$WEB_PORT"
+  local backend_url="http://$BACKEND_CHECK_HOST:$BACKEND_PORT/api/v1/health"
+  local web_url="http://$WEB_CHECK_HOST:$WEB_PORT"
 
   echo "[run] Startup summary"
   echo "[run] Web:     $web_url"
@@ -439,11 +415,12 @@ print_access_urls() {
       seen="$seen $ip"
       echo "[run]   Web:     http://$ip:$WEB_PORT"
       echo "[run]   Backend: http://$ip:$BACKEND_PORT/api/v1/health"
+      echo "[run]   Mobile LAN: -Pmobile.backend.baseUrl=http://$ip:$BACKEND_PORT"
     done
   fi
 
-  if [[ -n "${CGC_PID:-}" ]]; then
-    echo "[run] CGC:     watching $CGC_WATCH_PATH"
+  if [[ "${ADB_REVERSE_ACTIVE:-0}" == "1" ]]; then
+    echo "[run] Android USB: -Pmobile.backend.baseUrl=http://127.0.0.1:$BACKEND_PORT"
   fi
   echo "[run] Press Ctrl+C to stop"
 }
@@ -473,15 +450,15 @@ if ! python3 -c "from fastapi.dependencies.utils import ensure_multipart_is_inst
   fi
 fi
 
-if [[ ! -d "$WEB_DIR/node_modules" ]]; then
-  echo "[run] Installing web dependencies..."
-  (cd "$WEB_DIR" && npm install)
-fi
-
 if [[ ! -f "$WEB_DIR/package.json" ]]; then
   echo "[run] Frontend directory is invalid: $WEB_DIR"
   echo "[run] Set WEB_DIR_NAME=web-admin or WEB_DIR_NAME=web and retry."
   exit 1
+fi
+
+if [[ ! -d "$WEB_DIR/node_modules" ]]; then
+  echo "[run] Installing web dependencies..."
+  (cd "$WEB_DIR" && npm install)
 fi
 
 echo "[run] Cleaning stale local dev processes..."
@@ -520,14 +497,18 @@ cleanup() {
     kill "$WEB_PID" 2>/dev/null || true
   fi
 
-  if [[ -n "${CGC_PID:-}" ]] && kill -0 "$CGC_PID" 2>/dev/null; then
-    kill "$CGC_PID" 2>/dev/null || true
+  if [[ "$ADB_REVERSE" == "1" ]] && command -v adb >/dev/null 2>&1; then
+    local devices
+    devices="$(adb devices | awk 'NR>1 && $2=="device" {print $1}')"
+    local serial
+    for serial in $devices; do
+      adb -s "$serial" reverse --remove "tcp:$BACKEND_PORT" >/dev/null 2>&1 || true
+    done
   fi
 
   wait "${BACKEND_PID:-}" 2>/dev/null || true
   wait "${WEB_PID:-}" 2>/dev/null || true
-  wait "${CGC_PID:-}" 2>/dev/null || true
-  rm -f "$BACKEND_PID_FILE" "$WEB_PID_FILE" "$CGC_PID_FILE"
+  rm -f "$BACKEND_PID_FILE" "$WEB_PID_FILE"
 
   echo "[run] Dev processes stopped."
   exit "$code"
@@ -550,48 +531,30 @@ echo "[run] Starting web app ($WEB_DIR_NAME) on http://$WEB_HOST:$WEB_PORT"
 WEB_PID=$!
 echo "$WEB_PID" >"$WEB_PID_FILE"
 
-if [[ "$CGC_WATCH" == "1" ]]; then
-  if python3 -m codegraphcontext --version >/dev/null 2>&1; then
-    echo "[run] Starting CodeGraphContext watch on $CGC_WATCH_PATH (database: $CGC_DATABASE)"
-    echo "[run] CGC logs: $CGC_LOG_FILE"
-    (
-      cd "$ROOT_DIR"
-      python3 -m codegraphcontext --database "$CGC_DATABASE" watch "$CGC_WATCH_PATH" >>"$CGC_LOG_FILE" 2>&1
-    ) &
-    CGC_PID=$!
-    echo "$CGC_PID" >"$CGC_PID_FILE"
-  else
-    echo "[run] CodeGraphContext is not installed. Skipping watcher."
-    echo "[run] Install with: python3 -m pip install codegraphcontext"
-  fi
-fi
-
-if ! wait_for_http_ready "backend" "http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health" "$HEALTH_WAIT_SECONDS"; then
+if ! wait_for_http_ready "backend" "http://$BACKEND_CHECK_HOST:$BACKEND_PORT/api/v1/health" "$HEALTH_WAIT_SECONDS"; then
   exit 1
 fi
 
-if ! wait_for_http_ready "web" "http://$WEB_HOST:$WEB_PORT" "$HEALTH_WAIT_SECONDS"; then
+if ! wait_for_http_ready "web" "http://$WEB_CHECK_HOST:$WEB_PORT" "$HEALTH_WAIT_SECONDS"; then
   exit 1
+fi
+
+setup_adb_reverse
+if command -v adb >/dev/null 2>&1 && adb reverse --list 2>/dev/null | grep -q "tcp:$BACKEND_PORT tcp:$BACKEND_PORT"; then
+  ADB_REVERSE_ACTIVE=1
 fi
 
 print_access_urls
 
 while true; do
-  if ! http_is_ready "http://$BACKEND_HOST:$BACKEND_PORT/api/v1/health"; then
+  if ! http_is_ready "http://$BACKEND_CHECK_HOST:$BACKEND_PORT/api/v1/health"; then
     echo "[run] Backend health check failed after startup."
     exit 1
   fi
 
-  if ! http_is_ready "http://$WEB_HOST:$WEB_PORT"; then
+  if ! http_is_ready "http://$WEB_CHECK_HOST:$WEB_PORT"; then
     echo "[run] Web admin health check failed after startup."
     exit 1
-  fi
-
-  if [[ -n "${CGC_PID:-}" ]] && ! kill -0 "$CGC_PID" 2>/dev/null; then
-    echo "[run] CodeGraphContext watcher exited. Continuing without watcher."
-    wait "$CGC_PID" || true
-    rm -f "$CGC_PID_FILE"
-    CGC_PID=""
   fi
 
   sleep "$HEALTH_POLL_INTERVAL"
