@@ -491,6 +491,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       requiredPermissions: ["progress.view"],
     },
     {
+      id: "support",
+      title: language === "ru" ? "Заявки помощи" : "Help Requests",
+      description:
+        language === "ru"
+          ? "Обращения учеников из мобильной кнопки SOS по сложностям в курсах."
+          : "Learner SOS requests about course difficulties from the mobile app.",
+      href: withDashboardState(`/support?lang=${language}`),
+      requiredPermissions: ["support.request.view"],
+    },
+    {
       id: "settings",
       title: language === "ru" ? "Настройки" : "Settings",
       description:

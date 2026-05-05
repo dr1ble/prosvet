@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { Suspense, useCallback, useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { SearchBar } from "@/features/search/components/search-bar";
 import { SearchResults } from "@/features/search/components/search-results";
@@ -23,7 +23,7 @@ function parseFilter(value: string | null): SearchEntityType | "all" {
     : "all";
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -162,5 +162,13 @@ export default function SearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className={styles.page} />}>
+      <SearchPageContent />
+    </Suspense>
   );
 }
