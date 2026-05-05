@@ -59,6 +59,8 @@ internal class PlayerViewModel(
             PlayerIntent.DismissHotspotHint -> dismissHotspotHint()
             PlayerIntent.EnterFullscreen -> enterFullscreenPlayer()
             PlayerIntent.ExitFullscreen -> exitFullscreenMode()
+            PlayerIntent.ToggleFavorite -> toggleFavorite()
+            is PlayerIntent.CreateNote -> createNote(intent.content)
             PlayerIntent.Close -> closeCourse()
         }
     }
@@ -69,7 +71,7 @@ internal class PlayerViewModel(
             copy(
                 bundle = bundle,
                 currentScreenIndex = restoredProgress.currentScreenIndex,
-                isFullscreenMode = true,
+                isFullscreenMode = false,
                 mediaAccessToken = mediaAccessToken,
                 completedScreens = restoredProgress.completedScreens,
                 activeHotspotHint = null,
@@ -94,6 +96,33 @@ internal class PlayerViewModel(
 
     private fun exitFullscreenMode() {
         updateState { copy(isFullscreenMode = false) }
+    }
+
+    private suspend fun toggleFavorite() {
+        val currentBundle = currentState.bundle ?: return
+        runCatching {
+            if (currentBundle.course.isFavorite) {
+                catalogRepository.removeFavoriteCourse(currentBundle.course.id)
+            } else {
+                catalogRepository.addFavoriteCourse(currentBundle.course.id)
+            }
+        }.onSuccess { updatedCourse ->
+            updateState {
+                copy(bundle = currentBundle.copy(course = updatedCourse))
+            }
+            emitEffect(PlayerEffect.FavoriteChanged)
+        }
+    }
+
+    private suspend fun createNote(content: String) {
+        val lessonId = currentState.currentScreen?.lessonId ?: return
+        val normalized = content.trim()
+        if (normalized.isEmpty()) return
+        runCatching {
+            progressRepository.createNote(lessonId = lessonId, content = normalized)
+        }.onSuccess {
+            emitEffect(PlayerEffect.NoteCreated)
+        }
     }
 
     private fun navigateToScreenKey(screenKey: String) {

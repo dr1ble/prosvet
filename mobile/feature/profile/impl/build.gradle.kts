@@ -31,8 +31,14 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.materialIconsExtended)
             implementation(compose.components.resources)
+            implementation(libs.coil3.compose)
             implementation(libs.jetbrains.lifecycle.viewmodel)
             implementation(libs.koin.core)
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core.ktx)
         }
 
         jvmTest.dependencies {

@@ -18,21 +18,41 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.SupportAgent
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,9 +64,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
+import com.digitaledu.core.common.toUserMessage
 import com.digitaledu.core.model.catalog.CatalogCourse
+import com.digitaledu.core.model.progress.GlossaryTermEntry
+import com.digitaledu.core.model.progress.LessonNoteEntry
 import com.digitaledu.core.ui.CenteredLoadingIndicator
 import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
+import com.digitaledu.core.ui.components.ErrorDialog
+import com.digitaledu.core.ui.components.SuccessDialog
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
@@ -54,6 +79,7 @@ import com.digitaledu.core.ui.components.accessibilityControlScale
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.util.BackHandler
 import com.digitaledu.feature.catalog.api.CatalogIntent
 import com.digitaledu.feature.catalog.api.CourseProgress
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
@@ -65,6 +91,23 @@ import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileUiEntry
 import com.digitaledu.feature.profile.api.ProfileUiState
 import digital_education_mobile.feature.home.`impl`.generated.resources.Res
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_courses_tab
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_no_courses
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_no_courses_hint
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_no_notes
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_no_notes_hint
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_notes_tab
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_remove_course
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_saved_courses
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_search_placeholder
+import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_title
+import digital_education_mobile.feature.home.`impl`.generated.resources.glossary_bookmark
+import digital_education_mobile.feature.home.`impl`.generated.resources.glossary_empty_hint
+import digital_education_mobile.feature.home.`impl`.generated.resources.glossary_empty_title
+import digital_education_mobile.feature.home.`impl`.generated.resources.glossary_search_placeholder
+import digital_education_mobile.feature.home.`impl`.generated.resources.glossary_source_format
+import digital_education_mobile.feature.home.`impl`.generated.resources.glossary_subtitle
+import digital_education_mobile.feature.home.`impl`.generated.resources.glossary_title
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_learning
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_progress_empty
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_continue_progress_format
@@ -74,13 +117,35 @@ import digital_education_mobile.feature.home.`impl`.generated.resources.home_rec
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_recommended_all
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_search_placeholder
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_sos
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_sos_subtitle
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_sos_title
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_courses
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_lesson
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_tab_profile
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_courses_default
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_courses_personalized
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_title_lesson
+import digital_education_mobile.feature.home.`impl`.generated.resources.notes_delete
+import digital_education_mobile.feature.home.`impl`.generated.resources.notes_empty_hint
+import digital_education_mobile.feature.home.`impl`.generated.resources.notes_empty_title
+import digital_education_mobile.feature.home.`impl`.generated.resources.notes_search_placeholder
+import digital_education_mobile.feature.home.`impl`.generated.resources.notes_source_format
+import digital_education_mobile.feature.home.`impl`.generated.resources.notes_title
 import org.jetbrains.compose.resources.stringResource
+import kotlinx.coroutines.launch
+
+private enum class HomeOverlayScreen {
+    None,
+    Favorites,
+    Glossary,
+    Notes,
+    Sos,
+}
+
+private enum class FavoritesTab {
+    Courses,
+    Notes,
+}
 
 @Composable
 fun HomeScreen(
@@ -97,16 +162,34 @@ fun HomeScreen(
     onCatalogIntent: (CatalogIntent) -> Unit,
     onPlayerIntent: (PlayerIntent) -> Unit,
     onProfileIntent: (ProfileIntent) -> Unit,
+    onCreateHelpRequest: suspend (SosHelpRequestType, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var overlayScreen by rememberSaveable { mutableStateOf(HomeOverlayScreen.None) }
+
     if (playerUiEntry.shouldShowFullscreen(playerUiState)) {
+        if (overlayScreen == HomeOverlayScreen.Sos) {
+            SosHelpContent(
+                state = buildSosHelpState(),
+                onBack = { overlayScreen = HomeOverlayScreen.None },
+                onCreateHelpRequest = onCreateHelpRequest,
+                modifier = modifier.fillMaxSize(),
+            )
+            return
+        }
+
         playerUiEntry.FullscreenContent(
             uiState = playerUiState,
             onIntent = onPlayerIntent,
+            onHelpClick = { overlayScreen = HomeOverlayScreen.Sos },
             resolveUrl = resolveUrl,
             modifier = modifier,
         )
         return
+    }
+
+    BackHandler(enabled = overlayScreen != HomeOverlayScreen.None) {
+        overlayScreen = HomeOverlayScreen.None
     }
 
     Scaffold(
@@ -115,11 +198,11 @@ fun HomeScreen(
             SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
-            if (selectedTab == HomeTab.Home) {
+            if (selectedTab == HomeTab.Home || selectedTab == HomeTab.Learning) {
                 FloatingActionButton(
-                    onClick = { },
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
+                    onClick = { overlayScreen = HomeOverlayScreen.Sos },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     shape = UiShapes.pill,
                     modifier = Modifier
                         .accessibilityTouchTarget
@@ -128,13 +211,10 @@ fun HomeScreen(
                             role = Role.Button,
                         ),
                 ) {
-                    AccessibilityScaledControlContainer {
-                        Text(
-                            text = stringResource(Res.string.home_sos),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Rounded.SupportAgent,
+                        contentDescription = null,
+                    )
                 }
             }
         },
@@ -164,7 +244,10 @@ fun HomeScreen(
                             .accessibilityTouchTarget
                             .accessibilitySemantics(label = label, state = if (selected) "текущая вкладка" else null, role = Role.Tab)
                             .accessibilityFocusHighlight(shape = if (selected) UiShapes.cardXl else UiShapes.pill, color = MaterialTheme.colorScheme.secondary)
-                            .clickable { onTabSelected(tab) }
+                            .clickable {
+                                overlayScreen = HomeOverlayScreen.None
+                                onTabSelected(tab)
+                            }
                             .padding(horizontal = UiSpacing.lg, vertical = UiSpacing.xs),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
@@ -199,6 +282,60 @@ fun HomeScreen(
             }
         },
     ) { innerPadding ->
+        if (overlayScreen == HomeOverlayScreen.Favorites) {
+            FavoritesContent(
+                courses = catalogUiState.courses,
+                progressByCourseId = catalogUiState.progressByCourseId,
+                onBack = { overlayScreen = HomeOverlayScreen.None },
+                onOpenCourse = { slug ->
+                    overlayScreen = HomeOverlayScreen.None
+                    onTabSelected(HomeTab.Learning)
+                    onCatalogIntent(CatalogIntent.OpenCourse(slug))
+                },
+                onRemoveCourse = { courseId -> onCatalogIntent(CatalogIntent.ToggleFavorite(courseId)) },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+            return@Scaffold
+        }
+
+        if (overlayScreen == HomeOverlayScreen.Glossary) {
+            GlossaryContent(
+                terms = profileUiState.glossaryTerms,
+                onBack = { overlayScreen = HomeOverlayScreen.None },
+                onToggleBookmark = { termId -> onProfileIntent(ProfileIntent.ToggleGlossaryBookmark(termId)) },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+            return@Scaffold
+        }
+
+        if (overlayScreen == HomeOverlayScreen.Notes) {
+            NotesContent(
+                notes = profileUiState.notes,
+                onBack = { overlayScreen = HomeOverlayScreen.None },
+                onDeleteNote = { noteId -> onProfileIntent(ProfileIntent.DeleteNote(noteId)) },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+            return@Scaffold
+        }
+
+        if (overlayScreen == HomeOverlayScreen.Sos) {
+            SosHelpContent(
+                state = buildSosHelpState(),
+                onBack = { overlayScreen = HomeOverlayScreen.None },
+                onCreateHelpRequest = onCreateHelpRequest,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+            return@Scaffold
+        }
+
         when (selectedTab) {
             HomeTab.Home -> {
                 HomeCoursesContent(
@@ -239,11 +376,450 @@ fun HomeScreen(
                 profileUiEntry.Content(
                     uiState = profileUiState,
                     onIntent = onProfileIntent,
+                    onOpenFavorites = {
+                        onCatalogIntent(CatalogIntent.RefreshCourses)
+                        overlayScreen = HomeOverlayScreen.Favorites
+                    },
+                    onOpenGlossary = {
+                        onProfileIntent(ProfileIntent.RefreshGlossary)
+                        overlayScreen = HomeOverlayScreen.Glossary
+                    },
+                    onOpenNotes = {
+                        onProfileIntent(ProfileIntent.RefreshNotes)
+                        overlayScreen = HomeOverlayScreen.Notes
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SosHelpContent(
+    state: SosHelpState,
+    onBack: () -> Unit,
+    onCreateHelpRequest: suspend (SosHelpRequestType, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var selectedType by rememberSaveable { mutableStateOf<SosHelpRequestType?>(null) }
+    var message by rememberSaveable { mutableStateOf("") }
+    var isSubmitting by rememberSaveable { mutableStateOf(false) }
+    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var successMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val formState = buildSosHelpFormState(selectedType = selectedType, message = message)
+    val scope = rememberCoroutineScope()
+
+    ErrorDialog(message = errorMessage, onDismiss = { errorMessage = null })
+    SuccessDialog(message = successMessage, onDismiss = { successMessage = null })
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.md,
+            bottom = UiSpacing.xxl + UiSpacing.xxl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
+                        .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
+                        .clickable(onClick = onBack)
+                        .padding(UiSpacing.xs),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs)) {
+                    Text(
+                        text = stringResource(Res.string.home_sos_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = stringResource(Res.string.home_sos_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        item {
+            OutlinedTextField(
+                value = message,
+                onValueChange = { message = it },
+                label = { Text("Что случилось в курсе?") },
+                placeholder = { Text("Например: не понимаю, что нажать на этом шаге") },
+                minLines = 3,
+                maxLines = 5,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xs)) {
+                Text(
+                    text = "Тип обращения",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = if (selectedType == null) "Выберите один вариант" else "Выбранный вариант можно изменить",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                state.options.forEach { option ->
+                    val selected = selectedType == option.type
+                    val icon = when (option.type) {
+                        SosHelpRequestType.LessonHelp -> Icons.Rounded.AutoStories
+                        SosHelpRequestType.MentorQuestion -> Icons.Rounded.SupportAgent
+                        SosHelpRequestType.TechnicalIssue -> Icons.Rounded.Warning
+                    }
+                    Card(
+                        shape = UiShapes.cardLg,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (selected) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerLowest
+                            },
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(UiShapes.cardLg)
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(
+                                label = option.title,
+                                state = if (selected) "выбрано" else null,
+                                role = Role.RadioButton,
+                            )
+                            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.error)
+                            .clickable { selectedType = option.type }
+                            .border(
+                                width = 1.dp,
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = UiOpacity.border)
+                                },
+                                shape = UiShapes.cardLg,
+                            ),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = UiSpacing.md, vertical = UiSpacing.sm),
+                            horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(UiShapes.pill)
+                                    .background(
+                                        if (selected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.errorContainer
+                                        },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = if (selected) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                    },
+                                )
+                            }
+                            Text(
+                                text = option.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Button(
+                enabled = formState.canSubmit && !isSubmitting,
+                onClick = {
+                    scope.launch {
+                        isSubmitting = true
+                        runCatching {
+                            val requestType = formState.selectedType ?: return@launch
+                            onCreateHelpRequest(requestType, formState.trimmedMessage)
+                        }.onSuccess {
+                            message = ""
+                            successMessage = "Заявка отправлена. Вам скоро помогут."
+                        }.onFailure { throwable ->
+                            errorMessage = throwable.toUserMessage()
+                        }
+                        isSubmitting = false
+                    }
+                },
+                shape = UiShapes.pill,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(modifier = Modifier.width(UiSpacing.sm))
+                }
+                Text(text = "Отправить заявку")
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotesContent(
+    notes: List<LessonNoteEntry>,
+    onBack: () -> Unit,
+    onDeleteNote: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val filteredNotes = notes.filter { note ->
+        val normalizedQuery = query.trim()
+        normalizedQuery.isEmpty() ||
+            note.content.contains(normalizedQuery, ignoreCase = true) ||
+            note.courseTitle.contains(normalizedQuery, ignoreCase = true) ||
+            note.lessonTitle.contains(normalizedQuery, ignoreCase = true)
+    }
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.md,
+            bottom = UiSpacing.xxl + UiSpacing.xxl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.lg),
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
+                        .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
+                        .clickable(onClick = onBack)
+                        .padding(UiSpacing.xs),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.notes_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(UiShapes.cardLg)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(UiSpacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                BasicTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { innerTextField ->
+                        if (query.isBlank()) {
+                            Text(
+                                text = stringResource(Res.string.notes_search_placeholder),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        innerTextField()
+                    },
+                )
+            }
+        }
+
+        if (filteredNotes.isEmpty()) {
+            item { NotesEmptyState() }
+        } else {
+            items(filteredNotes, key = { note -> note.id }) { note ->
+                NoteCard(
+                    note = note,
+                    onDelete = { onDeleteNote(note.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteCard(
+    note: LessonNoteEntry,
+    onDelete: () -> Unit,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UiOpacity.border), UiShapes.cardLg),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.lg),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(UiShapes.pill)
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Description,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+            ) {
+                Text(
+                    text = note.content,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(
+                        Res.string.notes_source_format,
+                        note.courseTitle,
+                        note.lessonTitle,
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(UiShapes.pill)
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = stringResource(Res.string.notes_delete),
+                        role = Role.Button,
+                    )
+                    .clickable(onClick = onDelete)
+                    .padding(UiSpacing.sm),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotesEmptyState() {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Description,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(48.dp),
+            )
+            Text(
+                text = stringResource(Res.string.notes_empty_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            Text(
+                text = stringResource(Res.string.notes_empty_hint),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
         }
     }
 }
@@ -391,6 +967,595 @@ private fun HomeCoursesContent(
                     onClick = { onOpenCourse(course.slug) },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun FavoritesContent(
+    courses: List<CatalogCourse>,
+    progressByCourseId: Map<String, CourseProgress>,
+    onBack: () -> Unit,
+    onOpenCourse: (String) -> Unit,
+    onRemoveCourse: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var selectedTab by rememberSaveable { mutableStateOf(FavoritesTab.Courses) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val favoriteCourses = filterFavoriteCourses(courses, query)
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.md,
+            bottom = UiSpacing.xxl + UiSpacing.xxl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.lg),
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
+                        .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
+                        .clickable(onClick = onBack)
+                        .padding(UiSpacing.xs),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.favorites_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(UiShapes.cardLg)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(UiSpacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                BasicTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { innerTextField ->
+                        if (query.isBlank()) {
+                            Text(
+                                text = stringResource(Res.string.favorites_search_placeholder),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        innerTextField()
+                    },
+                )
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                FavoriteFilterChip(
+                    label = stringResource(Res.string.favorites_courses_tab),
+                    selected = selectedTab == FavoritesTab.Courses,
+                    onClick = { selectedTab = FavoritesTab.Courses },
+                )
+                FavoriteFilterChip(
+                    label = stringResource(Res.string.favorites_notes_tab),
+                    selected = selectedTab == FavoritesTab.Notes,
+                    onClick = { selectedTab = FavoritesTab.Notes },
+                )
+            }
+        }
+
+        when (selectedTab) {
+            FavoritesTab.Courses -> {
+                item {
+                    Text(
+                        text = stringResource(Res.string.favorites_saved_courses),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+
+                if (favoriteCourses.isEmpty()) {
+                    item {
+                        FavoritesEmptyState(
+                            title = stringResource(Res.string.favorites_no_courses),
+                            message = stringResource(Res.string.favorites_no_courses_hint),
+                        )
+                    }
+                } else {
+                    items(favoriteCourses, key = { course -> course.id }) { course ->
+                        FavoriteCourseCard(
+                            course = course,
+                            progress = progressByCourseId[course.id],
+                            onOpen = { onOpenCourse(course.slug) },
+                            onRemove = { onRemoveCourse(course.id) },
+                        )
+                    }
+                }
+            }
+
+            FavoritesTab.Notes -> {
+                item {
+                    FavoritesEmptyState(
+                        title = stringResource(Res.string.favorites_no_notes),
+                        message = stringResource(Res.string.favorites_no_notes_hint),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoriteFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        modifier = Modifier
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = label, state = if (selected) "выбрано" else null, role = Role.Tab),
+        label = {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+            )
+        },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+    )
+}
+
+@Composable
+private fun GlossaryContent(
+    terms: List<GlossaryTermEntry>,
+    onBack: () -> Unit,
+    onToggleBookmark: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val groups = buildGlossaryGroups(terms, query)
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.md,
+            bottom = UiSpacing.xxl + UiSpacing.xxl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.lg),
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
+                        .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
+                        .clickable(onClick = onBack)
+                        .padding(UiSpacing.xs),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs)) {
+                    Text(
+                        text = stringResource(Res.string.glossary_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = stringResource(Res.string.glossary_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(UiShapes.cardLg)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(UiSpacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                BasicTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { innerTextField ->
+                        if (query.isBlank()) {
+                            Text(
+                                text = stringResource(Res.string.glossary_search_placeholder),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        innerTextField()
+                    },
+                )
+            }
+        }
+
+        if (groups.isEmpty()) {
+            item {
+                GlossaryEmptyState()
+            }
+        } else {
+            groups.forEach { group ->
+                item(key = "letter-${group.letter}") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(UiShapes.pill)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = group.letter,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
+
+                items(group.terms, key = { term -> term.id }) { term ->
+                    GlossaryTermCard(
+                        term = term,
+                        onToggleBookmark = { onToggleBookmark(term.id) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlossaryTermCard(
+    term: GlossaryTermEntry,
+    onToggleBookmark: () -> Unit,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UiOpacity.border), UiShapes.cardLg),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.lg),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(UiShapes.pill)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoStories,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+            ) {
+                Text(
+                    text = term.term,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = term.definition,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(Res.string.glossary_source_format, term.courseTitle),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(UiShapes.pill)
+                    .background(
+                        if (term.isBookmarked) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        },
+                    )
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = stringResource(Res.string.glossary_bookmark),
+                        state = if (term.isBookmarked) "выбрано" else null,
+                        role = Role.Button,
+                    )
+                    .clickable(onClick = onToggleBookmark)
+                    .padding(UiSpacing.sm),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (term.isBookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                    contentDescription = null,
+                    tint = if (term.isBookmarked) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlossaryEmptyState() {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.AutoStories,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(48.dp),
+            )
+            Text(
+                text = stringResource(Res.string.glossary_empty_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            Text(
+                text = stringResource(Res.string.glossary_empty_hint),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FavoriteCourseCard(
+    course: CatalogCourse,
+    progress: CourseProgress?,
+    onOpen: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val subtitle = course.description?.trim()?.takeIf { it.isNotEmpty() }
+    val imageUrl = course.coverImageUrl?.takeIf { it.isNotBlank() }
+
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UiOpacity.border), UiShapes.cardLg)
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = course.title, state = "избранный курс", role = Role.Button)
+            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
+            .clickable(onClick = onOpen),
+    ) {
+        Box {
+            if (imageUrl == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(188.dp)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.primary,
+                                ),
+                            ),
+                        ),
+                )
+            } else {
+                SubcomposeAsyncImage(
+                    model = imageUrl,
+                    contentDescription = course.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(188.dp),
+                    loading = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surfaceContainer),
+                        )
+                    },
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(188.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(MaterialTheme.colorScheme.scrim, MaterialTheme.colorScheme.scrim),
+                        ),
+                    ),
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(UiSpacing.sm)
+                    .clip(UiShapes.pill)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = stringResource(Res.string.favorites_remove_course),
+                        role = Role.Button,
+                    )
+                    .clickable(onClick = onRemove)
+                    .padding(UiSpacing.sm),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Favorite,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(UiSpacing.lg),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+            ) {
+                Text(
+                    text = course.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                progress?.let {
+                    Text(
+                        text = "${it.completedLessons}/${it.totalLessons}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoritesEmptyState(
+    title: String,
+    message: String,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.xl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Favorite,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(48.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
         }
     }
 }
@@ -604,7 +1769,10 @@ private fun RecommendedCourseCard(
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
+                modifier = Modifier.weight(1f),
+            ) {
                 progress?.let {
                     Text(
                         text = "${it.completedLessons}/${it.totalLessons}",

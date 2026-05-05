@@ -4,6 +4,7 @@ sealed interface CatalogIntent {
     data object RefreshCourses : CatalogIntent
     data class OpenCourse(val slug: String) : CatalogIntent
     data object DismissError : CatalogIntent
+    data class ToggleFavorite(val courseId: String) : CatalogIntent
     data class SetSearchQuery(val query: String) : CatalogIntent
     data class SetCategory(val categoryId: String) : CatalogIntent
     data class UpdateProgress(

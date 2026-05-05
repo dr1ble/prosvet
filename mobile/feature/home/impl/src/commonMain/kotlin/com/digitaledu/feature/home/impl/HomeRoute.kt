@@ -11,6 +11,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.digitaledu.core.common.toUserMessage
 import com.digitaledu.core.data.groups.GroupQrRepository
+import com.digitaledu.core.data.progress.ProgressRepository
+import com.digitaledu.core.model.progress.CourseHelpRequestCreate
 import com.digitaledu.core.ui.ObserveEffects
 import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.util.BackHandler
@@ -40,6 +42,7 @@ fun HomeRoute(
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
     groupQrRepository: GroupQrRepository,
+    progressRepository: ProgressRepository,
     modifier: Modifier = Modifier,
 ) {
     val catalogUiState by catalogFeatureHost.uiState.collectAsState()
@@ -90,8 +93,13 @@ fun HomeRoute(
     }
 
     ObserveEffects(playerFeatureHost.effects) { effect ->
-        if (effect is PlayerEffect.Closed) {
-            selectedTab = HomeTab.Home
+        when (effect) {
+            PlayerEffect.Closed -> selectedTab = HomeTab.Home
+            PlayerEffect.FavoriteChanged -> {
+                catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
+                profileFeatureHost.processIntent(ProfileIntent.RefreshFavoriteCount)
+            }
+            PlayerEffect.NoteCreated -> profileFeatureHost.processIntent(ProfileIntent.RefreshNotes)
         }
     }
 
@@ -137,6 +145,20 @@ fun HomeRoute(
         onCatalogIntent = catalogFeatureHost::processIntent,
         onPlayerIntent = playerFeatureHost::processIntent,
         onProfileIntent = profileFeatureHost::processIntent,
+        onCreateHelpRequest = { requestType, message ->
+            val currentScreen = playerUiState.currentScreen
+            val currentBundle = playerUiState.bundle
+            progressRepository.createHelpRequest(
+                CourseHelpRequestCreate(
+                    requestType = requestType.backendValue,
+                    message = message,
+                    courseId = currentBundle?.course?.id,
+                    lessonId = currentScreen?.lessonId,
+                    screenKey = currentScreen?.screenKey,
+                    screenTitle = currentScreen?.title,
+                )
+            )
+        },
         modifier = modifier,
     )
 }

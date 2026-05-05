@@ -10,5 +10,7 @@ sealed interface PlayerIntent {
     data object DismissHotspotHint : PlayerIntent
     data object EnterFullscreen : PlayerIntent
     data object ExitFullscreen : PlayerIntent
+    data object ToggleFavorite : PlayerIntent
+    data class CreateNote(val content: String) : PlayerIntent
     data object Close : PlayerIntent
 }

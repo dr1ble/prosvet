@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,9 +39,11 @@ import com.digitaledu.core.model.content.QuizPayload
 import com.digitaledu.core.model.content.SimulationPayload
 import com.digitaledu.core.model.reference.LessonReference
 import com.digitaledu.feature.player.api.PlayerIntent
+import com.digitaledu.feature.player.impl.ui.buildLessonSummaryState
 import com.digitaledu.feature.player.impl.ui.player.PlayerContent
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
 import digital_education_mobile.feature.player.`impl`.generated.resources.close
+import digital_education_mobile.feature.player.`impl`.generated.resources.help
 import digital_education_mobile.feature.player.`impl`.generated.resources.theory
 import org.jetbrains.compose.resources.stringResource
 
@@ -61,6 +64,7 @@ fun LessonStoriesPager(
     activeHotspotHint: Hotspot?,
     activeLessonReference: LessonReference?,
     onIntent: (PlayerIntent) -> Unit,
+    onHelpClick: () -> Unit,
     onShowTheory: () -> Unit,
     resolveUrl: (String) -> String,
     modifier: Modifier = Modifier
@@ -86,7 +90,9 @@ fun LessonStoriesPager(
     }
 
     val currentScreen = bundle.screens.getOrNull(currentScreenIndex)
-    val isSimulation = currentScreen?.payload is SimulationPayload
+    val isSummaryScreen = currentScreenIndex == bundle.screens.lastIndex ||
+        (currentScreen?.payload as? SimulationPayload)?.isCompletion == true
+    val isSimulation = currentScreen?.payload is SimulationPayload && !isSummaryScreen
 
     Box(
         modifier = modifier
@@ -100,6 +106,8 @@ fun LessonStoriesPager(
         ) { pageIndex ->
             val screen = bundle.screens.getOrNull(pageIndex)
             if (screen != null) {
+                val isPageSummary = pageIndex == bundle.screens.lastIndex ||
+                    (screen.payload as? SimulationPayload)?.isCompletion == true
                 // Apply system bars padding only if NOT simulation
                 val contentModifier = if (screen.payload is SimulationPayload) {
                     Modifier.fillMaxSize()
@@ -109,16 +117,29 @@ fun LessonStoriesPager(
                         .systemBarsPadding() 
                         .padding(top = UiSpacing.xl)
                 }
-                
-                PlayerContent(
-                    screen = screen,
-                    mediaAccessToken = mediaAccessToken,
-                    activeHotspotHint = activeHotspotHint,
-                    activeLessonReference = activeLessonReference,
-                    onIntent = onIntent,
-                    resolveUrl = resolveUrl,
-                    modifier = contentModifier
-                )
+
+                if (isPageSummary) {
+                    LessonSummaryView(
+                        state = buildLessonSummaryState(
+                            course = bundle.course,
+                            screens = bundle.screens,
+                            currentScreenIndex = pageIndex,
+                        ),
+                        onContinue = { onIntent(PlayerIntent.Next) },
+                        onFinish = { onIntent(PlayerIntent.ExitFullscreen) },
+                        modifier = contentModifier,
+                    )
+                } else {
+                    PlayerContent(
+                        screen = screen,
+                        mediaAccessToken = mediaAccessToken,
+                        activeHotspotHint = activeHotspotHint,
+                        activeLessonReference = activeLessonReference,
+                        onIntent = onIntent,
+                        resolveUrl = resolveUrl,
+                        modifier = contentModifier,
+                    )
+                }
             }
         }
 
@@ -192,21 +213,41 @@ fun LessonStoriesPager(
                         Spacer(modifier = Modifier.size(UiSize.touchTarget))
                     }
 
-                    IconButton(
-                        onClick = { onIntent(PlayerIntent.ExitFullscreen) },
-                        modifier = Modifier
-                            .accessibilityTouchTarget
-                            .accessibilitySemantics(
-                                label = stringResource(Res.string.close),
-                                role = Role.Button,
-                            ),
-                    ) {
-                        AccessibilityScaledControlContainer {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(Res.string.close),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onHelpClick,
+                            modifier = Modifier
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.help),
+                                    role = Role.Button,
+                                ),
+                        ) {
+                            AccessibilityScaledControlContainer {
+                                Icon(
+                                    imageVector = Icons.Rounded.SupportAgent,
+                                    contentDescription = stringResource(Res.string.help),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { onIntent(PlayerIntent.ExitFullscreen) },
+                            modifier = Modifier
+                                .accessibilityTouchTarget
+                                .accessibilitySemantics(
+                                    label = stringResource(Res.string.close),
+                                    role = Role.Button,
+                                ),
+                        ) {
+                            AccessibilityScaledControlContainer {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(Res.string.close),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }

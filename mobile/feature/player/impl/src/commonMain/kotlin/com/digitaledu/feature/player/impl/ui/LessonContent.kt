@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -27,6 +28,10 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -37,8 +42,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,9 +84,11 @@ import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.player.api.PlayerUiState
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_all_courses
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_add_favorite
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_add_note
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_banks
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_choose_course_subtitle
-import digital_education_mobile.feature.player.`impl`.generated.resources.learning_course_details
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_course_overview_title
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_course_progress
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_course_rating
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_course_steps
@@ -91,14 +100,19 @@ import digital_education_mobile.feature.player.`impl`.generated.resources.learni
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_gosuslugi
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_messengers
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_no_bundle_open_catalog
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_note_cancel
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_note_dialog_placeholder
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_note_dialog_title
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_note_save
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_open_catalog
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_lesson_overview_title
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_lesson_progress_label
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_open_lesson
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_preview_only
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_progress_percent
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_remove_favorite
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_search_placeholder
-import digital_education_mobile.feature.player.`impl`.generated.resources.learning_start_lesson
+import digital_education_mobile.feature.player.`impl`.generated.resources.learning_start_course
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_status_available
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_status_completed
 import digital_education_mobile.feature.player.`impl`.generated.resources.learning_status_current
@@ -109,7 +123,6 @@ import digital_education_mobile.feature.player.`impl`.generated.resources.lesson
 import digital_education_mobile.feature.player.`impl`.generated.resources.lesson_continue_learning
 import digital_education_mobile.feature.player.`impl`.generated.resources.lesson_screen_progress
 import digital_education_mobile.feature.player.`impl`.generated.resources.lesson_screen_unavailable_subtitle
-import digital_education_mobile.feature.player.`impl`.generated.resources.lesson_screen_unavailable_title
 import digital_education_mobile.feature.player.`impl`.generated.resources.payload_article
 import digital_education_mobile.feature.player.`impl`.generated.resources.payload_cheat_sheet
 import digital_education_mobile.feature.player.`impl`.generated.resources.payload_completion
@@ -151,6 +164,7 @@ private data class LearningCoursePreview(
     val estimatedDurationMinutes: Int,
     val coverImageUrl: String?,
     val isPlayableBundle: Boolean,
+    val isFavorite: Boolean,
 )
 
 @Composable
@@ -159,7 +173,9 @@ fun LessonContent(
     onIntent: (PlayerIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var activeScreen by rememberSaveable { mutableStateOf(LearningScreen.Courses) }
+    var activeScreen by rememberSaveable(uiState.bundle?.course?.id) {
+        mutableStateOf(if (uiState.bundle == null) LearningScreen.Courses else LearningScreen.LessonDetails)
+    }
     val learningCourses = remember(uiState.bundle, uiState.currentScreenIndex) {
         buildLearningCoursePreviews(
             bundle = uiState.bundle,
@@ -178,18 +194,6 @@ fun LessonContent(
     }
 
     val selectedCourse = learningCourses.firstOrNull { it.id == selectedCourseId }
-
-    val initialScreen = remember(uiState.bundle) {
-        if (uiState.bundle == null) LearningScreen.Courses else LearningScreen.CourseLessons
-    }
-
-    if (
-        activeScreen == LearningScreen.Courses &&
-        initialScreen == LearningScreen.CourseLessons &&
-        selectedCourse != null
-    ) {
-        activeScreen = LearningScreen.CourseLessons
-    }
 
     BackHandler(enabled = activeScreen != LearningScreen.Courses) {
         activeScreen = when (activeScreen) {
@@ -243,6 +247,8 @@ fun LessonContent(
                         onIntent(PlayerIntent.EnterFullscreen)
                     }
                 },
+                onToggleFavorite = { onIntent(PlayerIntent.ToggleFavorite) },
+                onCreateNote = { content -> onIntent(PlayerIntent.CreateNote(content)) },
                 onBack = {
                     activeScreen = LearningScreen.CourseLessons
                 },
@@ -882,15 +888,55 @@ private fun LearningLessonDetailsScreen(
     selectedCourse: LearningCoursePreview,
     selectedLessonIndex: Int,
     onStartLesson: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onCreateNote: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showNoteDialog by rememberSaveable { mutableStateOf(false) }
+    var noteText by rememberSaveable { mutableStateOf("") }
     val currentScreen = selectedCourse.lessons.getOrNull(selectedLessonIndex)
     val progressPercent = ((selectedLessonIndex + 1) * 100 / selectedCourse.lessons.size.coerceAtLeast(1))
-    val learningItems = remember(currentScreen) {
-        currentScreen?.payload?.toLearningPoints() ?: emptyList()
+    val learningItems = remember(selectedCourse.lessons) {
+        selectedCourse.lessons
+            .flatMap { screen -> screen.payload.toLearningPoints() }
+            .distinct()
+            .take(4)
     }
     val canStartLesson = selectedCourse.isPlayableBundle
+
+    if (showNoteDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoteDialog = false },
+            title = { Text(text = stringResource(Res.string.learning_note_dialog_title)) },
+            text = {
+                OutlinedTextField(
+                    value = noteText,
+                    onValueChange = { noteText = it },
+                    label = { Text(text = stringResource(Res.string.learning_note_dialog_placeholder)) },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onCreateNote(noteText)
+                        noteText = ""
+                        showNoteDialog = false
+                    },
+                    enabled = noteText.isNotBlank(),
+                ) {
+                    Text(text = stringResource(Res.string.learning_note_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoteDialog = false }) {
+                    Text(text = stringResource(Res.string.learning_note_cancel))
+                }
+            },
+        )
+    }
 
     Column(
         modifier = modifier
@@ -941,7 +987,7 @@ private fun LearningLessonDetailsScreen(
                         )
                     }
                     Text(
-                        text = currentScreen?.title ?: stringResource(Res.string.lesson_screen_unavailable_title),
+                            text = selectedCourse.title,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -965,17 +1011,95 @@ private fun LearningLessonDetailsScreen(
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
             ) {
                 Text(
-                    text = stringResource(Res.string.learning_lesson_overview_title),
+                    text = stringResource(Res.string.learning_course_overview_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = currentScreen?.payload?.getPayloadPreview()
-                        ?: stringResource(Res.string.lesson_screen_unavailable_subtitle),
+                    text = selectedCourse.description.ifBlank {
+                        currentScreen?.payload?.getPayloadPreview()
+                            ?: stringResource(Res.string.lesson_screen_unavailable_subtitle)
+                    },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+
+        OutlinedButton(
+            onClick = onToggleFavorite,
+            modifier = Modifier
+                .fillMaxWidth()
+                .accessibilityTouchTarget
+                .accessibilitySemantics(
+                    label = stringResource(
+                        if (selectedCourse.isFavorite) {
+                            Res.string.learning_remove_favorite
+                        } else {
+                            Res.string.learning_add_favorite
+                        }
+                    ),
+                    role = Role.Button,
+                ),
+            shape = UiShapes.cardMd,
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = if (selectedCourse.isFavorite) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    Color.Transparent
+                },
+                contentColor = if (selectedCourse.isFavorite) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            ),
+        ) {
+            Icon(
+                imageVector = if (selectedCourse.isFavorite) {
+                    Icons.Rounded.Favorite
+                } else {
+                    Icons.Rounded.FavoriteBorder
+                },
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(UiSpacing.xs))
+            Text(
+                text = stringResource(
+                    if (selectedCourse.isFavorite) {
+                        Res.string.learning_remove_favorite
+                    } else {
+                        Res.string.learning_add_favorite
+                    }
+                ),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(vertical = UiSpacing.xxs),
+            )
+        }
+
+        OutlinedButton(
+            onClick = { showNoteDialog = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                .accessibilityTouchTarget
+                .accessibilitySemantics(
+                    label = stringResource(Res.string.learning_add_note),
+                    role = Role.Button,
+                ),
+            shape = UiShapes.cardMd,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Description,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(UiSpacing.xs))
+            Text(
+                text = stringResource(Res.string.learning_add_note),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(vertical = UiSpacing.xxs),
+            )
         }
 
         if (learningItems.isNotEmpty()) {
@@ -1021,7 +1145,7 @@ private fun LearningLessonDetailsScreen(
                 .accessibilityTouchTarget
                 .accessibilitySemantics(
                     label = if (canStartLesson) {
-                        stringResource(Res.string.learning_start_lesson)
+                        stringResource(Res.string.learning_start_course)
                     } else {
                         stringResource(Res.string.learning_preview_only)
                     },
@@ -1036,7 +1160,7 @@ private fun LearningLessonDetailsScreen(
         ) {
             Text(
                 text = if (canStartLesson) {
-                    stringResource(Res.string.learning_start_lesson)
+                stringResource(Res.string.learning_start_course)
                 } else {
                     stringResource(Res.string.learning_preview_only)
                 },
@@ -1163,6 +1287,7 @@ private fun buildLearningCoursePreviews(
                 courseCoverImageUrl = openedBundle.course.coverImageUrl,
             ),
             isPlayableBundle = true,
+            isFavorite = openedBundle.course.isFavorite,
         ),
     )
 }

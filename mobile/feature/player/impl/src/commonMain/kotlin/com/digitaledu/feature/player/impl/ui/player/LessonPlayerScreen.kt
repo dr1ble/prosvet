@@ -40,6 +40,7 @@ fun LessonPlayerScreen(
     activeLessonReference: LessonReference?,
     completedScreens: Set<Int> = emptySet(), // Kept for API compatibility, though visual progress is step-based
     onIntent: (PlayerIntent) -> Unit,
+    onHelpClick: () -> Unit,
     resolveUrl: (String) -> String,
     modifier: Modifier = Modifier,
 ) {
@@ -66,6 +67,7 @@ fun LessonPlayerScreen(
             activeHotspotHint = activeHotspotHint,
             activeLessonReference = activeLessonReference,
             onIntent = onIntent,
+            onHelpClick = onHelpClick,
             onShowTheory = { showTheorySheet = true },
             resolveUrl = resolveUrl,
             modifier = Modifier.fillMaxSize()

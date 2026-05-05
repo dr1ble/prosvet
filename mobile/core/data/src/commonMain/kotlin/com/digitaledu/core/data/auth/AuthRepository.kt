@@ -14,7 +14,15 @@ interface AuthRepository {
     suspend fun restoreSession(): Boolean
     suspend fun logout()
     suspend fun getCurrentUser(): AuthMe
+    suspend fun updateCurrentUser(displayName: String?, avatarKey: String?): AuthMe
+    suspend fun uploadAvatar(filename: String, contentType: String, content: ByteArray): AuthMe
     suspend fun bindEmail(email: String): AuthMe
+    suspend fun changePassword(currentPassword: String, newPassword: String): AuthMe
+    suspend fun updateAccountSettings(
+        learningRemindersEnabled: Boolean? = null,
+        securityAlertsEnabled: Boolean? = null,
+        profileVisible: Boolean? = null,
+    ): AuthMe
     suspend fun <T> withFreshAccessToken(block: suspend (accessToken: String) -> T): T
     fun getCachedTokens(): AuthTokens?
     fun observeTokens(): Flow<AuthTokens?>

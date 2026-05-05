@@ -6,6 +6,9 @@ import com.digitaledu.core.model.reference.LessonReference
 
 interface CatalogRepository {
     suspend fun listCourses(): List<CatalogCourse>
+    suspend fun listFavoriteCourses(): List<CatalogCourse>
+    suspend fun addFavoriteCourse(courseId: String): CatalogCourse
+    suspend fun removeFavoriteCourse(courseId: String): CatalogCourse
     suspend fun getLatestCourseBundle(courseSlug: String): CatalogBundle
     suspend fun getLessonReferences(lessonId: String): List<LessonReference>
     suspend fun getLessonReference(referenceId: String): LessonReference

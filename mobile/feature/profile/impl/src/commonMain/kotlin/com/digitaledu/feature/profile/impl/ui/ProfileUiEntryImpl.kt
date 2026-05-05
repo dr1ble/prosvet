@@ -11,11 +11,17 @@ internal class ProfileUiEntryImpl : ProfileUiEntry {
     override fun Content(
         uiState: ProfileUiState,
         onIntent: (ProfileIntent) -> Unit,
+        onOpenFavorites: () -> Unit,
+        onOpenGlossary: () -> Unit,
+        onOpenNotes: () -> Unit,
         modifier: Modifier,
     ) {
         ProfileContent(
             uiState = uiState,
             onIntent = onIntent,
+            onOpenFavorites = onOpenFavorites,
+            onOpenGlossary = onOpenGlossary,
+            onOpenNotes = onOpenNotes,
             modifier = modifier,
         )
     }

@@ -4,6 +4,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.compose.runtime.remember
 import com.digitaledu.core.data.groups.GroupQrRepository
+import com.digitaledu.core.data.progress.ProgressRepository
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
 import com.digitaledu.feature.home.api.HOME_ROUTE
@@ -23,6 +24,7 @@ internal fun NavGraphBuilder.homeScreen(
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
     groupQrRepository: GroupQrRepository,
+    progressRepository: ProgressRepository,
 ) {
     composable(route = HOME_ROUTE) {
         val catalogFeatureHost = remember { catalogFeatureHostProvider() }
@@ -40,6 +42,7 @@ internal fun NavGraphBuilder.homeScreen(
             playerUiEntry = playerUiEntry,
             profileUiEntry = profileUiEntry,
             groupQrRepository = groupQrRepository,
+            progressRepository = progressRepository,
         )
     }
 }

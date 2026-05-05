@@ -82,5 +82,9 @@ kotlin {
                 implementation(libs.androidx.lifecycle.runtime.compose)
             }
         }
+
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }

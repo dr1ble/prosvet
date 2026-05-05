@@ -17,6 +17,7 @@ fun catalogFeatureModule(): Module = module {
         CatalogViewModel(
             loadCoursesUseCase = get(),
             openCourseBundleUseCase = get(),
+            catalogRepository = get(),
         )
     }
 

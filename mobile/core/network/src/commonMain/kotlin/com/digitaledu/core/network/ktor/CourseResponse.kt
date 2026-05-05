@@ -10,6 +10,7 @@ internal data class CourseResponse(
     val title: String,
     val description: String? = null,
     @SerialName("cover_url") val coverUrl: String? = null,
+    @SerialName("is_favorite") val isFavorite: Boolean = false,
     @SerialName("photo_url") val photoUrl: String? = null,
     @SerialName("image_url") val imageUrl: String? = null,
 )

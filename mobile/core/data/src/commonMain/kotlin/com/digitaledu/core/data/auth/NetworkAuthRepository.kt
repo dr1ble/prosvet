@@ -73,9 +73,55 @@ class NetworkAuthRepository(
         }
     }
 
+    override suspend fun updateCurrentUser(displayName: String?, avatarKey: String?): AuthMe {
+        return withFreshAccessToken { accessToken ->
+            networkDataSource.updateCurrentUser(
+                accessToken = accessToken,
+                displayName = displayName,
+                avatarKey = avatarKey,
+            )
+        }
+    }
+
+    override suspend fun uploadAvatar(filename: String, contentType: String, content: ByteArray): AuthMe {
+        return withFreshAccessToken { accessToken ->
+            networkDataSource.uploadAvatar(
+                accessToken = accessToken,
+                filename = filename,
+                contentType = contentType,
+                content = content,
+            )
+        }
+    }
+
     override suspend fun bindEmail(email: String): AuthMe {
         return withFreshAccessToken { accessToken ->
             networkDataSource.bindEmail(accessToken = accessToken, email = email)
+        }
+    }
+
+    override suspend fun changePassword(currentPassword: String, newPassword: String): AuthMe {
+        return withFreshAccessToken { accessToken ->
+            networkDataSource.changePassword(
+                accessToken = accessToken,
+                currentPassword = currentPassword,
+                newPassword = newPassword,
+            )
+        }
+    }
+
+    override suspend fun updateAccountSettings(
+        learningRemindersEnabled: Boolean?,
+        securityAlertsEnabled: Boolean?,
+        profileVisible: Boolean?,
+    ): AuthMe {
+        return withFreshAccessToken { accessToken ->
+            networkDataSource.updateAccountSettings(
+                accessToken = accessToken,
+                learningRemindersEnabled = learningRemindersEnabled,
+                securityAlertsEnabled = securityAlertsEnabled,
+                profileVisible = profileVisible,
+            )
         }
     }
 

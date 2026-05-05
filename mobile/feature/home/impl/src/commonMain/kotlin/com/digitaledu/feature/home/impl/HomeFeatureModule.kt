@@ -14,6 +14,7 @@ fun homeFeatureModule(): Module = module {
             playerUiEntry = get(),
             profileUiEntry = get(),
             groupQrRepository = get(),
+            progressRepository = get(),
         )
     }
 }

@@ -5,14 +5,20 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
@@ -20,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +53,10 @@ import com.digitaledu.core.model.content.Hotspot
 import com.digitaledu.core.model.content.SimulationPayload
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
 import digital_education_mobile.feature.player.`impl`.generated.resources.close
+import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_trainer_complete
+import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_trainer_progress
+import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_trainer_task
+import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_trainer_title
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_hint
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_load_error
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_screen_image
@@ -64,6 +75,7 @@ import org.jetbrains.compose.resources.stringResource
  */
 @Composable
 fun SimulationScreen(
+    screenTitle: String,
     payload: SimulationPayload,
     accessToken: String?,
     activeHotspotHint: Hotspot?,
@@ -75,6 +87,12 @@ fun SimulationScreen(
     val platformContext = LocalPlatformContext.current
     var imageWidth by remember { mutableStateOf(0) }
     var imageHeight by remember { mutableStateOf(0) }
+    val discoveredLabels = remember(payload) { mutableStateListOf<String>() }
+    val trainerState = buildCyberTrainerState(
+        screenTitle = screenTitle,
+        payload = payload,
+        discoveredLabels = discoveredLabels.toSet(),
+    )
     
     val fullImageUrl = remember(payload.imageUrl, onResolveImageUrl) {
         onResolveImageUrl(payload.imageUrl)
@@ -137,9 +155,24 @@ fun SimulationScreen(
                     hotspot = hotspot,
                     imageWidth = imageWidth,
                     imageHeight = imageHeight,
-                    onClick = { onHotspotClick(hotspot) },
+                    onClick = {
+                        val label = hotspot.label.trim()
+                        if (label.isNotEmpty() && label !in discoveredLabels) {
+                            discoveredLabels += label
+                        }
+                        onHotspotClick(hotspot)
+                    },
                 )
             }
+        }
+
+        if (trainerState.isEnabled) {
+            CyberTrainerPanel(
+                state = trainerState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(UiSpacing.md),
+            )
         }
     }
     
@@ -161,6 +194,63 @@ fun SimulationScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun CyberTrainerPanel(
+    state: CyberTrainerState,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = UiShapes.cardLg,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        tonalElevation = 6.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs)) {
+                    Text(
+                        text = stringResource(Res.string.cyber_trainer_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = if (state.isComplete) {
+                            stringResource(Res.string.cyber_trainer_complete)
+                        } else {
+                            stringResource(Res.string.cyber_trainer_task)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = stringResource(
+                        Res.string.cyber_trainer_progress,
+                        state.discoveredSignals,
+                        state.totalSignals,
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            LinearProgressIndicator(
+                progress = { state.progressPercent / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(UiShapes.pill),
+            )
+        }
     }
 }
 

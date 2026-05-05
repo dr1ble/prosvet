@@ -17,6 +17,7 @@ fun profileFeatureModule(): Module = module {
             accessibilityPreferencesRepository = get(),
             profileRepository = get(),
             progressRepository = get(),
+            catalogRepository = get(),
         )
     }
 

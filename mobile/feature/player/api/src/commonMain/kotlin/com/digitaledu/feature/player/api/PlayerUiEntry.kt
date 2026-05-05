@@ -10,6 +10,7 @@ interface PlayerUiEntry {
     fun FullscreenContent(
         uiState: PlayerUiState,
         onIntent: (PlayerIntent) -> Unit,
+        onHelpClick: () -> Unit,
         resolveUrl: (String) -> String,
         modifier: Modifier = Modifier,
     )

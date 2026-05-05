@@ -6,4 +6,5 @@ data class CatalogCourse(
     val title: String,
     val description: String?,
     val coverImageUrl: String? = null,
+    val isFavorite: Boolean = false,
 )

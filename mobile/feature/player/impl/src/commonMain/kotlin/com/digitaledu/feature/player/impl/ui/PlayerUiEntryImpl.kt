@@ -16,6 +16,7 @@ internal class PlayerUiEntryImpl : PlayerUiEntry {
     override fun FullscreenContent(
         uiState: PlayerUiState,
         onIntent: (PlayerIntent) -> Unit,
+        onHelpClick: () -> Unit,
         resolveUrl: (String) -> String,
         modifier: Modifier,
     ) {
@@ -28,6 +29,7 @@ internal class PlayerUiEntryImpl : PlayerUiEntry {
             activeLessonReference = uiState.activeLessonReference,
             completedScreens = uiState.completedScreens,
             onIntent = onIntent,
+            onHelpClick = onHelpClick,
             resolveUrl = resolveUrl,
             modifier = modifier,
         )

@@ -19,3 +19,37 @@ data class LessonProgressEntry(
     val lessonId: String,
     val status: String,
 )
+
+data class MyGlossary(
+    val userId: String,
+    val terms: List<GlossaryTermEntry>,
+)
+
+data class GlossaryTermEntry(
+    val id: String,
+    val lessonId: String,
+    val courseId: String,
+    val courseTitle: String,
+    val term: String,
+    val definition: String,
+    val example: String? = null,
+    val isBookmarked: Boolean = false,
+)
+
+data class LessonNoteEntry(
+    val id: String,
+    val lessonId: String,
+    val courseId: String,
+    val courseTitle: String,
+    val lessonTitle: String,
+    val content: String,
+)
+
+data class CourseHelpRequestCreate(
+    val requestType: String,
+    val message: String,
+    val courseId: String? = null,
+    val lessonId: String? = null,
+    val screenKey: String? = null,
+    val screenTitle: String? = null,
+)

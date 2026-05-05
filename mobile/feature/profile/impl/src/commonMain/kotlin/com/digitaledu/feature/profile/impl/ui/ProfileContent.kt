@@ -1,7 +1,6 @@
 package com.digitaledu.feature.profile.impl.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,6 +65,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
@@ -73,6 +73,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.digitaledu.core.common.formatOneDecimal
 import com.digitaledu.core.ui.components.SuccessDialog
 import com.digitaledu.core.ui.components.UiOpacity
@@ -107,18 +108,29 @@ import digital_education_mobile.feature.profile.`impl`.generated.resources.profi
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_save
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_email
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_placeholder
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_achievement_dictionary
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_achievement_favorites
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_achievement_first_course
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_achievement_notes
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_achievements_title
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_featured
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_dictionary
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_logout
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_logout_loading
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_name
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_notes
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_points
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_progress
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_progress_courses_format
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_progress_lessons_format
+import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_progress_summary_title
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_settings
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_title
 import org.jetbrains.compose.resources.stringResource
 
 private enum class ProfileSection {
     Main,
+    Progress,
     Accessibility,
     Account,
 }
@@ -127,6 +139,9 @@ private enum class ProfileSection {
 fun ProfileContent(
     uiState: ProfileUiState,
     onIntent: (ProfileIntent) -> Unit,
+    onOpenFavorites: () -> Unit = {},
+    onOpenGlossary: () -> Unit = {},
+    onOpenNotes: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isLoggingOut = uiState.status is ProfileStatus.LoggingOut
@@ -141,15 +156,36 @@ fun ProfileContent(
         ProfileSection.Main -> {
             ProfileMain(
                 displayName = uiState.displayName,
-                role = uiState.role,
+                avatarKey = uiState.avatarKey,
+                avatarUrl = uiState.avatarUrl,
+                role = null,
                 accountStatus = uiState.accountStatus,
                 isLoggingOut = isLoggingOut,
                 accessibilitySettings = uiState.accessibilitySettings,
                 courseProgress = uiState.courseProgress,
+                favoriteCourseCount = uiState.favoriteCourseCount,
+                glossaryTermCount = uiState.glossaryTerms.size,
+                noteCount = uiState.notes.size,
                 isLoadingProgress = uiState.isLoadingProgress,
+                onOpenFavorites = onOpenFavorites,
+                onOpenGlossary = onOpenGlossary,
+                onOpenNotes = onOpenNotes,
+                onOpenProgress = { section = ProfileSection.Progress },
                 onOpenAccessibility = { section = ProfileSection.Accessibility },
                 onOpenAccount = { section = ProfileSection.Account },
                 onLogout = { onIntent(ProfileIntent.Logout) },
+                modifier = modifier,
+            )
+        }
+
+        ProfileSection.Progress -> {
+            ProgressDetailsContent(
+                courseProgress = uiState.courseProgress,
+                favoriteCourseCount = uiState.favoriteCourseCount,
+                glossaryTermCount = uiState.glossaryTerms.size,
+                noteCount = uiState.notes.size,
+                isLoadingProgress = uiState.isLoadingProgress,
+                onBack = { section = ProfileSection.Main },
                 modifier = modifier,
             )
         }
@@ -171,9 +207,27 @@ fun ProfileContent(
 
         ProfileSection.Account -> {
             AccountSettings(
+                displayName = uiState.displayName,
+                avatarKey = uiState.avatarKey,
+                avatarUrl = uiState.avatarUrl,
                 boundEmail = uiState.email,
+                isUpdatingDisplayName = uiState.isUpdatingDisplayName,
+                isUpdatingAvatar = uiState.isUpdatingAvatar,
                 isBindingEmail = uiState.isBindingEmail,
+                isChangingPassword = uiState.isChangingPassword,
+                isUpdatingSettings = uiState.isUpdatingAccountSettings,
+                learningRemindersEnabled = uiState.learningRemindersEnabled,
+                securityAlertsEnabled = uiState.securityAlertsEnabled,
+                profileVisible = uiState.profileVisible,
+                onUpdateDisplayName = { name -> onIntent(ProfileIntent.UpdateDisplayName(name)) },
+                onUploadAvatar = { filename, contentType, content ->
+                    onIntent(ProfileIntent.UploadAvatar(filename, contentType, content))
+                },
                 onBindEmail = { email -> onIntent(ProfileIntent.BindEmail(email)) },
+                onChangePassword = { current, new -> onIntent(ProfileIntent.ChangePassword(current, new)) },
+                onSetLearningReminders = { onIntent(ProfileIntent.SetLearningReminders(it)) },
+                onSetSecurityAlerts = { onIntent(ProfileIntent.SetSecurityAlerts(it)) },
+                onSetProfileVisible = { onIntent(ProfileIntent.SetProfileVisible(it)) },
                 onBack = { section = ProfileSection.Main },
                 modifier = modifier,
             )
@@ -184,17 +238,33 @@ fun ProfileContent(
 @Composable
 private fun ProfileMain(
     displayName: String?,
+    avatarKey: String?,
+    avatarUrl: String?,
     role: String?,
     accountStatus: String?,
     isLoggingOut: Boolean,
     accessibilitySettings: com.digitaledu.core.model.preferences.AccessibilitySettings,
     courseProgress: List<CourseProgressInfo>,
+    favoriteCourseCount: Int,
+    glossaryTermCount: Int,
+    noteCount: Int,
     isLoadingProgress: Boolean,
+    onOpenFavorites: () -> Unit,
+    onOpenGlossary: () -> Unit,
+    onOpenNotes: () -> Unit,
+    onOpenProgress: () -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenAccount: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val progressSummary = buildProfileProgressSummaryState(
+        courseProgress = courseProgress,
+        favoriteCourseCount = favoriteCourseCount,
+        glossaryTermCount = glossaryTermCount,
+        noteCount = noteCount,
+    )
+
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
@@ -211,44 +281,46 @@ private fun ProfileMain(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                 ),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(UiSpacing.lg),
-                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(
+                    Column(
                         modifier = Modifier
-                            .size(80.dp)
-                            .clip(UiShapes.pill)
-                            .background(MaterialTheme.colorScheme.primaryFixed)
-                            .border(4.dp, MaterialTheme.colorScheme.primaryFixed, UiShapes.pill),
-                        contentAlignment = Alignment.Center,
+                            .fillMaxWidth()
+                            .padding(UiSpacing.lg),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(40.dp),
-                        )
-                    }
-
+                    ProfileAvatar(
+                        avatarKey = avatarKey,
+                        avatarUrl = avatarUrl,
+                        displayName = displayName,
+                        size = 82,
+                    )
                     Text(
                         text = displayName?.trim()?.takeIf { it.isNotEmpty() }
                             ?: stringResource(Res.string.profile_name),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = UiSpacing.sm),
                     )
-                    Text(
-                        text = buildProfileSubtitle(role = role, accountStatus = accountStatus)
-                            ?: stringResource(Res.string.profile_title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    role?.takeIf { it.isNotBlank() }?.let { roleText ->
+                        Text(
+                            text = roleText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = UiSpacing.xxs),
+                        )
+                    }
                 }
             }
+        }
+
+        item {
+            QuickProfileActions(
+                favoriteCourseCount = favoriteCourseCount,
+                onOpenFavorites = onOpenFavorites,
+                onOpenGlossary = onOpenGlossary,
+                onOpenNotes = onOpenNotes,
+            )
         }
 
         item {
@@ -257,6 +329,13 @@ private fun ProfileMain(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = UiSpacing.xs),
+            )
+        }
+
+        item {
+            ProfileProgressSummaryCard(
+                state = progressSummary,
+                onClick = onOpenProgress,
             )
         }
 
@@ -374,12 +453,503 @@ private fun ProfileMain(
     }
 }
 
-private fun buildProfileSubtitle(role: String?, accountStatus: String?): String? {
-    val values = listOfNotNull(
-        role?.trim()?.takeIf { it.isNotEmpty() },
-        accountStatus?.trim()?.takeIf { it.isNotEmpty() },
+@Composable
+private fun QuickProfileActions(
+    favoriteCourseCount: Int,
+    onOpenFavorites: () -> Unit,
+    onOpenGlossary: () -> Unit,
+    onOpenNotes: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = UiShapes.cardLg,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.md),
+            horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            QuickProfileAction(
+                icon = Icons.Rounded.Favorite,
+                title = stringResource(Res.string.profile_featured),
+                badge = favoriteCourseCount.toString(),
+                onClick = onOpenFavorites,
+                modifier = Modifier.weight(1f),
+            )
+            QuickProfileAction(
+                icon = Icons.Rounded.AutoStories,
+                title = stringResource(Res.string.profile_dictionary),
+                onClick = onOpenGlossary,
+                modifier = Modifier.weight(1f),
+            )
+            QuickProfileAction(
+                icon = Icons.Rounded.Description,
+                title = stringResource(Res.string.profile_notes),
+                onClick = onOpenNotes,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileProgressSummaryCard(
+    state: ProfileProgressSummaryState,
+    onClick: (() -> Unit)? = null,
+) {
+    val clickModifier = if (onClick != null) {
+        Modifier
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = "Открыть подробный прогресс", role = Role.Button)
+            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
+            .clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        modifier = Modifier.fillMaxWidth().then(clickModifier),
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs)) {
+                    Text(
+                        text = stringResource(Res.string.profile_progress_summary_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Text(
+                        text = stringResource(
+                            Res.string.profile_progress_lessons_format,
+                            state.completedLessons,
+                            state.totalLessons,
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+                Text(
+                    text = "${state.progressPercent}%",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(UiShapes.pill)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(state.progressPercent / 100f)
+                        .height(10.dp)
+                        .clip(UiShapes.pill)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            }
+
+            Text(
+                text = stringResource(Res.string.profile_progress_courses_format, state.completedCourses),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            Text(
+                text = stringResource(Res.string.profile_achievements_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Bold,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+            ) {
+                state.achievements.forEach { achievement ->
+                    AchievementPill(
+                        title = achievement.titleText(),
+                        isUnlocked = achievement.isUnlocked,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressDetailsContent(
+    courseProgress: List<CourseProgressInfo>,
+    favoriteCourseCount: Int,
+    glossaryTermCount: Int,
+    noteCount: Int,
+    isLoadingProgress: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val summary = buildProfileProgressSummaryState(
+        courseProgress = courseProgress,
+        favoriteCourseCount = favoriteCourseCount,
+        glossaryTermCount = glossaryTermCount,
+        noteCount = noteCount,
     )
-    return if (values.isEmpty()) null else values.joinToString(separator = " • ")
+    val nextCourse = courseProgress
+        .filter { it.completedLessons < it.totalLessons }
+        .maxByOrNull { it.completionRate }
+
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.md,
+            bottom = UiSpacing.xxl,
+        ),
+    ) {
+        item {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
+                        .clickable(onClick = onBack)
+                        .padding(UiSpacing.xs),
+                )
+                Text(
+                    text = stringResource(Res.string.profile_progress),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+        }
+
+        item {
+            Card(
+                shape = UiShapes.cardLg,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            ) {
+                Column(
+                    modifier = Modifier.padding(UiSpacing.xl),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(176.dp)
+                            .clip(UiShapes.pill)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "${summary.progressPercent}%",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                    Text(
+                        text = "Ваш путь к успеху",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = if (summary.totalLessons == 0) {
+                            "Начните первый курс, и здесь появятся уроки, достижения и следующий шаг."
+                        } else {
+                            "Вы прошли ${summary.completedLessons} из ${summary.totalLessons} уроков. Продолжайте в том же темпе."
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                ProgressStatCard("Уроков", summary.completedLessons.toString(), Modifier.weight(1f))
+                ProgressStatCard("Курсов", summary.completedCourses.toString(), Modifier.weight(1f))
+                ProgressStatCard("Терминов", glossaryTermCount.toString(), Modifier.weight(1f))
+            }
+        }
+
+        item {
+            Text(
+                text = stringResource(Res.string.profile_achievements_title),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                summary.achievements.forEach { achievement ->
+                    AchievementRow(achievement)
+                }
+            }
+        }
+
+        item {
+            Card(
+                shape = UiShapes.cardLg,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+            ) {
+                Column(
+                    modifier = Modifier.padding(UiSpacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+                ) {
+                    Text(
+                        text = "Ваш следующий шаг",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = nextCourse?.let { "Продолжить: ${it.courseTitle}" }
+                            ?: "Выберите новый курс на главной странице",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = nextCourse?.let { "${it.completedLessons} из ${it.totalLessons} уроков уже пройдено" }
+                            ?: "Новые достижения появятся после следующих уроков.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                }
+            }
+        }
+
+        if (isLoadingProgress) {
+            item { CircularProgressIndicator() }
+        }
+
+        courseProgress.forEach { course ->
+            item { CourseProgressCard(course) }
+        }
+    }
+}
+
+@Composable
+private fun ProgressStatCard(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
+        ) {
+            Text(text = value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AchievementRow(achievement: ProfileAchievementState) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(
+            containerColor = if (achievement.isUnlocked) {
+                MaterialTheme.colorScheme.surfaceContainerLowest
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            },
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.md),
+            horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(UiShapes.pill)
+                    .background(
+                        if (achievement.isUnlocked) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (achievement.isUnlocked) Icons.Rounded.Stars else Icons.Rounded.LockReset,
+                    contentDescription = null,
+                    tint = if (achievement.isUnlocked) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = achievement.titleText(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (achievement.isUnlocked) "Открыто" else "Пока заблокировано",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AchievementPill(
+    title: String,
+    isUnlocked: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(UiShapes.cardMd)
+            .background(
+                if (isUnlocked) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                },
+            )
+            .padding(horizontal = UiSpacing.xs, vertical = UiSpacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
+    ) {
+        Icon(
+            imageVector = if (isUnlocked) Icons.Rounded.Stars else Icons.Rounded.EventAvailable,
+            contentDescription = null,
+            tint = if (isUnlocked) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.size(22.dp),
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isUnlocked) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun ProfileAchievementState.titleText(): String {
+    return when (kind) {
+        ProfileAchievementKind.FirstCourseCompleted -> stringResource(Res.string.profile_achievement_first_course)
+        ProfileAchievementKind.FavoritesCollector -> stringResource(Res.string.profile_achievement_favorites)
+        ProfileAchievementKind.DictionaryStarted -> stringResource(Res.string.profile_achievement_dictionary)
+        ProfileAchievementKind.NotesStarted -> stringResource(Res.string.profile_achievement_notes)
+    }
+}
+
+@Composable
+private fun QuickProfileAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    modifier: Modifier = Modifier,
+    badge: String? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    val clickModifier = if (onClick != null) {
+        Modifier
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = title, role = Role.Button)
+            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
+            .clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+
+    Surface(
+        modifier = modifier
+            .height(96.dp)
+            .then(clickModifier),
+        shape = UiShapes.cardLg,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = UiSpacing.xs, vertical = UiSpacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(UiShapes.pill)
+                    .background(MaterialTheme.colorScheme.primaryFixed),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = UiSpacing.xs),
+            )
+            if (badge != null) {
+                Text(
+                    text = badge,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -588,20 +1158,44 @@ fun AccessibilitySettingsContent(
 
 @Composable
 private fun AccountSettings(
+    displayName: String?,
+    avatarKey: String?,
+    avatarUrl: String?,
     boundEmail: String?,
+    isUpdatingDisplayName: Boolean,
+    isUpdatingAvatar: Boolean,
     isBindingEmail: Boolean,
+    isChangingPassword: Boolean,
+    isUpdatingSettings: Boolean,
+    learningRemindersEnabled: Boolean,
+    securityAlertsEnabled: Boolean,
+    profileVisible: Boolean,
+    onUpdateDisplayName: (String) -> Unit,
+    onUploadAvatar: (String, String, ByteArray) -> Unit,
     onBindEmail: (String) -> Unit,
+    onChangePassword: (String, String) -> Unit,
+    onSetLearningReminders: (Boolean) -> Unit,
+    onSetSecurityAlerts: (Boolean) -> Unit,
+    onSetProfileVisible: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val normalizedBoundEmail = boundEmail?.trim().orEmpty()
     val hasBoundEmail = normalizedBoundEmail.isNotEmpty()
+    val normalizedDisplayName = displayName?.trim().orEmpty()
+    var editedDisplayName by rememberSaveable { mutableStateOf(normalizedDisplayName) }
     var isEditingEmail by rememberSaveable { mutableStateOf(!hasBoundEmail) }
     var email by rememberSaveable { mutableStateOf(normalizedBoundEmail) }
+    var currentPassword by rememberSaveable { mutableStateOf("") }
+    var newPassword by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(normalizedBoundEmail) {
         email = normalizedBoundEmail
         isEditingEmail = normalizedBoundEmail.isEmpty()
+    }
+
+    LaunchedEffect(normalizedDisplayName) {
+        editedDisplayName = normalizedDisplayName
     }
 
     LazyColumn(
@@ -635,6 +1229,27 @@ private fun AccountSettings(
                     modifier = Modifier.align(Alignment.Center),
                 )
             }
+        }
+
+        item {
+            AccountAvatarCard(
+                selectedAvatarKey = avatarKey,
+                avatarUrl = avatarUrl,
+                displayName = displayName,
+                isUpdatingAvatar = isUpdatingAvatar,
+                onUploadAvatar = onUploadAvatar,
+            )
+        }
+
+        item {
+            AccountNameCard(
+                displayName = editedDisplayName,
+                isUpdatingDisplayName = isUpdatingDisplayName,
+                onDisplayNameChange = { editedDisplayName = it },
+                onSubmit = { onUpdateDisplayName(editedDisplayName) },
+                canSubmit = editedDisplayName.trim().length >= 2 &&
+                    editedDisplayName.trim() != normalizedDisplayName,
+            )
         }
 
         item {
@@ -804,26 +1419,341 @@ private fun AccountSettings(
         }
 
         item {
-            Surface(
-                shape = UiShapes.cardLg,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-            ) {
-                Column(
-                    modifier = Modifier.padding(UiSpacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
-                ) {
+            AccountPasswordCard(
+                currentPassword = currentPassword,
+                newPassword = newPassword,
+                isChangingPassword = isChangingPassword,
+                onCurrentPasswordChange = { currentPassword = it },
+                onNewPasswordChange = { newPassword = it },
+                onSubmit = {
+                    onChangePassword(currentPassword, newPassword)
+                    currentPassword = ""
+                    newPassword = ""
+                },
+            )
+        }
+
+        item {
+            AccountSwitchCard(
+                icon = Icons.Rounded.NotificationsActive,
+                title = "Уведомления",
+                subtitle = "Напоминать о продолжении обучения",
+                checked = learningRemindersEnabled,
+                enabled = !isUpdatingSettings,
+                onCheckedChange = onSetLearningReminders,
+            )
+        }
+
+        item {
+            AccountSwitchCard(
+                icon = Icons.Rounded.Shield,
+                title = "Безопасность",
+                subtitle = "Получать предупреждения о важных действиях",
+                checked = securityAlertsEnabled,
+                enabled = !isUpdatingSettings,
+                onCheckedChange = onSetSecurityAlerts,
+            )
+        }
+
+        item {
+            AccountSwitchCard(
+                icon = Icons.Rounded.Visibility,
+                title = "Конфиденциальность",
+                subtitle = "Показывать профиль наставникам и участникам группы",
+                checked = profileVisible,
+                enabled = !isUpdatingSettings,
+                onCheckedChange = onSetProfileVisible,
+            )
+        }
+    }
+}
+
+private val profileAvatarKeys = listOf(
+    "avatar_01",
+    "avatar_02",
+    "avatar_03",
+    "avatar_04",
+    "avatar_05",
+    "avatar_06",
+    "avatar_07",
+    "avatar_08",
+)
+
+@Composable
+private fun AccountAvatarCard(
+    selectedAvatarKey: String?,
+    avatarUrl: String?,
+    displayName: String?,
+    isUpdatingAvatar: Boolean,
+    onUploadAvatar: (String, String, ByteArray) -> Unit,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                ProfileAvatar(
+                    avatarKey = selectedAvatarKey,
+                    avatarUrl = avatarUrl,
+                    displayName = displayName,
+                    size = 54,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Аватар", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(
-                        text = "Дополнительные настройки профиля пока недоступны",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = "Когда backend-контракты для уведомлений, пароля и приватности будут готовы, эти разделы появятся здесь без ложных кнопок и заглушек.",
+                        text = "Загрузите фотографию профиля в формате JPG, PNG или WebP",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
+
+            AvatarUploadPicker(
+                enabled = !isUpdatingAvatar,
+                isUploading = isUpdatingAvatar,
+                onUploadAvatar = onUploadAvatar,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileAvatar(
+    avatarKey: String?,
+    avatarUrl: String?,
+    displayName: String?,
+    size: Int,
+) {
+    val effectiveKey = avatarKey?.takeIf { it in profileAvatarKeys }
+    val colors = avatarColors(effectiveKey)
+
+    Box(
+        modifier = Modifier
+            .size(size.dp)
+            .clip(UiShapes.pill)
+            .background(colors.first),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (!avatarUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = avatarUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else if (effectiveKey == null) {
+            Text(
+                text = displayName.initialsFallback(),
+                style = MaterialTheme.typography.titleLarge,
+                color = colors.second,
+                fontWeight = FontWeight.Bold,
+            )
+        } else {
+            Icon(
+                imageVector = avatarIcon(effectiveKey),
+                contentDescription = null,
+                tint = colors.second,
+                modifier = Modifier.size((size * 0.46f).dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun avatarColors(avatarKey: String?): Pair<Color, Color> {
+    val colorScheme = MaterialTheme.colorScheme
+    return when (avatarKey) {
+        "avatar_01" -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+        "avatar_02" -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
+        "avatar_03" -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
+        "avatar_04" -> colorScheme.errorContainer to colorScheme.onErrorContainer
+        "avatar_05" -> colorScheme.surfaceContainerHigh to colorScheme.onSurfaceVariant
+        "avatar_06" -> colorScheme.primaryContainer to colorScheme.primary
+        "avatar_07" -> colorScheme.secondaryContainer to colorScheme.secondary
+        "avatar_08" -> colorScheme.tertiaryContainer to colorScheme.tertiary
+        else -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+    }
+}
+
+private fun avatarIcon(avatarKey: String): androidx.compose.ui.graphics.vector.ImageVector {
+    return when (avatarKey) {
+        "avatar_01" -> Icons.Rounded.Favorite
+        "avatar_02" -> Icons.Rounded.AutoStories
+        "avatar_03" -> Icons.Rounded.Stars
+        "avatar_04" -> Icons.Rounded.Shield
+        "avatar_05" -> Icons.Rounded.Person
+        "avatar_06" -> Icons.Rounded.Description
+        "avatar_07" -> Icons.Rounded.CheckCircle
+        "avatar_08" -> Icons.Rounded.EventAvailable
+        else -> Icons.Rounded.Person
+    }
+}
+
+@Composable
+internal expect fun AvatarUploadPicker(
+    enabled: Boolean,
+    isUploading: Boolean,
+    onUploadAvatar: (String, String, ByteArray) -> Unit,
+    modifier: Modifier = Modifier,
+)
+
+private fun String?.initialsFallback(): String {
+    val words = this
+        ?.trim()
+        ?.split(Regex("\\s+"))
+        ?.filter { it.isNotBlank() }
+        .orEmpty()
+    return words
+        .take(2)
+        .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+        .joinToString("")
+        .ifBlank { "?" }
+}
+
+@Composable
+private fun AccountNameCard(
+    displayName: String,
+    isUpdatingDisplayName: Boolean,
+    canSubmit: Boolean,
+    onDisplayNameChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                Icon(imageVector = Icons.Rounded.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text(text = "Имя в профиле", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+            OutlinedTextField(
+                value = displayName,
+                onValueChange = onDisplayNameChange,
+                enabled = !isUpdatingDisplayName,
+                label = { Text("Как вас называть") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = onSubmit,
+                enabled = !isUpdatingDisplayName && canSubmit,
+                shape = UiShapes.cardLg,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = if (isUpdatingDisplayName) "Сохраняем..." else "Сохранить имя", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountPasswordCard(
+    currentPassword: String,
+    newPassword: String,
+    isChangingPassword: Boolean,
+    onCurrentPasswordChange: (String) -> Unit,
+    onNewPasswordChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                Icon(imageVector = Icons.Rounded.LockReset, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text(text = "Смена пароля", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+            OutlinedTextField(
+                value = currentPassword,
+                onValueChange = onCurrentPasswordChange,
+                enabled = !isChangingPassword,
+                label = { Text("Текущий пароль") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = newPassword,
+                onValueChange = onNewPasswordChange,
+                enabled = !isChangingPassword,
+                label = { Text("Новый пароль") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = onSubmit,
+                enabled = !isChangingPassword && currentPassword.length >= 8 && newPassword.length >= 8,
+                shape = UiShapes.cardLg,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = if (isChangingPassword) "Сохраняем..." else "Обновить пароль", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountSwitchCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.md),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(UiShapes.pill)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Column {
+                    Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Switch(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = onCheckedChange,
+            )
         }
     }
 }

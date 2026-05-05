@@ -2,6 +2,7 @@ package com.digitaledu.feature.catalog.impl.presentation
 
 import com.digitaledu.core.common.BaseViewModel
 import com.digitaledu.core.common.toUserMessage
+import com.digitaledu.core.data.catalog.CatalogRepository
 import com.digitaledu.feature.catalog.api.CatalogEffect
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
 import com.digitaledu.feature.catalog.api.CatalogIntent
@@ -12,6 +13,7 @@ import com.digitaledu.feature.catalog.impl.domain.OpenCourseBundleUseCase
 internal class CatalogViewModel(
     private val loadCoursesUseCase: LoadCoursesUseCase,
     private val openCourseBundleUseCase: OpenCourseBundleUseCase,
+    private val catalogRepository: CatalogRepository,
 ) : BaseViewModel<CatalogUiState, CatalogIntent, CatalogEffect>(CatalogUiState()), CatalogFeatureHost {
 
     init {
@@ -22,6 +24,7 @@ internal class CatalogViewModel(
         when (intent) {
             CatalogIntent.RefreshCourses -> loadCourses()
             is CatalogIntent.OpenCourse -> openCourse(intent.slug)
+            is CatalogIntent.ToggleFavorite -> toggleFavorite(intent.courseId)
             CatalogIntent.DismissError -> dismissError()
             is CatalogIntent.SetSearchQuery -> setSearchQuery(intent.query)
             is CatalogIntent.SetCategory -> setCategory(intent.categoryId)
@@ -59,6 +62,23 @@ internal class CatalogViewModel(
             )
         }
         emitEffect(CatalogEffect.CourseOpened(bundle))
+    }
+
+    private suspend fun toggleFavorite(courseId: String) {
+        val course = currentState.courses.firstOrNull { it.id == courseId } ?: return
+        val updatedCourse = try {
+            if (course.isFavorite) {
+                catalogRepository.removeFavoriteCourse(courseId)
+            } else {
+                catalogRepository.addFavoriteCourse(courseId)
+            }
+        } catch (throwable: Throwable) {
+            setError(throwable)
+            return
+        }
+        updateState {
+            copy(courses = courses.map { if (it.id == courseId) updatedCourse else it })
+        }
     }
 
     private suspend fun <T> runLoadingAction(block: suspend () -> T): T? {

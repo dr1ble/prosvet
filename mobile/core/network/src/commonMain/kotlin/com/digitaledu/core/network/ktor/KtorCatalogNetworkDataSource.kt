@@ -11,6 +11,8 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.headers
 import io.ktor.client.request.parameter
+import io.ktor.client.request.put
+import io.ktor.client.request.delete
 import io.ktor.client.request.url
 import io.ktor.http.HttpHeaders
 
@@ -32,6 +34,39 @@ class KtorCatalogNetworkDataSource(
                 parameter("include_drafts", includeDrafts)
                 parameter("include_archived", includeArchived)
             }.body<List<CourseResponse>>().map(CourseResponse::toCatalogCourse)
+        }
+    }
+
+    override suspend fun listFavoriteCourses(accessToken: String): List<CatalogCourse> {
+        return executeCall {
+            client.get {
+                url("api/v1/catalog/courses/favorites")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
+            }.body<List<CourseResponse>>().map(CourseResponse::toCatalogCourse)
+        }
+    }
+
+    override suspend fun addFavoriteCourse(courseId: String, accessToken: String): CatalogCourse {
+        return executeCall {
+            client.put {
+                url("api/v1/catalog/courses/$courseId/favorite")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
+            }.body<CourseResponse>().toCatalogCourse()
+        }
+    }
+
+    override suspend fun removeFavoriteCourse(courseId: String, accessToken: String): CatalogCourse {
+        return executeCall {
+            client.delete {
+                url("api/v1/catalog/courses/$courseId/favorite")
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $accessToken")
+                }
+            }.body<CourseResponse>().toCatalogCourse()
         }
     }
 
@@ -87,6 +122,7 @@ private fun CourseResponse.toCatalogCourse(): CatalogCourse {
         title = title,
         description = description,
         coverImageUrl = pickCoverImageUrl(),
+        isFavorite = isFavorite,
     )
 }
 

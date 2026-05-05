@@ -8,6 +8,9 @@ interface ProfileUiEntry {
     fun Content(
         uiState: ProfileUiState,
         onIntent: (ProfileIntent) -> Unit,
+        onOpenFavorites: () -> Unit = {},
+        onOpenGlossary: () -> Unit = {},
+        onOpenNotes: () -> Unit = {},
         modifier: Modifier = Modifier,
     )
 }

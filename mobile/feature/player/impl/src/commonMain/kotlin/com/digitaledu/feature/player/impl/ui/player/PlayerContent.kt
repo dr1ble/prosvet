@@ -61,6 +61,7 @@ fun PlayerContent(
         is SimulationPayload -> {
             // Render interactive simulation
             SimulationScreen(
+                screenTitle = screen.title,
                 payload = payload,
                 accessToken = mediaAccessToken,
                 activeHotspotHint = activeHotspotHint,

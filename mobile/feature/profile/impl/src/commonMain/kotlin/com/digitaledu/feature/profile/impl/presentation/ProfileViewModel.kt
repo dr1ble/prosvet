@@ -8,6 +8,7 @@ import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiState
 import androidx.lifecycle.viewModelScope
+import com.digitaledu.core.data.catalog.CatalogRepository
 import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
 import com.digitaledu.core.data.profile.ProfileRepository
 import com.digitaledu.core.data.progress.ProgressRepository
@@ -21,6 +22,7 @@ internal class ProfileViewModel(
     private val accessibilityPreferencesRepository: AccessibilityPreferencesRepository,
     private val profileRepository: ProfileRepository,
     private val progressRepository: ProgressRepository,
+    private val catalogRepository: CatalogRepository,
 ) : BaseViewModel<ProfileUiState, ProfileIntent, ProfileEffect>(ProfileUiState()), ProfileFeatureHost {
 
     init {
@@ -35,6 +37,15 @@ internal class ProfileViewModel(
         viewModelScope.launch {
             loadProgress()
         }
+        viewModelScope.launch {
+            loadFavoriteCount()
+        }
+        viewModelScope.launch {
+            loadGlossary()
+        }
+        viewModelScope.launch {
+            loadNotes()
+        }
     }
 
     override suspend fun handleIntent(intent: ProfileIntent) {
@@ -42,7 +53,23 @@ internal class ProfileViewModel(
             ProfileIntent.Logout -> logout()
             ProfileIntent.DismissError -> dismissError()
             ProfileIntent.DismissSuccess -> dismissSuccess()
+            ProfileIntent.RefreshFavoriteCount -> loadFavoriteCount()
+            ProfileIntent.RefreshGlossary -> loadGlossary()
+            ProfileIntent.RefreshNotes -> loadNotes()
+            is ProfileIntent.ToggleGlossaryBookmark -> toggleGlossaryBookmark(intent.termId)
+            is ProfileIntent.DeleteNote -> deleteNote(intent.noteId)
+            is ProfileIntent.UpdateDisplayName -> updateDisplayName(intent.displayName)
+            is ProfileIntent.UpdateAvatar -> updateAvatar(intent.avatarKey)
+            is ProfileIntent.UploadAvatar -> uploadAvatar(
+                filename = intent.filename,
+                contentType = intent.contentType,
+                content = intent.content,
+            )
             is ProfileIntent.BindEmail -> bindEmail(intent.email)
+            is ProfileIntent.ChangePassword -> changePassword(intent.currentPassword, intent.newPassword)
+            is ProfileIntent.SetLearningReminders -> updateAccountSettings(learningRemindersEnabled = intent.enabled)
+            is ProfileIntent.SetSecurityAlerts -> updateAccountSettings(securityAlertsEnabled = intent.enabled)
+            is ProfileIntent.SetProfileVisible -> updateAccountSettings(profileVisible = intent.enabled)
             ProfileIntent.ResetAccessibility -> resetAccessibility()
             is ProfileIntent.SetFontScale -> updateAccessibility { copy(fontScale = intent.value.coerceIn(1.0f, 1.6f)) }
             is ProfileIntent.SetControlScale -> updateAccessibility { copy(controlScale = intent.value.coerceIn(1.0f, 1.3f)) }
@@ -62,12 +89,20 @@ internal class ProfileViewModel(
         updateState {
             copy(
                 status = ProfileStatus.Idle,
-                displayName = null,
-                email = null,
+                    displayName = null,
+                    email = null,
+                    avatarKey = null,
+                    avatarUrl = null,
                 role = null,
                 accountStatus = null,
                 permissions = emptyList(),
+                learningRemindersEnabled = true,
+                securityAlertsEnabled = true,
+                profileVisible = false,
+                favoriteCourseCount = 0,
                 courseProgress = emptyList(),
+                glossaryTerms = emptyList(),
+                notes = emptyList(),
             )
         }
         emitEffect(ProfileEffect.LoggedOut)
@@ -81,9 +116,14 @@ internal class ProfileViewModel(
                 copy(
                     displayName = profile.displayName,
                     email = profile.email,
+                    avatarKey = profile.avatarKey,
+                    avatarUrl = profile.avatarUrl,
                     role = profile.role,
                     accountStatus = profile.status,
                     permissions = profile.permissions,
+                    learningRemindersEnabled = profile.learningRemindersEnabled,
+                    securityAlertsEnabled = profile.securityAlertsEnabled,
+                    profileVisible = profile.profileVisible,
                 )
             }
         }.onFailure { throwable ->
@@ -107,6 +147,62 @@ internal class ProfileViewModel(
         }
     }
 
+    private suspend fun loadFavoriteCount() {
+        runCatching {
+            catalogRepository.listFavoriteCourses().size
+        }.onSuccess { count ->
+            updateState { copy(favoriteCourseCount = count) }
+        }
+    }
+
+    private suspend fun loadGlossary() {
+        runCatching {
+            progressRepository.getMyGlossary()
+        }.onSuccess { terms ->
+            updateState { copy(glossaryTerms = terms) }
+        }
+    }
+
+    private suspend fun toggleGlossaryBookmark(termId: String) {
+        val currentTerm = currentState.glossaryTerms.firstOrNull { it.id == termId } ?: return
+        val targetBookmarked = !currentTerm.isBookmarked
+        runCatching {
+            progressRepository.setGlossaryTermBookmark(termId, targetBookmarked)
+        }.onSuccess {
+            updateState {
+                copy(
+                    glossaryTerms = glossaryTerms.map { term ->
+                        if (term.id == termId) {
+                            term.copy(isBookmarked = targetBookmarked)
+                        } else {
+                            term
+                        }
+                    },
+                )
+            }
+        }.onFailure { throwable ->
+            setError(throwable)
+        }
+    }
+
+    private suspend fun loadNotes() {
+        runCatching {
+            progressRepository.getMyNotes()
+        }.onSuccess { notes ->
+            updateState { copy(notes = notes) }
+        }
+    }
+
+    private suspend fun deleteNote(noteId: String) {
+        runCatching {
+            progressRepository.deleteNote(noteId)
+        }.onSuccess {
+            updateState { copy(notes = notes.filterNot { note -> note.id == noteId }) }
+        }.onFailure { throwable ->
+            setError(throwable)
+        }
+    }
+
     private suspend fun bindEmail(email: String) {
         val normalizedEmail = email.trim()
         if (normalizedEmail.isEmpty() || currentState.isBindingEmail) return
@@ -125,6 +221,149 @@ internal class ProfileViewModel(
             }
         }.onFailure { throwable ->
             updateState { copy(isBindingEmail = false) }
+            setError(throwable)
+        }
+    }
+
+    private suspend fun updateDisplayName(displayName: String) {
+        val normalizedName = displayName.trim()
+        if (normalizedName.length < 2 || currentState.isUpdatingDisplayName) return
+
+        updateState { copy(isUpdatingDisplayName = true, successMessage = null) }
+        runCatching {
+            profileRepository.updateDisplayName(
+                displayName = normalizedName,
+                avatarKey = currentState.avatarKey,
+            )
+        }.onSuccess { profile ->
+            updateState {
+                copy(
+                    displayName = profile.displayName,
+                    avatarKey = profile.avatarKey,
+                    avatarUrl = profile.avatarUrl,
+                    isUpdatingDisplayName = false,
+                    status = ProfileStatus.Idle,
+                    successMessage = "Имя успешно обновлено.",
+                )
+            }
+        }.onFailure { throwable ->
+            updateState { copy(isUpdatingDisplayName = false) }
+            setError(throwable)
+        }
+    }
+
+    private suspend fun updateAvatar(avatarKey: String) {
+        val normalizedAvatarKey = avatarKey.trim()
+        if (normalizedAvatarKey.isEmpty() || currentState.isUpdatingAvatar) return
+        if (normalizedAvatarKey == currentState.avatarKey) return
+
+        updateState { copy(isUpdatingAvatar = true, successMessage = null) }
+        runCatching {
+            profileRepository.updateAvatar(
+                displayName = currentState.displayName,
+                avatarKey = normalizedAvatarKey,
+            )
+        }.onSuccess { profile ->
+            updateState {
+                copy(
+                    displayName = profile.displayName,
+                    avatarKey = profile.avatarKey,
+                    avatarUrl = profile.avatarUrl,
+                    isUpdatingAvatar = false,
+                    status = ProfileStatus.Idle,
+                    successMessage = "Аватар обновлён.",
+                )
+            }
+        }.onFailure { throwable ->
+            updateState { copy(isUpdatingAvatar = false) }
+            setError(throwable)
+        }
+    }
+
+    private suspend fun uploadAvatar(filename: String, contentType: String, content: ByteArray) {
+        if (currentState.isUpdatingAvatar) return
+        if (content.isEmpty()) {
+            updateState { copy(status = ProfileStatus.Error("Файл аватарки пустой.")) }
+            return
+        }
+
+        updateState { copy(isUpdatingAvatar = true, successMessage = null) }
+        runCatching {
+            profileRepository.uploadAvatar(
+                filename = filename,
+                contentType = contentType,
+                content = content,
+            )
+        }.onSuccess { profile ->
+            updateState {
+                copy(
+                    displayName = profile.displayName,
+                    avatarKey = profile.avatarKey,
+                    avatarUrl = profile.avatarUrl,
+                    isUpdatingAvatar = false,
+                    status = ProfileStatus.Idle,
+                    successMessage = "Аватар обновлён.",
+                )
+            }
+        }.onFailure { throwable ->
+            updateState { copy(isUpdatingAvatar = false) }
+            setError(throwable)
+        }
+    }
+
+    private suspend fun changePassword(currentPassword: String, newPassword: String) {
+        if (currentState.isChangingPassword) return
+        if (currentPassword.length < 8 || newPassword.length < 8) {
+            updateState { copy(status = ProfileStatus.Error("Пароль должен быть не короче 8 символов.")) }
+            return
+        }
+
+        updateState { copy(isChangingPassword = true, successMessage = null) }
+        runCatching {
+            profileRepository.changePassword(
+                currentPassword = currentPassword,
+                newPassword = newPassword,
+            )
+        }.onSuccess {
+            updateState {
+                copy(
+                    isChangingPassword = false,
+                    status = ProfileStatus.Idle,
+                    successMessage = "Пароль успешно изменён.",
+                )
+            }
+        }.onFailure { throwable ->
+            updateState { copy(isChangingPassword = false) }
+            setError(throwable)
+        }
+    }
+
+    private suspend fun updateAccountSettings(
+        learningRemindersEnabled: Boolean? = null,
+        securityAlertsEnabled: Boolean? = null,
+        profileVisible: Boolean? = null,
+    ) {
+        if (currentState.isUpdatingAccountSettings) return
+        updateState { copy(isUpdatingAccountSettings = true, successMessage = null) }
+        runCatching {
+            profileRepository.updateAccountSettings(
+                learningRemindersEnabled = learningRemindersEnabled,
+                securityAlertsEnabled = securityAlertsEnabled,
+                profileVisible = profileVisible,
+            )
+        }.onSuccess { profile ->
+            updateState {
+                copy(
+                    learningRemindersEnabled = profile.learningRemindersEnabled,
+                    securityAlertsEnabled = profile.securityAlertsEnabled,
+                    profileVisible = profile.profileVisible,
+                    isUpdatingAccountSettings = false,
+                    status = ProfileStatus.Idle,
+                    successMessage = "Настройки аккаунта сохранены.",
+                )
+            }
+        }.onFailure { throwable ->
+            updateState { copy(isUpdatingAccountSettings = false) }
             setError(throwable)
         }
     }

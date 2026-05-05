@@ -20,6 +20,14 @@
     <string name="learning_open_catalog">Открыть каталог</string>
     <string name="learning_open_lesson">Урок %1$d</string>
     <string name="learning_start_lesson">Начать урок</string>
+    <string name="learning_start_course">Начать курс</string>
+    <string name="learning_add_favorite">Добавить в избранное</string>
+    <string name="learning_remove_favorite">Убрать из избранного</string>
+    <string name="learning_add_note">Добавить заметку</string>
+    <string name="learning_note_dialog_title">Заметка к уроку</string>
+    <string name="learning_note_dialog_placeholder">Напишите, что важно запомнить</string>
+    <string name="learning_note_save">Сохранить</string>
+    <string name="learning_note_cancel">Отмена</string>
     <string name="learning_preview_only">Только предпросмотр</string>
     <string name="learning_course_details">Детали урока</string>
     <string name="learning_you_will_learn">Вы научитесь</string>
@@ -37,8 +45,16 @@
     <string name="learning_lesson_progress">Прогресс урока: %1$d%%</string>
     <string name="learning_lesson_progress_label">Прогресс урока</string>
     <string name="learning_lesson_overview_title">О чем этот урок</string>
+    <string name="learning_course_overview_title">О чем этот курс</string>
     <string name="learning_ready_title">Готовы начать?</string>
     <string name="learning_ready_subtitle">Ваш прогресс будет сохранен автоматически.</string>
+    <string name="lesson_summary_title">Итоги урока</string>
+    <string name="lesson_summary_complete_title">Курс завершен</string>
+    <string name="lesson_summary_subtitle">Вы прошли «%1$s» в курсе «%2$s».</string>
+    <string name="lesson_summary_progress">%1$d из %2$d шагов • %3$d%%</string>
+    <string name="lesson_summary_next">Следующий урок: %1$s</string>
+    <string name="lesson_summary_finish">Вернуться к курсу</string>
+    <string name="lesson_summary_continue">Продолжить</string>
 
     <plurals name="learning_course_time">
         <item quantity="one">%1$d минута</item>
@@ -66,10 +82,12 @@
     <string name="cheat_sheet_copy_code">Скопировать код</string>
     <string name="list_bullet">•</string>
 
-    <string name="video_debug_text">Состояние видео: %2$s</string>
-    <string name="video_state_playing">воспроизведение</string>
-    <string name="video_state_paused">пауза</string>
+    <string name="video_title">Видеоурок</string>
+    <string name="video_duration">%1$s</string>
+    <string name="video_transcript_title">Кратко о видео</string>
+    <string name="video_no_transcript">Краткое описание видео пока недоступно.</string>
     <string name="video_play">Запустить видео</string>
+    <string name="video_pause">Поставить на паузу</string>
 
     <string name="quiz_progress">Вопрос %1$d из %2$d</string>
     <string name="quiz_multiple_pending">Раздел в разработке: множественный выбор</string>
@@ -81,8 +99,13 @@
     <string name="quiz_continue">Продолжить</string>
 
     <string name="theory">Теория</string>
+    <string name="help">Помощь</string>
     <string name="close">Закрыть</string>
     <string name="simulation_screen_image">Изображение экрана симуляции</string>
     <string name="simulation_load_error">Не удалось загрузить изображение</string>
     <string name="simulation_hint">Подсказка</string>
+    <string name="cyber_trainer_title">Кибер-тренажер</string>
+    <string name="cyber_trainer_task">Найдите красные флаги</string>
+    <string name="cyber_trainer_progress">%1$d из %2$d</string>
+    <string name="cyber_trainer_complete">Все признаки найдены</string>
 </resources>

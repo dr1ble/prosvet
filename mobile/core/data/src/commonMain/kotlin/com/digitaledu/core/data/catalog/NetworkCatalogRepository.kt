@@ -20,6 +20,24 @@ class NetworkCatalogRepository(
         }
     }
 
+    override suspend fun listFavoriteCourses(): List<CatalogCourse> {
+        return authRepository.withFreshAccessToken { accessToken ->
+            networkDataSource.listFavoriteCourses(accessToken = accessToken)
+        }
+    }
+
+    override suspend fun addFavoriteCourse(courseId: String): CatalogCourse {
+        return authRepository.withFreshAccessToken { accessToken ->
+            networkDataSource.addFavoriteCourse(courseId = courseId, accessToken = accessToken)
+        }
+    }
+
+    override suspend fun removeFavoriteCourse(courseId: String): CatalogCourse {
+        return authRepository.withFreshAccessToken { accessToken ->
+            networkDataSource.removeFavoriteCourse(courseId = courseId, accessToken = accessToken)
+        }
+    }
+
     override suspend fun getLatestCourseBundle(courseSlug: String): CatalogBundle {
         return authRepository.withFreshAccessToken { accessToken ->
             networkDataSource.getLatestCourseBundle(

@@ -12,5 +12,14 @@ interface AuthNetworkDataSource {
     suspend fun refreshSession(refreshToken: String): AuthTokens
     suspend fun logout(refreshToken: String)
     suspend fun getCurrentUser(accessToken: String): AuthMe
+    suspend fun updateCurrentUser(accessToken: String, displayName: String?, avatarKey: String?): AuthMe
+    suspend fun uploadAvatar(accessToken: String, filename: String, contentType: String, content: ByteArray): AuthMe
     suspend fun bindEmail(accessToken: String, email: String): AuthMe
+    suspend fun changePassword(accessToken: String, currentPassword: String, newPassword: String): AuthMe
+    suspend fun updateAccountSettings(
+        accessToken: String,
+        learningRemindersEnabled: Boolean? = null,
+        securityAlertsEnabled: Boolean? = null,
+        profileVisible: Boolean? = null,
+    ): AuthMe
 }
