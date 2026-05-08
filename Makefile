@@ -1,4 +1,4 @@
-.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check mobile-theme-guard kg-sync kg-sync-force init-test-db db-backup db-backup-list db-restore db-schema-health db-schema-repair-local builder-mocks builder-mocks-clean builder-mocks-reset progress-mocks progress-mocks-clean progress-mocks-reset literacy-demo-seed literacy-demo-clean literacy-demo-reset literacy-demo-realistic-seed literacy-demo-realistic-reset dashboard-demo-seed dashboard-demo-clean dashboard-demo-reset dashboard-demo-realistic-seed dashboard-demo-realistic-reset mobile-runtime-seed mobile-runtime-clean mobile-runtime-reset mobile-runtime-verify mobile-runtime-heavy-seed mobile-runtime-heavy-reset mobile-runtime-heavy-verify
+.PHONY: up down logs run run-bg stop restart status dev-logs doctor backend-test backend-lint install-hooks deps-check mobile-theme-guard init-test-db db-backup db-backup-list db-restore db-schema-health db-schema-repair-local builder-mocks builder-mocks-clean builder-mocks-reset progress-mocks progress-mocks-clean progress-mocks-reset literacy-demo-seed literacy-demo-clean literacy-demo-reset literacy-demo-realistic-seed literacy-demo-realistic-reset dashboard-demo-seed dashboard-demo-clean dashboard-demo-reset dashboard-demo-realistic-seed dashboard-demo-realistic-reset mobile-runtime-seed mobile-runtime-clean mobile-runtime-reset mobile-runtime-verify mobile-runtime-heavy-seed mobile-runtime-heavy-reset mobile-runtime-heavy-verify
 PROJECT_ROOT := $(CURDIR)
 MOCK_DB_URL ?= postgresql+psycopg://app:app@127.0.0.1:5432/app
 
@@ -158,8 +158,3 @@ deps-check:
 
 mobile-theme-guard:
 	@./scripts/check-mobile-theme-tokens.sh $$(git ls-files 'mobile/**/*.kt')
-
-kg-sync:
-	@python3 scripts/seed_kg_memory.py --project-root "$(PROJECT_ROOT)" --memory-file .context/operations/kg_memory.jsonl --replace
-
-kg-sync-force: kg-sync

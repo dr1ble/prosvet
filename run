@@ -19,9 +19,6 @@ Environment overrides:
 - WEB_HOST (default: 0.0.0.0)
 - WEB_PORT (default: 3000)
 - WEB_DIR_NAME (default: web-admin if present, otherwise web)
-- KG_MEMORY_SYNC (default: 1, set 0 to disable auto sync)
-- KG_MEMORY_SYNC_MODE (default: auto, values: auto|force)
-- KG_MEMORY_FILE (default: .context/operations/kg_memory.jsonl)
 - AUTO_INSTALL_BACKEND_DEPS (default: 1, set 0 to disable auto pip install)
 - AUTO_FIX_BROKEN_DB_SCHEMA (default: 1, auto-repair schema on inconsistency)
 - ALLOW_DB_SCHEMA_RESET (default: 1, allows DROP SCHEMA public in auto-repair)
@@ -54,10 +51,6 @@ BACKEND_HOST="${BACKEND_HOST:-0.0.0.0}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 WEB_HOST="${WEB_HOST:-0.0.0.0}"
 WEB_PORT="${WEB_PORT:-3000}"
-KG_MEMORY_SYNC="${KG_MEMORY_SYNC:-1}"
-KG_MEMORY_SYNC_MODE="${KG_MEMORY_SYNC_MODE:-auto}"
-KG_MEMORY_FILE="${KG_MEMORY_FILE:-$ROOT_DIR/.context/operations/kg_memory.jsonl}"
-KG_SEED_SCRIPT="$ROOT_DIR/scripts/seed_kg_memory.py"
 DB_BACKUP_BEFORE_DESTRUCTIVE="${DB_BACKUP_BEFORE_DESTRUCTIVE:-1}"
 DB_BACKUP_DIR="${DB_BACKUP_DIR:-$ROOT_DIR/.backups/db}"
 AUTO_INSTALL_BACKEND_DEPS="${AUTO_INSTALL_BACKEND_DEPS:-1}"
@@ -69,10 +62,6 @@ HEALTH_POLL_INTERVAL="${HEALTH_POLL_INTERVAL:-10}"
 BACKEND_CHECK_HOST="${BACKEND_CHECK_HOST:-127.0.0.1}"
 WEB_CHECK_HOST="${WEB_CHECK_HOST:-127.0.0.1}"
 ADB_REVERSE="${ADB_REVERSE:-1}"
-
-if [[ "$KG_MEMORY_FILE" != /* ]]; then
-  KG_MEMORY_FILE="$ROOT_DIR/$KG_MEMORY_FILE"
-fi
 
 mkdir -p "$STATE_DIR"
 
@@ -192,70 +181,6 @@ cleanup_stale_processes() {
   kill_matching_processes "uvicorn app.main:app" "backend"
   kill_matching_processes "next dev -- --hostname" "web"
   kill_matching_processes "next dev --hostname" "web"
-}
-
-has_newer_context_than_memory() {
-  if [[ ! -f "$KG_MEMORY_FILE" ]]; then
-    return 0
-  fi
-
-  if [[ -f "$ROOT_DIR/Claude.md" ]] && [[ "$ROOT_DIR/Claude.md" -nt "$KG_MEMORY_FILE" ]]; then
-    return 0
-  fi
-
-  if [[ "$KG_SEED_SCRIPT" -nt "$KG_MEMORY_FILE" ]]; then
-    return 0
-  fi
-
-  if [[ -d "$ROOT_DIR/.context" ]]; then
-    local newer
-    newer="$(find "$ROOT_DIR/.context" -type f -name '*.md' -newer "$KG_MEMORY_FILE" -print -quit 2>/dev/null || true)"
-    if [[ -n "$newer" ]]; then
-      return 0
-    fi
-  fi
-
-  return 1
-}
-
-sync_knowledge_memory_if_needed() {
-  if [[ "$KG_MEMORY_SYNC" != "1" ]]; then
-    return
-  fi
-
-  if [[ ! -f "$KG_SEED_SCRIPT" ]]; then
-    echo "[run] KG memory seed script not found: $KG_SEED_SCRIPT"
-    echo "[run] Skipping knowledge-memory sync."
-    return
-  fi
-
-  local should_sync=0
-  case "$KG_MEMORY_SYNC_MODE" in
-    force)
-      should_sync=1
-      ;;
-    auto)
-      if has_newer_context_than_memory; then
-        should_sync=1
-      fi
-      ;;
-    *)
-      echo "[run] Unknown KG_MEMORY_SYNC_MODE='$KG_MEMORY_SYNC_MODE'. Expected: auto|force"
-      exit 1
-      ;;
-  esac
-
-  if [[ "$should_sync" -eq 0 ]]; then
-    echo "[run] Knowledge memory is up to date."
-    return
-  fi
-
-  echo "[run] Syncing knowledge-memory graph ($KG_MEMORY_SYNC_MODE)..."
-  if python3 "$KG_SEED_SCRIPT" --project-root "$ROOT_DIR" --memory-file "$KG_MEMORY_FILE" --replace; then
-    echo "[run] Knowledge-memory sync completed."
-  else
-    echo "[run] Knowledge-memory sync failed. Continuing startup."
-  fi
 }
 
 db_has_required_tables() {
@@ -463,8 +388,6 @@ fi
 
 echo "[run] Cleaning stale local dev processes..."
 cleanup_stale_processes
-
-sync_knowledge_memory_if_needed
 
 echo "[run] Starting PostgreSQL container..."
 docker compose -f "$COMPOSE_FILE" up -d postgres >/dev/null
