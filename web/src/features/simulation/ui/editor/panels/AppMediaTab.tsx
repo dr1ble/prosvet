@@ -260,13 +260,8 @@ export function AppMediaTab({
           type="button"
           className={styles.iconButton}
           onClick={onOpenCreateModal}
-          title={labels.createHint}
-          aria-label={labels.createHint}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
-          </svg>
+          {labels.createHint}
         </button>
       </div>
 

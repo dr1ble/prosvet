@@ -371,6 +371,7 @@ export function LibraryTab({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [saveMode, setSaveMode] = useState<"all" | "selected" | null>(null);
+  const [saveTarget, setSaveTarget] = useState<"all" | "selected">("all");
 
   const labels = useMemo(
     () =>
@@ -379,8 +380,11 @@ export function LibraryTab({
             title: "Сценарии",
             quickSearch: "Поиск сценариев",
             allScenarios: "Все сценарии",
-            saveAll: "Сохранить весь холст",
-            saveSelected: "Сохранить выделенное",
+            save: "Сохранить",
+            saveTitle: "Область сохранения",
+            saving: "Сохраняем...",
+            saveTargetAll: "Холст",
+            saveTargetSelected: "Выбранное",
             quickEmpty: "Нет сценариев для текущего приложения и версии.",
             allEmpty: "В библиотеке пока нет сценариев.",
             loading: "Загрузка...",
@@ -397,8 +401,11 @@ export function LibraryTab({
             title: "Scenarios",
             quickSearch: "Search scenarios",
             allScenarios: "All scenarios",
-            saveAll: "Save full canvas",
-            saveSelected: "Save selected",
+            save: "Save",
+            saveTitle: "Save scope",
+            saving: "Saving...",
+            saveTargetAll: "Canvas",
+            saveTargetSelected: "Selection",
             quickEmpty: "No scenarios for current app and version.",
             allEmpty: "Scenario library is empty.",
             loading: "Loading...",
@@ -569,34 +576,37 @@ export function LibraryTab({
     <div className={styles.container}>
       <h4 className={styles.title}>{labels.title}</h4>
 
-      <div className={styles.actionsRow}>
+      <div className={styles.saveCard}>
+        <div className={styles.saveCardHead}>
+          <span className={styles.saveCardTitle}>{labels.saveTitle}</span>
+        </div>
+        <div className={styles.saveTargetGroup}>
+          <button
+            type="button"
+            className={`${styles.saveTargetButton} ${saveTarget === "all" ? styles.saveTargetButtonActive : ""}`}
+            disabled={saveMode !== null}
+            aria-pressed={saveTarget === "all"}
+            onClick={() => setSaveTarget("all")}
+          >
+            {labels.saveTargetAll}
+          </button>
+          <button
+            type="button"
+            className={`${styles.saveTargetButton} ${saveTarget === "selected" ? styles.saveTargetButtonActive : ""}`}
+            disabled={saveMode !== null}
+            aria-pressed={saveTarget === "selected"}
+            onClick={() => setSaveTarget("selected")}
+          >
+            {labels.saveTargetSelected}
+          </button>
+        </div>
         <button
           type="button"
-          className={`${styles.secondaryButton} ${styles.rowButton}`}
+          className={`${styles.primaryButton} ${styles.saveButton}`}
           disabled={saveMode !== null}
-          onClick={() => void handleSave("all")}
+          onClick={() => void handleSave(saveTarget)}
         >
-          <span className={styles.iconLabel}>
-            <span className={styles.inlineIcon} aria-hidden="true">
-              <LibraryIcon name="saveAll" />
-            </span>
-            <span>{saveMode === "all" ? labels.loading : labels.saveAll}</span>
-          </span>
-        </button>
-        <button
-          type="button"
-          className={`${styles.secondaryButton} ${styles.rowButton}`}
-          disabled={saveMode !== null}
-          onClick={() => void handleSave("selected")}
-        >
-          <span className={styles.iconLabel}>
-            <span className={styles.inlineIcon} aria-hidden="true">
-              <LibraryIcon name="saveSelected" />
-            </span>
-            <span>
-              {saveMode === "selected" ? labels.loading : labels.saveSelected}
-            </span>
-          </span>
+          {saveMode === saveTarget ? labels.saving : labels.save}
         </button>
       </div>
 

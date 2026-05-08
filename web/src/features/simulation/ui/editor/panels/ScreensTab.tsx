@@ -50,7 +50,7 @@ export function ScreensTab({
       <div className={styles.header}>
         <h4 className={styles.title}>{labels.title}</h4>
         <button className={styles.addButton} onClick={onAddScreen}>
-          + {labels.addScreen}
+          {labels.addScreen}
         </button>
       </div>
 

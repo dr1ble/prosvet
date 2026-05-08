@@ -1,60 +1,57 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 8px;
 }
 
 .title {
   margin: 0;
-  font-size: 11px;
-  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-secondary, #666);
+  color: #6b7280;
 }
 
 .iconButton {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid var(--border-default, #d7d7d7);
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
   border-radius: 10px;
-  background: #fff;
-  color: var(--text-primary, #1f1f1f);
+  background: #3b82f6;
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .iconButton svg {
-  width: 16px;
-  height: 16px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  display: none;
 }
 
 .iconButton:hover {
-  background: #f3f7ff;
-  border-color: #9fbdf8;
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
 .searchInput {
   width: 100%;
-  padding: 7px 9px;
+  min-height: 36px;
+  padding: 7px 10px;
   border: 1px solid var(--border-default, #d7d7d7);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg-secondary, #f7f7f7);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-primary, #1f1f1f);
 }
 
@@ -65,8 +62,8 @@
 }
 
 .appCard {
-  border: 1px solid var(--border-default, #dcdcdc);
-  border-radius: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
   background: #fff;
   overflow: hidden;
 }

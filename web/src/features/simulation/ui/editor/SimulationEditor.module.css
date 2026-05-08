@@ -61,12 +61,39 @@
   color: var(--text-primary, #333);
 }
 
-.scope {
+.scopeButton {
+  max-width: 260px;
+  min-height: 32px;
+  border: 1px solid rgba(93, 117, 144, 0.16);
+  border-radius: 10px;
+  background: #f5f7fa;
+  color: #2d4054;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scopeButton:hover {
+  border-color: rgba(59, 130, 246, 0.32);
+  background: #eef6ff;
+  color: #2563eb;
+}
+
+.scopeButtonText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scopeButtonCaret {
+  flex: 0 0 auto;
+  color: currentColor;
   font-size: 11px;
-  color: var(--text-secondary, #666);
-  background: var(--bg-secondary, #f0f0f0);
-  padding: 3px 8px;
-  border-radius: 4px;
 }
 
 .titleInput {
@@ -145,6 +172,10 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+}
+
+.viewportGuard {
+  display: none;
 }
 
 .sidebarContainer {
@@ -609,6 +640,126 @@
   color: var(--text-tertiary, #999);
 }
 
+.coursePickerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.coursePickerModal {
+  width: min(520px, 100%);
+  max-height: min(680px, calc(100vh - 40px));
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.26);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.coursePickerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.coursePickerTitle {
+  margin: 0;
+  color: #203a55;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.coursePickerDescription {
+  margin: 6px 0 0;
+  color: #60758a;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.coursePickerClose {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(93, 117, 144, 0.2);
+  background: #f6f9fc;
+  color: #2d4054;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.coursePickerSearch {
+  min-height: 38px;
+  border-radius: 11px;
+  border: 1px solid rgba(93, 117, 144, 0.2);
+  background: #f8fafc;
+  color: #1f2937;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.coursePickerList {
+  max-height: 320px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.coursePickerOption {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(93, 117, 144, 0.18);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #24384d;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.coursePickerOption small {
+  color: #718499;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.coursePickerOptionActive {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: #eef6ff;
+  color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.coursePickerEmpty {
+  margin: 0;
+  padding: 12px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.coursePickerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .previewOverlay {
   position: fixed;
   inset: 0;
@@ -746,10 +897,30 @@
   color: var(--text-tertiary, #999);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1023px) {
   .container {
     height: auto;
     min-height: 100dvh;
+  }
+
+  .viewportGuard {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    margin: 24px;
+    padding: 24px;
+    border: 1px solid var(--border-default, #e0e0e0);
+    border-radius: 14px;
+    background: var(--bg-primary, #ffffff);
+    color: var(--text-secondary, #666);
+    line-height: 1.5;
+  }
+
+  .viewportGuard strong {
+    color: var(--text-primary, #333);
+    font-size: 18px;
   }
 
   .toolbar {
@@ -773,8 +944,7 @@
   }
 
   .main {
-    flex-direction: column;
-    overflow: auto;
+    display: none;
   }
 
   .canvas {

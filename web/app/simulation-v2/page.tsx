@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { fetchAdminAuthMeServer } from "@/features/auth/server";
+import { fetchCourses } from "@/features/catalog/api";
+import type { CourseDto } from "@/features/catalog/types";
 import { buildSimulationScope } from "@/features/simulation/model/scope";
 import { SimulationEditor } from "@/features/simulation/ui/editor";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
@@ -29,6 +31,7 @@ function compactId(value: string): string {
 function formatScopeLabel(
   language: AppLanguage,
   scope: ReturnType<typeof buildSimulationScope>,
+  courseTitle?: string | null,
 ): string {
   if (scope.isGlobal) {
     return language === "ru"
@@ -39,9 +42,13 @@ function formatScopeLabel(
   const parts: string[] = [];
   if (scope.courseId) {
     parts.push(
-      language === "ru"
-        ? `Курс ${compactId(scope.courseId)}`
-        : `Course ${compactId(scope.courseId)}`,
+      courseTitle
+        ? language === "ru"
+          ? `Курс: ${courseTitle}`
+          : `Course: ${courseTitle}`
+        : language === "ru"
+          ? `Курс ${compactId(scope.courseId)}`
+          : `Course ${compactId(scope.courseId)}`,
     );
   }
   if (scope.moduleId) {
@@ -104,7 +111,17 @@ export default async function SimulationV2Page({
     redirect(`/dashboard?lang=${language}`);
   }
 
-  const scopeLabel = formatScopeLabel(language, scope);
+  let courses: CourseDto[] = [];
+  try {
+    courses = await fetchCourses(accessToken);
+  } catch {
+    courses = [];
+  }
+  const selectedCourse = params.courseId
+    ? courses.find((course) => course.id === params.courseId)
+    : null;
+  const selectedCourseId = selectedCourse?.id ?? params.courseId ?? null;
+  const scopeLabel = formatScopeLabel(language, scope, selectedCourse?.title);
 
   return (
     <main className={styles.page}>
@@ -112,6 +129,8 @@ export default async function SimulationV2Page({
         language={language}
         scopeKey={scope.scopeKey}
         scopeLabel={scopeLabel}
+        courses={courses}
+        selectedCourseId={selectedCourseId}
       />
     </main>
   );

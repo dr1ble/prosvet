@@ -62,44 +62,42 @@ async function assertDashboardKeyboardFlow(page) {
   );
 }
 
-async function assertSimulationMobileLayout(page) {
+async function assertSimulationMobileGuard(page) {
   await page.goto(`${BASE_URL}/simulation-v2?lang=ru`, {
     waitUntil: "networkidle0",
     timeout: 30000,
   });
 
   await page.setViewport({ width: 320, height: 900 });
-  await page.waitForSelector("[class*='SimulationEditor_canvas']", {
+  await page.waitForSelector("[class*='SimulationEditor_viewportGuard']", {
     timeout: 15000,
   });
 
   const metrics = await page.evaluate(() => {
-    const canvas = document.querySelector("[class*='SimulationEditor_canvas']");
-    const flow = document.querySelector(".react-flow");
-    const tabs = document.querySelector("[role='tablist']");
-    if (!canvas) {
+    const guard = document.querySelector(
+      "[class*='SimulationEditor_viewportGuard']",
+    );
+    const main = document.querySelector("[class*='SimulationEditor_main']");
+    if (!guard || !main) {
       return null;
     }
-    const canvasRect = canvas.getBoundingClientRect();
-    const flowRect = flow ? flow.getBoundingClientRect() : null;
-    const tabsRect = tabs ? tabs.getBoundingClientRect() : null;
+    const guardRect = guard.getBoundingClientRect();
     return {
-      canvasHeight: canvasRect.height,
-      canvasTop: canvasRect.top,
-      flowHeight: flowRect ? flowRect.height : null,
-      flowTop: flowRect ? flowRect.top : null,
-      tabsTop: tabsRect ? tabsRect.top : null,
+      guardText: guard.textContent || "",
+      guardDisplay: window.getComputedStyle(guard).display,
+      mainDisplay: window.getComputedStyle(main).display,
+      guardTop: guardRect.top,
     };
   });
 
-  assertCondition(Boolean(metrics), "Missing simulation canvas container");
+  assertCondition(Boolean(metrics), "Missing simulation mobile viewport guard");
   assertCondition(
-    metrics.canvasHeight >= 220,
-    `Canvas wrapper too small on mobile: ${JSON.stringify(metrics)}`,
+    metrics.guardText.includes("1024 px") && metrics.guardDisplay !== "none",
+    `Mobile guard is not visible or explanatory: ${JSON.stringify(metrics)}`,
   );
   assertCondition(
-    metrics.canvasTop < 260,
-    `Canvas wrapper is pushed too far below fold: ${JSON.stringify(metrics)}`,
+    metrics.mainDisplay === "none",
+    `Builder must be hidden below 1024px: ${JSON.stringify(metrics)}`,
   );
 }
 
@@ -113,7 +111,7 @@ async function run() {
     const page = await browser.newPage();
     await login(page);
     await assertDashboardKeyboardFlow(page);
-    await assertSimulationMobileLayout(page);
+    await assertSimulationMobileGuard(page);
     console.log("Simulation runtime assertions passed");
   } finally {
     await browser.close();

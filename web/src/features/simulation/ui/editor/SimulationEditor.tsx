@@ -45,6 +45,7 @@ import {
 } from "./panels/AppMediaTab";
 import { LibraryTab } from "./panels/LibraryTab";
 import type { AppScreen } from "./types";
+import type { CourseDto } from "@/features/catalog/types";
 import type { SimulationDraft } from "@/features/simulation/model/types";
 import {
   deleteSimulationMediaAssetRemote,
@@ -97,8 +98,8 @@ const SCENARIO_IMPORT_VERTICAL_GAP = 88;
 const SCENARIO_IMPORT_COLLISION_PADDING = 16;
 const SCENARIO_IMPORT_COLLISION_STEP_Y = 56;
 const SCENARIO_IMPORT_COLLISION_MAX_STEPS = 120;
-const SIDEBAR_WIDTH_MIN = 220;
-const SIDEBAR_WIDTH_DEFAULT = 220;
+const SIDEBAR_WIDTH_MIN = 280;
+const SIDEBAR_WIDTH_DEFAULT = 300;
 const SIDEBAR_WIDTH_MAX = 460;
 const PROPERTIES_WIDTH_MIN = 240;
 const PROPERTIES_WIDTH_DEFAULT = 260;
@@ -441,7 +442,24 @@ type SimulationEditorProps = {
   language: "ru" | "en";
   scopeKey: string;
   scopeLabel: string;
+  courses: Pick<CourseDto, "id" | "title" | "status">[];
+  selectedCourseId: string | null;
 };
+
+function courseStatusLabel(
+  status: Pick<CourseDto, "status">["status"],
+  language: "ru" | "en",
+): string {
+  const labels: Record<
+    Pick<CourseDto, "status">["status"],
+    { ru: string; en: string }
+  > = {
+    draft: { ru: "Черновик", en: "Draft" },
+    active: { ru: "Активный", en: "Active" },
+    archived: { ru: "Архив", en: "Archived" },
+  };
+  return labels[status]?.[language] ?? status;
+}
 
 type ScenarioInsertOptions = {
   dropFlowPosition?: { x: number; y: number } | null;
@@ -684,6 +702,8 @@ function SimulationEditorInner({
   language,
   scopeLabel,
   scopeKey,
+  courses,
+  selectedCourseId,
 }: SimulationEditorProps) {
   const [nodes, setNodes] = useState<SimulationNode[]>([]);
   const [edges, setEdges] = useState<SimulationEdge[]>([]);
@@ -691,6 +711,11 @@ function SimulationEditorInner({
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(
     null,
+  );
+  const [coursePickerOpen, setCoursePickerOpen] = useState(false);
+  const [courseSearchQuery, setCourseSearchQuery] = useState("");
+  const [pendingCourseId, setPendingCourseId] = useState<string | null>(
+    selectedCourseId,
   );
   const [showAllConnections, setShowAllConnections] = useState(false);
   const [draggingHotspot, setDraggingHotspot] = useState<{
@@ -1359,6 +1384,14 @@ function SimulationEditorInner({
             resizeProperties: "Изменить ширину панели свойств",
             closePreview: "Закрыть предпросмотр",
             imagePreviewHint: "Двойной клик для предпросмотра",
+            coursePickerTitle: "Привязка к курсу",
+            coursePickerDescription:
+              "Выберите курс, чтобы сценарий сохранялся в его рабочей области.",
+            coursePickerSearch: "Поиск курса",
+            noCourseBinding: "Без привязки к курсу",
+            noCoursesFound: "Курсы не найдены.",
+            cancel: "Отмена",
+            bindCourse: "Привязать",
           }
         : {
             title: "Simulation Editor",
@@ -1389,12 +1422,51 @@ function SimulationEditorInner({
             resizeProperties: "Resize properties panel",
             closePreview: "Close preview",
             imagePreviewHint: "Double click to preview",
+            coursePickerTitle: "Course binding",
+            coursePickerDescription:
+              "Choose a course so the scenario is saved in its workspace.",
+            coursePickerSearch: "Search courses",
+            noCourseBinding: "Global (not attached to a course)",
+            noCoursesFound: "No courses found.",
+            cancel: "Cancel",
+            bindCourse: "Bind",
           },
     [language],
   );
 
   const backToMenuAria =
     language === "ru" ? "Назад к рабочему столу" : "Back to dashboard";
+
+  useEffect(() => {
+    setPendingCourseId(selectedCourseId);
+  }, [selectedCourseId]);
+
+  const filteredCourses = useMemo(() => {
+    const normalizedQuery = courseSearchQuery.trim().toLowerCase();
+    const visibleCourses = courses.filter(
+      (course) => course.status !== "archived",
+    );
+    if (!normalizedQuery) {
+      return visibleCourses;
+    }
+    return visibleCourses.filter((course) =>
+      course.title.toLowerCase().includes(normalizedQuery),
+    );
+  }, [courseSearchQuery, courses]);
+
+  const handleOpenCoursePicker = () => {
+    setPendingCourseId(selectedCourseId);
+    setCourseSearchQuery("");
+    setCoursePickerOpen(true);
+  };
+
+  const handleApplyCourseBinding = () => {
+    const params = new URLSearchParams({ lang: language });
+    if (pendingCourseId) {
+      params.set("courseId", pendingCourseId);
+    }
+    window.location.assign(`/simulation-v2?${params.toString()}`);
+  };
 
   const handleAddScreen = useCallback(() => {
     const newId = `screen-${Date.now()}`;
@@ -3011,7 +3083,17 @@ function SimulationEditorInner({
               />
             </svg>
           </a>
-          <span className={styles.scope}>{scopeLabel}</span>
+          <button
+            type="button"
+            className={styles.scopeButton}
+            onClick={handleOpenCoursePicker}
+            aria-haspopup="dialog"
+          >
+            <span className={styles.scopeButtonText}>{scopeLabel}</span>
+            <span className={styles.scopeButtonCaret} aria-hidden="true">
+              ▾
+            </span>
+          </button>
         </div>
         <div className={styles.toolbarCenter}>
           <input
@@ -3060,6 +3142,19 @@ function SimulationEditorInner({
           )}
         </div>
       </header>
+
+      <div className={styles.viewportGuard} role="status">
+        <strong>
+          {language === "ru"
+            ? "Конструктор доступен на экранах от 1024 px"
+            : "Builder is available on screens from 1024 px"}
+        </strong>
+        <span>
+          {language === "ru"
+            ? "Откройте раздел на ноутбуке или расширьте окно браузера, чтобы редактировать сценарии и зоны экранов."
+            : "Open this section on a laptop or widen the browser window to edit scenarios and screen hotspots."}
+        </span>
+      </div>
 
       <div className={styles.main}>
         <div
@@ -3430,6 +3525,86 @@ function SimulationEditorInner({
           </aside>
         </div>
       </div>
+      {coursePickerOpen ? (
+        <div className={styles.coursePickerOverlay} role="presentation">
+          <section
+            className={styles.coursePickerModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="course-picker-title"
+          >
+            <div className={styles.coursePickerHeader}>
+              <div>
+                <h2
+                  id="course-picker-title"
+                  className={styles.coursePickerTitle}
+                >
+                  {labels.coursePickerTitle}
+                </h2>
+                <p className={styles.coursePickerDescription}>
+                  {labels.coursePickerDescription}
+                </p>
+              </div>
+              <button
+                type="button"
+                className={styles.coursePickerClose}
+                onClick={() => setCoursePickerOpen(false)}
+                aria-label={labels.cancel}
+              >
+                ×
+              </button>
+            </div>
+            <input
+              className={styles.coursePickerSearch}
+              value={courseSearchQuery}
+              onChange={(event) => setCourseSearchQuery(event.target.value)}
+              placeholder={labels.coursePickerSearch}
+            />
+            <div className={styles.coursePickerList}>
+              <button
+                type="button"
+                className={`${styles.coursePickerOption} ${pendingCourseId === null ? styles.coursePickerOptionActive : ""}`}
+                onClick={() => setPendingCourseId(null)}
+              >
+                <span>{labels.noCourseBinding}</span>
+              </button>
+              {filteredCourses.length === 0 ? (
+                <p className={styles.coursePickerEmpty}>
+                  {labels.noCoursesFound}
+                </p>
+              ) : (
+                filteredCourses.map((course) => (
+                  <button
+                    key={course.id}
+                    type="button"
+                    className={`${styles.coursePickerOption} ${pendingCourseId === course.id ? styles.coursePickerOptionActive : ""}`}
+                    onClick={() => setPendingCourseId(course.id)}
+                  >
+                    <span>{course.title}</span>
+                    <small>{courseStatusLabel(course.status, language)}</small>
+                  </button>
+                ))
+              )}
+            </div>
+            <div className={styles.coursePickerActions}>
+              <button
+                type="button"
+                className={styles.buttonSecondary}
+                onClick={() => setCoursePickerOpen(false)}
+              >
+                {labels.cancel}
+              </button>
+              <button
+                type="button"
+                className={styles.button}
+                onClick={handleApplyCourseBinding}
+              >
+                {labels.bindCourse}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {previewImage ? (
         <div
           className={styles.previewOverlay}
