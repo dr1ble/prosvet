@@ -466,6 +466,62 @@ class TestBulkUpdateStructure:
         assert resp2.status_code == 200
         assert len(resp2.json()["lessons"]) == 1
 
+    def test_bulk_delete_first_lesson_and_compact_remaining_order(self, builder_client):
+        course = self._create(builder_client, "bulk-delete-first")
+        course_id = course["id"]
+
+        resp1 = builder_client.post(
+            f"/api/v1/catalog/courses/{course_id}/structure/bulk",
+            json={
+                "lessons": [
+                    {
+                        "id": None,
+                        "title": "Remove Me",
+                        "description": None,
+                        "order_index": 0,
+                        "tasks": [
+                            {
+                                "id": None,
+                                "task_type": "theory_text",
+                                "title": "Theory",
+                                "order_index": 0,
+                                "required": True,
+                                "payload": {"content": "<p>Content to remove</p>"},
+                            }
+                        ],
+                    },
+                    {
+                        "id": None,
+                        "title": "Keep Me",
+                        "description": None,
+                        "order_index": 1,
+                        "tasks": [],
+                    },
+                ]
+            },
+        )
+        assert resp1.status_code == 200
+        keep_id = resp1.json()["lessons"][1]["id"]
+
+        resp2 = builder_client.post(
+            f"/api/v1/catalog/courses/{course_id}/structure/bulk",
+            json={
+                "lessons": [
+                    {
+                        "id": keep_id,
+                        "title": "Keep Me",
+                        "description": None,
+                        "order_index": 0,
+                        "tasks": [],
+                    }
+                ]
+            },
+        )
+        assert resp2.status_code == 200
+        assert len(resp2.json()["lessons"]) == 1
+        assert resp2.json()["lessons"][0]["id"] == keep_id
+        assert resp2.json()["lessons"][0]["order_index"] == 0
+
     def test_bulk_update_nonexistent_course_404(self, builder_client):
         fake_id = str(uuid.uuid4())
         resp = builder_client.post(

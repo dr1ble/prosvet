@@ -785,14 +785,23 @@ class CatalogService:
             str(lesson.id): lesson for lesson in existing_lessons
         }
 
-        processed_lesson_ids: set[str] = set()
+        processed_lesson_ids: set[str] = {
+            str(lesson_payload.id)
+            for lesson_payload in payload.lessons
+            if lesson_payload.id and str(lesson_payload.id) in existing_lesson_map
+        }
+
+        # Free order_index slots before reordering/creating lessons. Archived lessons still
+        # participate in the DB uniqueness constraint, so they must move out of the active range.
+        for lesson_id, lesson in existing_lesson_map.items():
+            if lesson_id not in processed_lesson_ids:
+                self.repo.archive_lesson(lesson.id)
 
         for lesson_payload in payload.lessons:
             lesson_id = str(lesson_payload.id) if lesson_payload.id else None
 
             if lesson_id and lesson_id in existing_lesson_map:
                 lesson = existing_lesson_map[lesson_id]
-                processed_lesson_ids.add(lesson_id)
                 self.repo.update_lesson(
                     lesson_id=lesson.id,
                     title=lesson_payload.title.strip(),
@@ -813,7 +822,6 @@ class CatalogService:
                     status=LessonStatus.DRAFT.value,
                 )
                 lesson_id = str(lesson.id)
-                processed_lesson_ids.add(lesson_id)
 
             existing_tasks = self.repo.list_tasks_by_lesson(lesson.id)
             existing_task_map: dict[str, LessonTask] = {
@@ -864,10 +872,6 @@ class CatalogService:
                         payload=task_payload.payload,
                         checksum=checksum,
                     )
-
-        for lesson_id, lesson in existing_lesson_map.items():
-            if lesson_id not in processed_lesson_ids:
-                self.repo.archive_lesson(lesson.id)
 
         lessons = self.repo.list_lessons_by_course(course_id, include_archived=False)
         lessons_data: list[dict[str, Any]] = []

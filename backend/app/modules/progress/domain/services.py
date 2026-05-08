@@ -12,6 +12,7 @@ from app.modules.progress.api.schemas import (
     MyLessonNotesOut,
     MyProgressOut,
     ProgressOverviewRowOut,
+    ProgressTimeseriesPointOut,
 )
 from app.modules.progress.domain.errors import ProgressError
 from app.modules.progress.infra.repository import ProgressRepository
@@ -111,6 +112,29 @@ class ProgressService:
             )
         )
         return rows
+
+    def get_timeseries(
+        self,
+        period: Literal["all", "7d", "14d", "30d", "90d", "custom"] = "all",
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[ProgressTimeseriesPointOut]:
+        completed_from, completed_to = self._resolve_time_window(
+            period=period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        points = self.repo.get_completed_lessons_timeseries(
+            completed_from=completed_from,
+            completed_to=completed_to,
+        )
+        return [
+            ProgressTimeseriesPointOut(
+                date=point_date,
+                completed_lessons_count=completed_count,
+            )
+            for point_date, completed_count in points
+        ]
 
     def _resolve_time_window(
         self,

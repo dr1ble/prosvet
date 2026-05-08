@@ -21,6 +21,13 @@ class ProgressOverviewRowOut(BaseModel):
     completion_rate: float = Field(ge=0.0, le=1.0)
 
 
+class ProgressTimeseriesPointOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    date: datetime
+    completed_lessons_count: int = Field(ge=0)
+
+
 class LessonProgressUpsertIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

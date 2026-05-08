@@ -23,7 +23,6 @@ ALLOWED_STORE_TYPES = {"play_market", "rustore", "app_store", "other"}
 ALLOWED_IMAGE_TYPES = {
     "image/png": "png",
     "image/jpeg": "jpg",
-    "image/webp": "webp",
 }
 PACKAGE_PATTERN = re.compile(r"^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+$")
 VERSION_PATTERN = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")

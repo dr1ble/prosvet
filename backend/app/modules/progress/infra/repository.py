@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.infra.models import Course, CourseLesson, LessonStatus
@@ -160,6 +160,27 @@ class ProgressRepository:
             stmt = stmt.where(LessonProgress.completed_at <= completed_to)
         rows = self.db.execute(stmt).all()
         return {(course_id, user_id): int(count) for course_id, user_id, count in rows}
+
+    def get_completed_lessons_timeseries(
+        self,
+        completed_from: datetime | None,
+        completed_to: datetime | None,
+    ) -> list[tuple[datetime, int]]:
+        completed_day = cast(LessonProgress.completed_at, Date)
+        stmt = (
+            select(completed_day, func.count(LessonProgress.id))
+            .where(
+                LessonProgress.status == LessonProgressStatus.COMPLETED.value,
+                LessonProgress.completed_at.is_not(None),
+            )
+            .group_by(completed_day)
+            .order_by(completed_day.asc())
+        )
+        if completed_from is not None:
+            stmt = stmt.where(LessonProgress.completed_at >= completed_from)
+        if completed_to is not None:
+            stmt = stmt.where(LessonProgress.completed_at <= completed_to)
+        return [(datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc), int(count)) for day, count in self.db.execute(stmt).all()]
 
     def upsert_lesson_progress(self, user_id: UUID, lesson_id: UUID, status: str) -> LessonProgress:
         stmt = select(LessonProgress).where(

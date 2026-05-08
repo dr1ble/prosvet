@@ -13,6 +13,7 @@ from app.modules.progress.api.schemas import (
     MyLessonNotesOut,
     MyProgressOut,
     ProgressOverviewRowOut,
+    ProgressTimeseriesPointOut,
 )
 from app.modules.progress.domain.errors import ProgressError
 from app.shared.auth.deps import require_policy
@@ -144,6 +145,24 @@ def get_progress_overview(
             group_id=group_id,
             course_id=course_id,
             user_id=user_id,
+            period=period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    except ProgressError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
+
+
+@router.get("/timeseries", response_model=list[ProgressTimeseriesPointOut])
+def get_progress_timeseries(
+    service: ProgressServiceDep,
+    period: Literal["all", "7d", "14d", "30d", "90d", "custom"] = Query(default="all"),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    _actor: CurrentActor = Depends(require_policy("progress.view")),
+) -> list[ProgressTimeseriesPointOut]:
+    try:
+        return service.get_timeseries(
             period=period,
             date_from=date_from,
             date_to=date_to,

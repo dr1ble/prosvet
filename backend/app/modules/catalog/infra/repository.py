@@ -272,7 +272,13 @@ class CatalogRepository:
         return lesson
 
     def archive_lesson(self, lesson_id: UUID) -> CourseLesson | None:
-        return self.update_lesson(lesson_id, status=LessonStatus.ARCHIVED.value)
+        lesson = self.get_lesson_by_id(lesson_id)
+        if lesson is None:
+            return None
+        lesson.status = LessonStatus.ARCHIVED.value
+        lesson.order_index = self.get_next_lesson_order_index(lesson.course_id)
+        self.db.flush()
+        return lesson
 
     def restore_lesson(self, lesson_id: UUID) -> CourseLesson | None:
         return self.update_lesson(lesson_id, status=LessonStatus.DRAFT.value)
