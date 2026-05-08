@@ -60,28 +60,6 @@ function writeAuthCookies(
   });
 }
 
-function clearAuthCookies(response: NextResponse, request: Request): void {
-  const secure = resolveSecureCookieFlag(request);
-  response.cookies.set({
-    name: ADMIN_ACCESS_COOKIE,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    secure,
-    path: "/",
-    maxAge: 0,
-  });
-  response.cookies.set({
-    name: ADMIN_REFRESH_COOKIE,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    secure,
-    path: "/",
-    maxAge: 0,
-  });
-}
-
 function resolveSafeNextPath(
   nextPath: string | null,
   language: AppLanguage,
@@ -147,8 +125,6 @@ export async function POST(request: Request): Promise<Response> {
   });
   if (refreshed.tokens) {
     writeAuthCookies(response, request, refreshed.tokens);
-  } else if (refreshed.status === 401) {
-    clearAuthCookies(response, request);
   }
   return response;
 }
@@ -167,7 +143,5 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const authUrl = new URL(`/auth?lang=${language}`, request.url);
-  const response = NextResponse.redirect(authUrl);
-  clearAuthCookies(response, request);
-  return response;
+  return NextResponse.redirect(authUrl);
 }

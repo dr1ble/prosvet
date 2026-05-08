@@ -32,6 +32,17 @@ function assertNoServiceTokenFallback() {
   }
 }
 
+function assertRefreshFailureDoesNotClearCookies() {
+  const content = fs.readFileSync(
+    projectFile("app/api/admin/auth/refresh/route.ts"),
+    "utf8",
+  );
+  assertCondition(
+    !content.includes("clearAuthCookies"),
+    "Refresh failures must not clear auth cookies; a stale failed refresh can race with a successful token rotation.",
+  );
+}
+
 function collectSetCookieValues(headers) {
   if (typeof headers.getSetCookie === "function") {
     return headers.getSetCookie();
@@ -96,6 +107,7 @@ async function assertLoginSanitizedAndCookieAuth() {
 
 async function run() {
   assertNoServiceTokenFallback();
+  assertRefreshFailureDoesNotClearCookies();
   await assertLoginSanitizedAndCookieAuth();
   console.log("Auth hardening assertions passed");
 }
