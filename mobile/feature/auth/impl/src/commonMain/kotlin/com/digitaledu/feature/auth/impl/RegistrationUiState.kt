@@ -9,7 +9,7 @@ data class RegistrationUiState(
     val infoMessage: String? = null,
 ) {
     val passwordValidationMessage: String?
-        get() = if (password.isNotEmpty() && password.length < MIN_PASSWORD_LENGTH) {
+        get() = if (password.isNotEmpty() && !isSixDigitPin(password)) {
             PASSWORD_MIN_LENGTH_MESSAGE
         } else {
             null
@@ -21,7 +21,7 @@ data class RegistrationUiState(
     val canSubmit: Boolean
         get() = fullName.isNotBlank() &&
             login.isNotBlank() &&
-            password.length >= MIN_PASSWORD_LENGTH &&
+            isSixDigitPin(password) &&
             passwordsMatch &&
             !isSubmitting
 }

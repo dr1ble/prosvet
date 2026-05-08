@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.digitaledu.core.ui.components.AuthUiColors
 import com.digitaledu.core.ui.components.AuthUiOpacity
 import com.digitaledu.core.ui.components.AuthUiShapes
 import com.digitaledu.core.ui.components.AuthUiSize
@@ -61,12 +62,7 @@ internal fun OnboardingScreen(
             .fillMaxSize()
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.secondaryContainer,
-                        MaterialTheme.colorScheme.tertiaryContainer,
-                        MaterialTheme.colorScheme.surface,
-                    ),
+                    colors = AuthUiColors.splashOnboardingGradient,
                     start = androidx.compose.ui.geometry.Offset(
                         x = -520f,
                         y = -120f,

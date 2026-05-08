@@ -6,6 +6,7 @@ sealed interface AuthIntent {
     data class LoginChanged(val value: String) : AuthIntent
     data class PasswordChanged(val value: String) : AuthIntent
     data class DebugQuickLoginClicked(val preset: DebugQuickLoginPreset) : AuthIntent
+    data class QrTokenScanned(val token: String) : AuthIntent
     data object LoginClicked : AuthIntent
     data object DismissError : AuthIntent
 }

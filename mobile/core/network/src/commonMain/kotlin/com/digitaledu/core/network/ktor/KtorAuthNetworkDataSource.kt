@@ -45,6 +45,15 @@ class KtorAuthNetworkDataSource(
         }
     }
 
+    override suspend fun activateQr(token: String): AuthTokens {
+        return executeCall {
+            postJson<AuthResponse>(
+                path = "api/v1/auth/qr/activate",
+                payload = QrActivatePayload(token = token),
+            ).toAuthTokens()
+        }
+    }
+
     override suspend fun requestPasswordRecovery(loginOrEmail: String): PasswordRecoveryRequest {
         return executeCall {
             client.post {
@@ -222,6 +231,8 @@ private fun AuthResponse.toAuthTokens(): AuthTokens {
     return AuthTokens(
         accessToken = accessToken,
         refreshToken = refreshToken,
+        initialLogin = initialLogin,
+        initialPassword = initialPassword,
     )
 }
 

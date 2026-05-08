@@ -24,6 +24,7 @@ class AuthViewModel(
                 login = intent.preset.login,
                 password = intent.preset.password,
             )
+            is AuthIntent.QrTokenScanned -> activateQr(intent.token)
             AuthIntent.LoginClicked -> login()
             AuthIntent.DismissError -> dismissError()
         }
@@ -76,6 +77,31 @@ class AuthViewModel(
         }.onSuccess {
             updateState { copy(isSubmitting = false) }
             emitEffect(AuthEffect.Authenticated)
+        }.onFailure { throwable ->
+            updateState {
+                copy(
+                    isSubmitting = false,
+                    errorMessage = throwable.toUserMessage(),
+                )
+            }
+        }
+    }
+
+    private suspend fun activateQr(token: String) {
+        if (token.isBlank() || currentState.isSubmitting) return
+
+        updateState {
+            copy(
+                isSubmitting = true,
+                errorMessage = null,
+            )
+        }
+
+        runCatching {
+            authRepository.activateQr(token = token)
+        }.onSuccess { tokens ->
+            updateState { copy(isSubmitting = false) }
+            emitEffect(qrAuthEffectFor(tokens))
         }.onFailure { throwable ->
             updateState {
                 copy(

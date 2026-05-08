@@ -155,9 +155,18 @@ internal actual fun QrScannerViewport(
                     barcodeScanner
                         .process(inputImage)
                         .addOnSuccessListener { barcodes ->
+                            val authToken = barcodes
+                                .firstNotNullOfOrNull { barcode ->
+                                    extractAuthQrToken(barcode)
+                                }
+                            if (authToken != null && handledScan.compareAndSet(false, true)) {
+                                onScanSuccess(authToken)
+                                return@addOnSuccessListener
+                            }
+
                             val token = barcodes
                                 .firstNotNullOfOrNull { barcode ->
-                                    extractQrToken(barcode)
+                                    extractGroupQrToken(barcode)
                                 }
 
                             if (token != null && handledScan.compareAndSet(false, true)) {
@@ -194,7 +203,26 @@ internal actual fun QrScannerViewport(
     }
 }
 
-private fun extractQrToken(barcode: Barcode): String? {
+private fun extractAuthQrToken(barcode: Barcode): String? {
+    val rawValue = barcode.rawValue?.trim().orEmpty()
+    if (rawValue.isBlank()) {
+        return null
+    }
+
+    val asUri = runCatching { Uri.parse(rawValue) }.getOrNull() ?: return null
+    if (asUri.scheme != "digitaledu" || asUri.host != "auth") {
+        return null
+    }
+
+    val segments = asUri.pathSegments
+    val qrIndex = segments.indexOf("qr")
+    if (qrIndex >= 0 && qrIndex + 1 < segments.size) {
+        return segments[qrIndex + 1].takeIf { it.isNotBlank() }
+    }
+    return asUri.getQueryParameter("token")?.takeIf { it.isNotBlank() }
+}
+
+private fun extractGroupQrToken(barcode: Barcode): String? {
     val rawValue = barcode.rawValue?.trim().orEmpty()
     if (rawValue.isBlank()) {
         return null

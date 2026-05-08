@@ -31,6 +31,12 @@ class NetworkAuthRepository(
         return tokens
     }
 
+    override suspend fun activateQr(token: String): AuthTokens {
+        val tokens = networkDataSource.activateQr(token = token)
+        authSessionStore.update(tokens)
+        return tokens
+    }
+
     override suspend fun requestPasswordRecovery(loginOrEmail: String): PasswordRecoveryRequest {
         return networkDataSource.requestPasswordRecovery(loginOrEmail = loginOrEmail)
     }

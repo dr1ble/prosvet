@@ -9,8 +9,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.material3.MaterialTheme
 import androidx.navigation.compose.rememberNavController
+import com.digitaledu.core.ui.components.AuthUiColors
 import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.feature.auth.api.AUTH_ROUTE
 import com.digitaledu.feature.auth.api.AuthFeatureEntry
@@ -90,12 +90,7 @@ private fun BootstrapSplash(
     modifier: Modifier = Modifier,
 ) {
     val backgroundBrush = Brush.linearGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.primaryContainer,
-            MaterialTheme.colorScheme.secondaryContainer,
-            MaterialTheme.colorScheme.tertiaryContainer,
-            MaterialTheme.colorScheme.surface,
-        ),
+        colors = AuthUiColors.splashOnboardingGradient,
         start = androidx.compose.ui.geometry.Offset(
             x = -520f,
             y = -120f,

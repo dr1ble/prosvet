@@ -7,6 +7,7 @@ import com.digitaledu.core.model.auth.PasswordRecoveryRequest
 interface AuthNetworkDataSource {
     suspend fun register(fullName: String, login: String, password: String): AuthTokens
     suspend fun login(login: String, password: String): AuthTokens
+    suspend fun activateQr(token: String): AuthTokens
     suspend fun requestPasswordRecovery(loginOrEmail: String): PasswordRecoveryRequest
     suspend fun confirmPasswordRecovery(resetToken: String, newPassword: String)
     suspend fun refreshSession(refreshToken: String): AuthTokens

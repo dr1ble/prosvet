@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -54,6 +55,7 @@ import com.digitaledu.core.ui.ObserveEffects
 import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.AuthUiShapes
 import com.digitaledu.core.ui.components.AuthUiSpacing
+import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
@@ -82,9 +84,33 @@ internal fun AuthRoute(
         KoinPlatform.getKoin().get<AccessibilityPreferencesRepository>()
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var initialLogin by rememberSaveable { mutableStateOf<String?>(null) }
+    var initialPassword by rememberSaveable { mutableStateOf<String?>(null) }
 
     ObserveEffects(viewModel.effects) { effect ->
-        if (effect is AuthEffect.Authenticated) onAuthenticated()
+        when (effect) {
+            AuthEffect.Authenticated -> onAuthenticated()
+            is AuthEffect.InitialCredentialsReady -> {
+                initialLogin = effect.login
+                initialPassword = effect.password
+            }
+        }
+    }
+
+    val pendingLogin = initialLogin
+    val pendingPassword = initialPassword
+    if (pendingLogin != null && pendingPassword != null) {
+        InitialCredentialsScreen(
+            login = pendingLogin,
+            password = pendingPassword,
+            onContinue = {
+                initialLogin = null
+                initialPassword = null
+                onAuthenticated()
+            },
+            modifier = modifier,
+        )
+        return
     }
 
     val navController = rememberNavController()
@@ -119,6 +145,7 @@ internal fun AuthRoute(
             QrLoginScreen(
                 onBack = { navController.popBackStack() },
                 onManualLogin = { navController.navigate(ROUTE_LOGIN) { popUpTo(ROUTE_LOGIN) { inclusive = true } } },
+                onIntent = viewModel::processIntent,
             )
         }
         composable(ROUTE_RECOVERY) {
@@ -152,6 +179,85 @@ internal fun AuthRoute(
                     viewModel.updateAccessibility { copy(tremorFilter = enabled) }
                 },
                 onBack = { navController.popBackStack() },
+            )
+        }
+    }
+}
+
+@Composable
+private fun InitialCredentialsScreen(
+    login: String,
+    password: String,
+    onContinue: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(AuthUiSpacing.screenHorizontal),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "Запишите данные для входа",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+        Text(
+            text = "Если вы выйдете из приложения, используйте эти данные для входа.",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
+        CredentialCard(label = "Логин", value = login)
+        Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
+        CredentialCard(label = "Пароль", value = password)
+        Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
+        Text(
+            text = "Логин, пароль и остальные данные можно изменить или заполнить позже в профиле.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(AuthUiSpacing.sectionMd))
+        GradientPrimaryButton(
+            text = "Я записал, продолжить",
+            onClick = onContinue,
+        )
+    }
+}
+
+@Composable
+private fun CredentialCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = AuthUiShapes.cardLg,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(AuthUiSpacing.itemMd),
+            verticalArrangement = Arrangement.spacedBy(AuthUiSpacing.itemXs),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }

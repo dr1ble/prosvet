@@ -4,6 +4,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
@@ -52,6 +53,15 @@ object AuthUiShapes {
     val pill: Shape = CircleShape
     val cardMd: Shape = RoundedCornerShape(12.dp)
     val cardLg: Shape = RoundedCornerShape(16.dp)
+}
+
+object AuthUiColors {
+    val splashOnboardingGradient: List<Color> = listOf(
+        Color(0xFFCCF6FF),
+        Color(0xFFD6EAFF),
+        Color(0xFFD8F8E8),
+        Color(0xFFF3F8FF),
+    )
 }
 
 object AuthUiTypography {

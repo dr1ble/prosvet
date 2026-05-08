@@ -59,6 +59,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun QrLoginScreen(
     onBack: () -> Unit,
     onManualLogin: () -> Unit,
+    onIntent: (AuthIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var scanStatus by rememberSaveable { mutableStateOf<String?>(null) }
@@ -109,7 +110,8 @@ internal fun QrLoginScreen(
                             .clip(AuthUiShapes.cardLg),
                         onScanSuccess = {
                             scanError = null
-                            scanStatus = "QR-код распознан. Открываем материал…"
+                            scanStatus = "QR-код распознан. Выполняем вход…"
+                            onIntent(AuthIntent.QrTokenScanned(it))
                         },
                         onScanError = { msg -> scanError = msg },
                     )
