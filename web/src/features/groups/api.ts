@@ -197,3 +197,19 @@ export function generateGroupQr(groupId: string): Promise<GroupQrDto> {
     body: "{}",
   });
 }
+
+export type PersonalQrDto = {
+  user_id: string;
+  deep_link_url: string;
+  expires_at: string;
+};
+
+export function generatePersonalLoginQr(
+  userId: string,
+): Promise<PersonalQrDto> {
+  return fetchAdminJson<PersonalQrDto>("/api/admin/auth/qr/personal", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  });
+}

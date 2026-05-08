@@ -424,6 +424,12 @@
   color: #8b2f2f;
 }
 
+.btnSmall {
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
 .membersList {
   max-height: 280px;
   overflow: auto;
@@ -456,13 +462,107 @@
 .memberRow {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   padding: 6px;
   border-radius: 8px;
 }
 
+.memberInfo {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.memberInfo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .memberRow:hover {
   background: #f5f9ff;
+}
+
+.memberActions {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.memberActionsMenu {
+  position: relative;
+}
+
+.memberActionsTrigger {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(42, 70, 96, 0.16);
+  border-radius: 9px;
+  background: #fff;
+  color: #516b83;
+  cursor: pointer;
+  list-style: none;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.08em;
+}
+
+.memberActionsTrigger::-webkit-details-marker {
+  display: none;
+}
+
+.memberActionsMenu[open] .memberActionsTrigger,
+.memberActionsTrigger:hover {
+  border-color: rgba(29, 115, 226, 0.28);
+  background: #edf5ff;
+  color: #1d5ea9;
+}
+
+.memberActionsPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  min-width: 170px;
+  padding: 6px;
+  border: 1px solid rgba(42, 70, 96, 0.16);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(28, 52, 75, 0.16);
+}
+
+.memberActionButton {
+  width: 100%;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #294760;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.memberActionButton:hover:enabled {
+  border-color: rgba(29, 115, 226, 0.18);
+  background: #f4f9ff;
+  color: #1d5ea9;
+}
+
+.memberActionButton:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
 }
 
 .muted {

@@ -10,11 +10,13 @@ import {
   createGroup,
   createGroupAssignment,
   generateGroupQr,
+  generatePersonalLoginQr,
   replaceGroupMembers,
   restoreGroup,
   updateGroup,
   updateGroupAssignment,
 } from "@/features/groups/api";
+import type { PersonalQrDto } from "@/features/groups/api";
 import type {
   AssignmentStartPolicy,
   AssignmentStatus,
@@ -108,6 +110,14 @@ export function GroupsWorkspace({
   const [groupQr, setGroupQr] = useState<GroupQrDto | null>(null);
   const [groupQrImageUrl, setGroupQrImageUrl] = useState<string | null>(null);
   const [groupQrModalOpen, setGroupQrModalOpen] = useState(false);
+  const [personalQr, setPersonalQr] = useState<PersonalQrDto | null>(null);
+  const [personalQrUserLabel, setPersonalQrUserLabel] = useState<string | null>(
+    null,
+  );
+  const [personalQrImageUrl, setPersonalQrImageUrl] = useState<string | null>(
+    null,
+  );
+  const [personalQrModalOpen, setPersonalQrModalOpen] = useState(false);
 
   const selectedGroup = useMemo(
     () => groups.find((group) => group.id === selectedGroupId) ?? null,
@@ -136,6 +146,8 @@ export function GroupsWorkspace({
     assignments: isRu ? "Назначения" : "Assignments",
     createAssignment: isRu ? "Создать назначение" : "Create assignment",
     createQr: isRu ? "QR для входа в группу" : "Group join QR",
+    createPersonalQr: isRu ? "QR для входа" : "Login QR",
+    memberActions: isRu ? "Действия" : "Actions",
     regenerateQr: isRu ? "Обновить QR" : "Regenerate QR",
     qrScansHint: isRu
       ? "Покажите QR участникам: после сканирования они откроют обучение для своей группы."
@@ -603,6 +615,37 @@ export function GroupsWorkspace({
     }
   }
 
+  async function handleGeneratePersonalQr(userId: string, userLabel: string) {
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const qrPayload = await generatePersonalLoginQr(userId);
+      const imageUrl = await toDataURL(qrPayload.deep_link_url, {
+        width: 320,
+        margin: 1,
+      });
+      setPersonalQr(qrPayload);
+      setPersonalQrUserLabel(userLabel);
+      setPersonalQrImageUrl(imageUrl);
+      setPersonalQrModalOpen(true);
+      setSuccess(
+        isRu ? "Персональный QR-код готов" : "Personal QR code is ready",
+      );
+    } catch (err) {
+      setError(
+        toUserErrorMessage(
+          err,
+          isRu
+            ? "Не удалось сформировать персональный QR"
+            : "Failed to generate personal QR",
+        ),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <section className={styles.workspace}>
       <aside className={styles.panel}>
@@ -886,22 +929,49 @@ export function GroupsWorkspace({
                       const label =
                         user.display_name || user.login || user.user_id;
                       return (
-                        <label key={user.user_id} className={styles.memberRow}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => {
-                              setSelectedUserIds((prev) => {
-                                const next = new Set(prev);
-                                if (event.target.checked)
-                                  next.add(user.user_id);
-                                else next.delete(user.user_id);
-                                return next;
-                              });
-                            }}
-                          />
-                          <span>{label}</span>
-                        </label>
+                        <div key={user.user_id} className={styles.memberRow}>
+                          <label className={styles.memberInfo}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(event) => {
+                                setSelectedUserIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (event.target.checked)
+                                    next.add(user.user_id);
+                                  else next.delete(user.user_id);
+                                  return next;
+                                });
+                              }}
+                            />
+                            <span>{label}</span>
+                          </label>
+                          <div className={styles.memberActions}>
+                            <details className={styles.memberActionsMenu}>
+                              <summary
+                                className={styles.memberActionsTrigger}
+                                aria-label={`${text.memberActions}: ${label}`}
+                              >
+                                <span aria-hidden="true">•••</span>
+                              </summary>
+                              <div className={styles.memberActionsPanel}>
+                                <button
+                                  className={styles.memberActionButton}
+                                  type="button"
+                                  onClick={() =>
+                                    void handleGeneratePersonalQr(
+                                      user.user_id,
+                                      label,
+                                    )
+                                  }
+                                  disabled={saving}
+                                >
+                                  {text.createPersonalQr}
+                                </button>
+                              </div>
+                            </details>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -1376,6 +1446,70 @@ export function GroupsWorkspace({
                 disabled={saving}
               >
                 {text.regenerateQr}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {personalQrModalOpen && personalQr && personalQrImageUrl ? (
+        <div className={styles.modalOverlay}>
+          <section className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.sectionTitle}>{text.createPersonalQr}</h3>
+              <button
+                className={styles.modalClose}
+                type="button"
+                onClick={() => setPersonalQrModalOpen(false)}
+                aria-label={isRu ? "Закрыть" : "Close"}
+              >
+                ×
+              </button>
+            </div>
+
+            <p className={styles.muted}>
+              {isRu
+                ? `Одноразовый QR для входа пользователя: ${personalQrUserLabel ?? personalQr.user_id}`
+                : `One-time login QR for user: ${personalQrUserLabel ?? personalQr.user_id}`}
+            </p>
+            <div className={styles.qrImageWrap}>
+              <Image
+                src={personalQrImageUrl}
+                alt={
+                  isRu ? "Персональный QR-код входа" : "Personal login QR code"
+                }
+                className={styles.qrImage}
+                width={320}
+                height={320}
+              />
+            </div>
+            <p className={styles.qrLink}>{personalQr.deep_link_url}</p>
+            <p className={styles.muted}>
+              {isRu ? "Действует до" : "Valid until"}:{" "}
+              {formatDateTime(personalQr.expires_at)}
+            </p>
+
+            <div className={styles.modalActions}>
+              <button
+                className={styles.btn}
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(personalQr.deep_link_url);
+                  setSuccess(
+                    isRu
+                      ? "Персональная ссылка для входа скопирована"
+                      : "Personal login link copied",
+                  );
+                }}
+              >
+                {isRu ? "Скопировать ссылку" : "Copy link"}
+              </button>
+              <button
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                type="button"
+                onClick={() => setPersonalQrModalOpen(false)}
+              >
+                {isRu ? "Готово" : "Done"}
               </button>
             </div>
           </section>
