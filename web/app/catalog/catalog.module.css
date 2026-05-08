@@ -539,8 +539,11 @@
 
 .releaseFilters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 7px;
+  grid-template-columns:
+    minmax(170px, 0.95fr) minmax(220px, 1.15fr) minmax(132px, 0.66fr)
+    minmax(286px, auto);
+  column-gap: 10px;
+  row-gap: 9px;
   align-items: end;
   border: 1px solid rgba(44, 72, 98, 0.14);
   border-radius: 14px;
@@ -573,8 +576,10 @@
 .filterActions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .activeFilters {
@@ -598,12 +603,27 @@
 }
 
 .filterButton {
-  min-width: 120px;
+  min-width: 0;
+  min-height: 42px;
+  padding-inline: 16px;
+  border-radius: 11px;
+  box-shadow: 0 8px 18px rgba(25, 118, 222, 0.2);
+  white-space: nowrap;
 }
 
 .filterReset {
-  min-width: fit-content;
+  min-width: 0;
+  min-height: 42px;
   padding-inline: 14px;
+  border-color: rgba(43, 72, 98, 0.16);
+  border-radius: 11px;
+  background: #fff;
+  white-space: nowrap;
+}
+
+.filterReset:hover {
+  border-color: rgba(43, 72, 98, 0.14);
+  background: #ffffff;
 }
 
 .releasesPanel,
@@ -740,6 +760,21 @@
   .releaseHeaderMeta {
     justify-content: flex-start;
   }
+
+  .releaseFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filterActions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .filterButton,
+  .filterReset {
+    flex: 1;
+  }
 }
 
 @media (max-width: 760px) {
@@ -760,6 +795,7 @@
   }
 
   .filterActions {
-    flex-wrap: wrap;
+    grid-column: auto;
+    flex-wrap: nowrap;
   }
 }

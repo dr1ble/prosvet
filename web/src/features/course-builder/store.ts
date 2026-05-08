@@ -200,24 +200,38 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
   },
 
   removeLesson: (lessonId: string) => {
-    set((s) => ({
-      course: s.course
-        ? {
-            ...s.course,
-            lessons: s.course.lessons.filter(
-              (l) => l.id !== lessonId && `${l.id}` !== lessonId,
-            ),
-          }
-        : s.course,
-      isDirty: true,
-      selectedTaskId: null,
-      historyPast: s.course
-        ? [...s.historyPast, cloneCourse(s.course)]
-        : s.historyPast,
-      historyFuture: s.course ? [] : s.historyFuture,
-      canUndo: s.course ? true : s.canUndo,
-      canRedo: false,
-    }));
+    set((s) => {
+      if (!s.course) return s;
+
+      const removedIndex = s.course.lessons.findIndex(
+        (l) => l.id === lessonId || `${l.id}` === lessonId,
+      );
+      const lessons = s.course.lessons
+        .filter((l) => l.id !== lessonId && `${l.id}` !== lessonId)
+        .map((l, index) => ({ ...l, orderIndex: index }));
+      const selectedLessonWasRemoved =
+        s.selectedLessonId === lessonId || `${s.selectedLessonId}` === lessonId;
+      const fallbackLessonId =
+        removedIndex >= 0
+          ? (lessons[removedIndex]?.id ?? lessons[removedIndex - 1]?.id ?? null)
+          : s.selectedLessonId;
+
+      return {
+        course: {
+          ...s.course,
+          lessons,
+        },
+        isDirty: true,
+        selectedLessonId: selectedLessonWasRemoved
+          ? fallbackLessonId
+          : s.selectedLessonId,
+        selectedTaskId: selectedLessonWasRemoved ? null : s.selectedTaskId,
+        historyPast: [...s.historyPast, cloneCourse(s.course)],
+        historyFuture: [],
+        canUndo: true,
+        canRedo: false,
+      };
+    });
   },
 
   updateLesson: (
@@ -305,9 +319,9 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
               l.id === lessonId || `${l.id}` === lessonId
                 ? {
                     ...l,
-                    tasks: l.tasks.filter(
-                      (t) => t.id !== taskId && `${t.id}` !== taskId,
-                    ),
+                    tasks: l.tasks
+                      .filter((t) => t.id !== taskId && `${t.id}` !== taskId)
+                      .map((t, index) => ({ ...t, orderIndex: index })),
                   }
                 : l,
             ),
@@ -431,6 +445,16 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
     const { course } = get();
     if (!course) return;
 
+    const selectedLessonIndex = course.lessons.findIndex(
+      (l) => `${l.id}` === `${get().selectedLessonId}`,
+    );
+    const selectedTaskIndex =
+      selectedLessonIndex >= 0
+        ? course.lessons[selectedLessonIndex].tasks.findIndex(
+            (t) => `${t.id}` === `${get().selectedTaskId}`,
+          )
+        : -1;
+
     set({ isSaving: true });
     try {
       const { bulkUpdateStructure } = await import("./api");
@@ -456,7 +480,10 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
         const hasLesson = updated.lessons.some(
           (l) => `${l.id}` === `${s.selectedLessonId}`,
         );
-        const fallbackLesson = updated.lessons[0]?.id ?? null;
+        const fallbackLesson =
+          selectedLessonIndex >= 0
+            ? (updated.lessons[selectedLessonIndex]?.id ?? null)
+            : (updated.lessons[0]?.id ?? null);
         const nextSelectedLessonId = hasLesson
           ? s.selectedLessonId
           : fallbackLesson;
@@ -467,7 +494,10 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
         const hasTask = selectedLesson?.tasks.some(
           (t) => `${t.id}` === `${s.selectedTaskId}`,
         );
-        const fallbackTask = selectedLesson?.tasks[0]?.id ?? null;
+        const fallbackTask =
+          selectedTaskIndex >= 0
+            ? (selectedLesson?.tasks[selectedTaskIndex]?.id ?? null)
+            : (selectedLesson?.tasks[0]?.id ?? null);
         const nextSelectedTaskId = hasTask ? s.selectedTaskId : fallbackTask;
 
         return {
