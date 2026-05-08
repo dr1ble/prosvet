@@ -1,19 +1,21 @@
 import { apiBaseUrl } from "@/shared/config";
 import { extractApiErrorMessage } from "@/shared/lib/api-error";
 
-import type { ProgressOverviewRowDto } from "./types";
+import type {
+  ProgressOverviewRowDto,
+  ProgressTimeseriesPointDto,
+} from "./types";
 
-export async function fetchProgressOverview(
-  accessToken: string,
-  filters: {
-    groupId?: string;
-    courseId?: string;
-    userId?: string;
-    period?: "all" | "7d" | "14d" | "30d" | "90d" | "custom";
-    dateFrom?: string;
-    dateTo?: string;
-  },
-): Promise<ProgressOverviewRowDto[]> {
+type ProgressFilters = {
+  groupId?: string;
+  courseId?: string;
+  userId?: string;
+  period?: "all" | "7d" | "14d" | "30d" | "90d" | "custom";
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+function buildProgressParams(filters: ProgressFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.groupId) params.set("group_id", filters.groupId);
   if (filters.courseId) params.set("course_id", filters.courseId);
@@ -21,11 +23,14 @@ export async function fetchProgressOverview(
   if (filters.period) params.set("period", filters.period);
   if (filters.dateFrom) params.set("date_from", filters.dateFrom);
   if (filters.dateTo) params.set("date_to", filters.dateTo);
+  return params;
+}
 
-  const path = params.toString()
-    ? `/progress/overview?${params.toString()}`
-    : "/progress/overview";
-
+async function fetchProgressJson<T>(
+  accessToken: string,
+  path: string,
+  errorMessage: string,
+): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -34,16 +39,40 @@ export async function fetchProgressOverview(
   });
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(
-      extractApiErrorMessage(
-        raw,
-        response.status,
-        "Не удалось загрузить отчет по прогрессу.",
-      ),
-    );
+    throw new Error(extractApiErrorMessage(raw, response.status, errorMessage));
   }
   if (!raw) {
-    return [];
+    return [] as T;
   }
-  return JSON.parse(raw) as ProgressOverviewRowDto[];
+  return JSON.parse(raw) as T;
+}
+
+export async function fetchProgressOverview(
+  accessToken: string,
+  filters: ProgressFilters,
+): Promise<ProgressOverviewRowDto[]> {
+  const params = buildProgressParams(filters);
+  const path = params.toString()
+    ? `/progress/overview?${params.toString()}`
+    : "/progress/overview";
+  return fetchProgressJson<ProgressOverviewRowDto[]>(
+    accessToken,
+    path,
+    "Не удалось загрузить отчет по прогрессу.",
+  );
+}
+
+export async function fetchProgressTimeseries(
+  accessToken: string,
+  filters: ProgressFilters,
+): Promise<ProgressTimeseriesPointDto[]> {
+  const params = buildProgressParams(filters);
+  const path = params.toString()
+    ? `/progress/timeseries?${params.toString()}`
+    : "/progress/timeseries";
+  return fetchProgressJson<ProgressTimeseriesPointDto[]>(
+    accessToken,
+    path,
+    "Не удалось загрузить динамику прогресса.",
+  );
 }

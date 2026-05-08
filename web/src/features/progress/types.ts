@@ -12,3 +12,8 @@ export type ProgressOverviewRowDto = {
   completed_lessons: number;
   completion_rate: number;
 };
+
+export type ProgressTimeseriesPointDto = {
+  date: string;
+  completed_lessons_count: number;
+};

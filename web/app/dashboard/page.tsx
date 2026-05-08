@@ -322,38 +322,6 @@ function metricValue(value: number | null): string {
   return String(value);
 }
 
-function buildProgressSeriesPoints(
-  rows: { completion_rate: number }[],
-  options: { baselinePercent: number },
-): string {
-  const { baselinePercent } = options;
-  const width = 560;
-  const height = 180;
-  const bottomPadding = 20;
-  const topPadding = 20;
-  const usableHeight = height - bottomPadding - topPadding;
-
-  const values =
-    rows.length > 0
-      ? rows
-          .slice(0, 10)
-          .map((item) => Math.max(0, Math.min(100, item.completion_rate * 100)))
-      : [baselinePercent];
-
-  if (values.length === 1) {
-    const y = topPadding + ((100 - values[0]) / 100) * usableHeight;
-    return `0,${y.toFixed(1)} ${width},${y.toFixed(1)}`;
-  }
-
-  return values
-    .map((value, index) => {
-      const x = (index / (values.length - 1)) * width;
-      const y = topPadding + ((100 - value) / 100) * usableHeight;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-}
-
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const language = resolveLanguage(params.lang);
@@ -402,9 +370,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     value,
     label: periodLabelByValue[value],
   }));
-  const chartTitle = language === "ru" ? "Пульс обучения" : "Learning pulse";
-  const completionLabel = language === "ru" ? "Завершение" : "Completion";
-  const engagementLabel = language === "ru" ? "Активность" : "Engagement";
   const dashboardTitle =
     language === "ru" ? "Рабочий стол" : "Workspace Dashboard";
   const dashboardSubtitle =
@@ -421,8 +386,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     language === "ru" ? "Настройки профиля" : "Profile settings";
   const interfaceLanguageTitle =
     language === "ru" ? "Язык интерфейса" : "Interface language";
-  const workspaceSectionTitle =
-    language === "ru" ? "Рабочее пространство" : "Workspace";
   const currentLabel = language === "ru" ? "Сейчас выбран" : "Current";
 
   const catalogHref = withDashboardState(`/catalog?lang=${language}`);
@@ -525,16 +488,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     hasAnyPermission(profile.permissions, tile.requiredPermissions),
   );
   const workspaceTiles = visibleTiles.filter((tile) => tile.id !== "settings");
-  const actionableTiles = visibleTiles;
-  const accessCoverage =
-    tiles.length > 0
-      ? Math.round((visibleTiles.length / tiles.length) * 100)
-      : 0;
-  const actionableCoverage =
-    tiles.length > 0
-      ? Math.round((actionableTiles.length / tiles.length) * 100)
-      : 0;
-
   const hasCatalogAccess = profile.permissions.includes("catalog.view");
   const hasGroupsAccess = profile.permissions.includes("groups.view");
   const hasProgressAccess = profile.permissions.includes("progress.view");
@@ -582,21 +535,60 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             100,
         )
       : null;
-  const laggingUsers = progressRows.filter(
-    (row) => row.completion_rate < 0.5,
-  ).length;
-  const effectiveAvgProgress = avgProgress ?? 0;
-  const chartPrimaryPoints = buildProgressSeriesPoints(progressRows, {
-    baselinePercent: effectiveAvgProgress,
-  });
-  const chartSecondaryPoints = buildProgressSeriesPoints(
-    progressRows.map((row) => ({
-      completion_rate: Math.max(0, row.completion_rate - 0.1),
-    })),
-    {
-      baselinePercent: Math.max(0, effectiveAvgProgress - 10),
-    },
-  );
+
+  const hasModerationAccess = hasAnyPermission(profile.permissions, [
+    "moderation.review",
+    "catalog.release.approve",
+  ]);
+  const hasSupportAccess = profile.permissions.includes("support.request.view");
+
+  let moderationPendingCount: number | null = null;
+  let supportNewCount: number | null = null;
+  let supportInProgressCount: number | null = null;
+
+  const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:8000/api/v1";
+
+  if (hasModerationAccess) {
+    try {
+      const pendingRes = await fetch(
+        `${apiBaseUrl}/moderation/releases/pending`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: "no-store",
+        },
+      );
+      if (pendingRes.ok) {
+        const pending = (await pendingRes.json()) as unknown[];
+        moderationPendingCount = pending.length;
+      }
+    } catch {
+      moderationPendingCount = null;
+    }
+  }
+
+  if (hasSupportAccess) {
+    try {
+      const supportRes = await fetch(`${apiBaseUrl}/support/help-requests`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      });
+      if (supportRes.ok) {
+        const payload = (await supportRes.json()) as {
+          requests?: { status: string }[];
+        };
+        const requests = payload.requests ?? [];
+        supportNewCount = requests.filter(
+          (request) => request.status === "new",
+        ).length;
+        supportInProgressCount = requests.filter(
+          (request) => request.status === "in_progress",
+        ).length;
+      }
+    } catch {
+      supportNewCount = null;
+      supportInProgressCount = null;
+    }
+  }
 
   const profileTitle = language === "ru" ? "Профиль" : "Profile";
   const logoutLabel = language === "ru" ? "Выйти" : "Logout";
@@ -627,26 +619,58 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     {
       title: language === "ru" ? "Курсов" : "Courses",
       value: metricValue(coursesCount),
-      trend: `${accessCoverage}%`,
       tone: styles.statToneBlue,
     },
     {
       title: language === "ru" ? "Учебных групп" : "Groups",
       value: metricValue(groupsCount),
-      trend: `${actionableCoverage}%`,
       tone: styles.statTonePurple,
     },
     {
       title: language === "ru" ? "Участников" : "Learners",
       value: metricValue(usersCount),
-      trend: hasProgressAccess ? String(laggingUsers) : "-",
       tone: styles.statToneRose,
     },
     {
       title: language === "ru" ? "Средний прогресс" : "Avg progress",
       value: avgProgress === null ? "-" : `${avgProgress}%`,
-      trend: periodLabel,
       tone: styles.statToneGreen,
+    },
+  ];
+
+  const attentionItems = [
+    {
+      label:
+        language === "ru"
+          ? "Пользователи без прогресса"
+          : "Learners without progress",
+      value: progressRows.filter((row) => row.completed_lessons === 0).length,
+      href: withDashboardState(`/progress?lang=${language}`),
+    },
+    {
+      label:
+        language === "ru"
+          ? "Группы без назначений"
+          : "Groups without assignments",
+      value:
+        groupsCount !== null
+          ? Math.max(groupsCount - progressRows.length, 0)
+          : null,
+      href: withDashboardState(`/groups?lang=${language}`),
+    },
+    {
+      label:
+        language === "ru"
+          ? "Средний прогресс ниже 50%"
+          : "Avg progress below 50%",
+      value: avgProgress !== null && avgProgress < 50 ? 1 : 0,
+      href: withDashboardState(`/progress?lang=${language}`),
+    },
+    {
+      label:
+        language === "ru" ? "Курсы без публикации" : "Courses not published",
+      value: coursesCount,
+      href: withDashboardState(`/catalog?lang=${language}`),
     },
   ];
 
@@ -773,42 +797,101 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                         <strong className={styles.statValue}>
                           {card.value}
                         </strong>
-                        <span className={styles.statTrend}>{card.trend}</span>
                       </div>
                     </article>
                   ))}
                 </div>
 
-                <article className={styles.chartPanel}>
-                  <div className={styles.chartPanelHead}>
-                    <h4 className={styles.chartPanelTitle}>{chartTitle}</h4>
-                    <span className={styles.periodBadge}>{periodLabel}</span>
-                  </div>
-                  <svg
-                    viewBox="0 0 560 180"
-                    className={styles.lineChart}
-                    role="presentation"
-                    aria-hidden="true"
+                <div className={styles.dashboardActionGrid}>
+                  <article
+                    className={`${styles.dashboardInfoPanel} ${styles.attentionPanel}`}
                   >
-                    <polyline
-                      points={chartPrimaryPoints}
-                      className={styles.chartLinePrimary}
-                    />
-                    <polyline
-                      points={chartSecondaryPoints}
-                      className={styles.chartLineSecondary}
-                    />
-                  </svg>
-                  <div className={styles.chartLegend}>
-                    <span>
-                      {completionLabel}:{" "}
-                      {avgProgress === null ? "-" : `${avgProgress}%`}
-                    </span>
-                    <span>
-                      {engagementLabel}: {actionableCoverage}%
-                    </span>
-                  </div>
-                </article>
+                    <div className={styles.chartPanelHead}>
+                      <h4 className={styles.chartPanelTitle}>
+                        {language === "ru"
+                          ? "Требуют внимания"
+                          : "Need attention"}
+                      </h4>
+                    </div>
+                    <div className={styles.attentionList}>
+                      {attentionItems.map((item) => (
+                        <Link
+                          key={item.label}
+                          className={styles.attentionItemLink}
+                          href={item.href}
+                        >
+                          <span>{item.label}</span>
+                          <strong>
+                            {item.value === null ? "-" : item.value}
+                          </strong>
+                        </Link>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className={styles.dashboardInfoPanel}>
+                    <div className={styles.chartPanelHead}>
+                      <h4 className={styles.chartPanelTitle}>
+                        {language === "ru"
+                          ? "Оперативная очередь"
+                          : "Operational queue"}
+                      </h4>
+                    </div>
+
+                    {hasModerationAccess ? (
+                      <div className={styles.queueSection}>
+                        <p className={styles.queueSectionTitle}>
+                          {language === "ru" ? "Модерация" : "Moderation"}
+                        </p>
+                        <Link
+                          className={styles.attentionItemLink}
+                          href={withDashboardState(
+                            `/moderation?lang=${language}`,
+                          )}
+                        >
+                          <span>
+                            {language === "ru"
+                              ? "На проверке"
+                              : "Pending review"}
+                          </span>
+                          <strong>{moderationPendingCount ?? "-"}</strong>
+                        </Link>
+                      </div>
+                    ) : null}
+
+                    {hasSupportAccess ? (
+                      <div className={styles.queueSection}>
+                        <p className={styles.queueSectionTitle}>
+                          {language === "ru"
+                            ? "Заявки помощи"
+                            : "Help requests"}
+                        </p>
+                        <div className={styles.attentionList}>
+                          <Link
+                            className={styles.attentionItemLink}
+                            href={withDashboardState(
+                              `/support?lang=${language}&status=new`,
+                            )}
+                          >
+                            <span>{language === "ru" ? "Новые" : "New"}</span>
+                            <strong>{supportNewCount ?? "-"}</strong>
+                          </Link>
+                          <Link
+                            className={styles.attentionItemLink}
+                            href={withDashboardState(
+                              `/support?lang=${language}&status=in_progress`,
+                            )}
+                          >
+                            <span>
+                              {language === "ru" ? "В работе" : "In progress"}
+                            </span>
+                            <strong>{supportInProgressCount ?? "-"}</strong>
+                          </Link>
+                        </div>
+                      </div>
+                    ) : null}
+                  </article>
+                </div>
               </div>
             </div>
           </article>
@@ -857,21 +940,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <p className={styles.modalText}>
                   {currentLabel}: <strong>{language.toUpperCase()}</strong>
                 </p>
-
-                <h3 className={styles.modalSectionTitle}>
-                  {workspaceSectionTitle}
-                </h3>
-                <div className={styles.workspaceQuickLinks}>
-                  {workspaceTiles.map((tile) => (
-                    <Link
-                      key={tile.id}
-                      href={tile.href}
-                      className={styles.workspaceQuickLink}
-                    >
-                      {tile.title}
-                    </Link>
-                  ))}
-                </div>
               </div>
             ) : (
               <div className={styles.modalBody}>

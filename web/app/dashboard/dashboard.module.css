@@ -2,6 +2,9 @@
   min-height: 100vh;
   padding: clamp(14px, 2vw, 24px);
   color: #172332;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
   background:
     radial-gradient(
       circle at 100% 0,
@@ -196,19 +199,22 @@
 }
 
 .workspaceSplit {
+  min-height: 100%;
   display: grid;
   grid-template-columns: minmax(270px, 360px) minmax(0, 1fr);
   gap: 10px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .sectionsSidebar,
 .mainPanel {
+  height: 100%;
   border: 1px solid rgba(40, 69, 95, 0.14);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.95);
   padding: 12px;
   display: grid;
+  align-content: stretch;
   gap: 8px;
 }
 
@@ -218,18 +224,21 @@
 }
 
 .mainPrimary {
+  height: 100%;
   display: grid;
-  align-content: start;
+  align-content: stretch;
   gap: 10px;
 }
 
 .dashboardShell {
+  height: 100%;
   border: 1px solid rgba(40, 69, 95, 0.12);
   border-radius: 12px;
   background: rgba(244, 249, 255, 0.72);
-  padding: 12px;
+  padding: 10px;
   display: grid;
-  gap: 12px;
+  align-content: start;
+  gap: 10px;
 }
 
 .dashboardTopBar {
@@ -380,57 +389,113 @@
   font-weight: 700;
 }
 
-.chartPanel {
-  border: 1px solid rgba(40, 69, 95, 0.12);
-  border-radius: 10px;
-  background: #fff;
-  padding: 12px;
+.dashboardActionGrid {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.dashboardInfoPanel {
+  height: 100%;
+  border: 1px solid rgba(40, 69, 95, 0.12);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 14px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  box-shadow: 0 12px 30px rgba(31, 66, 95, 0.06);
+}
+
+.attentionPanel {
+  grid-row: span 2;
 }
 
 .chartPanelHead {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .chartPanelTitle {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 700;
   color: #244760;
 }
 
-.lineChart {
-  width: 100%;
-  height: 160px;
+.panelKicker {
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(74, 143, 232, 0.12);
+  color: #2d5f8a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
-.chartLinePrimary,
-.chartLineSecondary {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
+.attentionList {
+  display: grid;
+  gap: 8px;
 }
 
-.chartLinePrimary {
-  stroke: #3e7fdc;
+.queueSection {
+  display: grid;
+  gap: 8px;
 }
 
-.chartLineSecondary {
-  stroke: #d968a2;
-  stroke-width: 2.6;
+.queueSection + .queueSection {
+  border-top: 1px solid rgba(40, 69, 95, 0.1);
+  padding-top: 12px;
 }
 
-.chartLegend {
+.queueSectionTitle {
+  margin: 0;
+  color: #60758a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.attentionItemLink {
+  min-height: 48px;
+  border: 1px solid rgba(40, 69, 95, 0.1);
+  border-radius: 12px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  color: #5b7490;
-  font-size: 12px;
-  font-weight: 700;
+  justify-content: space-between;
+  gap: 12px;
+  color: #2a4a65;
+  font-size: 13px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.92);
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.attentionItemLink:hover {
+  border-color: rgba(29, 115, 226, 0.28);
+  background: #ffffff;
+  box-shadow: 0 10px 20px rgba(29, 115, 226, 0.08);
+  transform: translateY(-1px);
+}
+
+.attentionItemLink strong {
+  min-width: 34px;
+  color: #1f425f;
+  font-size: 22px;
+  line-height: 1;
+  text-align: right;
 }
 
 .panelTitle {
@@ -544,7 +609,7 @@
 }
 
 .profilePanelSidebar {
-  margin-top: 8px;
+  margin-top: auto;
 }
 
 .profileName {
@@ -790,32 +855,6 @@
   background: #eef6ff;
 }
 
-.workspaceQuickLinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.workspaceQuickLink {
-  min-height: 32px;
-  border-radius: 9px;
-  border: 1px solid rgba(40, 69, 95, 0.14);
-  background: #fff;
-  color: #294b69;
-  font-size: 12px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  padding: 0 12px;
-}
-
-.workspaceQuickLink:hover {
-  background: #f3f8ff;
-  border-color: rgba(29, 115, 226, 0.28);
-}
-
 .modalLinkButton {
   min-height: 32px;
   border-radius: 9px;
@@ -987,8 +1026,12 @@
   }
 
   .metricsGrid,
-  .chartsGrid {
+  .dashboardActionGrid {
     grid-template-columns: 1fr;
+  }
+
+  .attentionPanel {
+    grid-row: auto;
   }
 
   .metricsGridInline {
@@ -997,12 +1040,6 @@
 
   .statCard {
     padding: 10px;
-  }
-
-  .chartLegend {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
   }
 }
 
