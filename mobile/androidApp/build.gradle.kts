@@ -8,7 +8,7 @@ plugins {
 val debugBackendBaseUrl = providers
     .gradleProperty("mobile.backend.baseUrl")
     .orElse(providers.environmentVariable("MOBILE_BACKEND_BASE_URL"))
-    .orElse("http://10.0.2.2:8000")
+    .orElse("http://127.0.0.1:8000")
 
 val composeResourceModules = listOf(
     project(":core:ui") to "digital_education_mobile.core.ui.generated.resources",
