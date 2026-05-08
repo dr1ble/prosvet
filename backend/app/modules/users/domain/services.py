@@ -7,6 +7,7 @@ from app.modules.auth.domain.permissions import permissions_for_role
 from app.modules.users.api.schemas import UserOverviewItemOut, UserRoleSummaryOut, UsersOverviewOut
 from app.modules.users.infra.repository import UsersRepository
 from app.modules.users.models import UserRole, UserStatus
+from app.shared.security.passwords import hash_password
 from app.shared.security.repository import AdminAuditLogRepository
 
 
@@ -92,6 +93,48 @@ class UsersService:
                 entity_id=str(user.id),
                 details={"changes": changes},
             )
+
+        return UserOverviewItemOut(
+            user_id=str(user.id),
+            login=user.login,
+            display_name=user.display_name,
+            role=user.role.value,
+            status=user.status.value,
+            permissions=permissions_for_role(user.role),
+        )
+
+    def create_user(
+        self,
+        *,
+        actor_user_id: str,
+        display_name: str | None,
+        login: str,
+        password: str,
+        role: str,
+        status: str,
+    ) -> UserOverviewItemOut:
+        actor_uuid = UUID(actor_user_id)
+        normalized_login = login.strip().lower()
+        if self.repository.get_user_by_login(normalized_login) is not None:
+            raise ValueError("Login is already used.")
+
+        user_role = UserRole(role)
+        user_status = UserStatus(status)
+        user = self.repository.create_user(
+            login=normalized_login,
+            display_name=display_name.strip() if display_name else None,
+            password_hash=hash_password(password),
+            role=user_role,
+            status=user_status,
+        )
+
+        self.audit_repository.append(
+            actor_user_id=actor_uuid,
+            action_key="users.user.create",
+            entity_type="user",
+            entity_id=str(user.id),
+            details={"login": user.login, "role": user.role.value, "status": user.status.value},
+        )
 
         return UserOverviewItemOut(
             user_id=str(user.id),

@@ -17,3 +17,27 @@ class UsersRepository:
     def get_user(self, user_id: str) -> User | None:
         stmt = select(User).where(User.id == user_id)
         return self.db.scalar(stmt)
+
+    def get_user_by_login(self, login: str) -> User | None:
+        stmt = select(User).where(User.login == login)
+        return self.db.scalar(stmt)
+
+    def create_user(
+        self,
+        *,
+        login: str,
+        display_name: str | None,
+        password_hash: str,
+        role,
+        status,
+    ) -> User:
+        user = User(
+            login=login,
+            display_name=display_name,
+            password_hash=password_hash,
+            role=role,
+            status=status,
+        )
+        self.db.add(user)
+        self.db.flush()
+        return user
