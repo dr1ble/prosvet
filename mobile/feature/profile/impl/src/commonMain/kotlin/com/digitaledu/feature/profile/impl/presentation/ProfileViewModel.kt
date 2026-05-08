@@ -59,6 +59,10 @@ internal class ProfileViewModel(
             is ProfileIntent.ToggleGlossaryBookmark -> toggleGlossaryBookmark(intent.termId)
             is ProfileIntent.DeleteNote -> deleteNote(intent.noteId)
             is ProfileIntent.UpdateDisplayName -> updateDisplayName(intent.displayName)
+            is ProfileIntent.CompleteProfile -> completeProfile(
+                displayName = intent.displayName,
+                email = intent.email,
+            )
             is ProfileIntent.UpdateAvatar -> updateAvatar(intent.avatarKey)
             is ProfileIntent.UploadAvatar -> uploadAvatar(
                 filename = intent.filename,
@@ -89,10 +93,11 @@ internal class ProfileViewModel(
         updateState {
             copy(
                 status = ProfileStatus.Idle,
-                    displayName = null,
-                    email = null,
-                    avatarKey = null,
-                    avatarUrl = null,
+                isProfileLoaded = false,
+                displayName = null,
+                email = null,
+                avatarKey = null,
+                avatarUrl = null,
                 role = null,
                 accountStatus = null,
                 permissions = emptyList(),
@@ -115,6 +120,7 @@ internal class ProfileViewModel(
             updateState {
                 copy(
                     displayName = profile.displayName,
+                    isProfileLoaded = true,
                     email = profile.email,
                     avatarKey = profile.avatarKey,
                     avatarUrl = profile.avatarUrl,
@@ -248,6 +254,56 @@ internal class ProfileViewModel(
             }
         }.onFailure { throwable ->
             updateState { copy(isUpdatingDisplayName = false) }
+            setError(throwable)
+        }
+    }
+
+    private suspend fun completeProfile(displayName: String, email: String?) {
+        val normalizedName = displayName.trim()
+        val normalizedEmail = email?.trim()?.takeIf { it.isNotEmpty() }
+        if (normalizedName.length < 2 || currentState.isUpdatingDisplayName || currentState.isBindingEmail) return
+
+        updateState {
+            copy(
+                isUpdatingDisplayName = true,
+                isBindingEmail = normalizedEmail != null,
+                successMessage = null,
+            )
+        }
+        runCatching {
+            var profile = profileRepository.updateDisplayName(
+                displayName = normalizedName,
+                avatarKey = currentState.avatarKey,
+            )
+            if (normalizedEmail != null) {
+                profile = profileRepository.bindEmail(normalizedEmail)
+            }
+            profile
+        }.onSuccess { profile ->
+            updateState {
+                copy(
+                    displayName = profile.displayName,
+                    email = profile.email,
+                    avatarKey = profile.avatarKey,
+                    avatarUrl = profile.avatarUrl,
+                    role = profile.role,
+                    accountStatus = profile.status,
+                    permissions = profile.permissions,
+                    learningRemindersEnabled = profile.learningRemindersEnabled,
+                    securityAlertsEnabled = profile.securityAlertsEnabled,
+                    profileVisible = profile.profileVisible,
+                    isUpdatingDisplayName = false,
+                    isBindingEmail = false,
+                    status = ProfileStatus.Idle,
+                )
+            }
+        }.onFailure { throwable ->
+            updateState {
+                copy(
+                    isUpdatingDisplayName = false,
+                    isBindingEmail = false,
+                )
+            }
             setError(throwable)
         }
     }

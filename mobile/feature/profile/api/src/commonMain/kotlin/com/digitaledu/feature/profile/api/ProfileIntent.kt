@@ -10,6 +10,7 @@ sealed interface ProfileIntent {
     data class ToggleGlossaryBookmark(val termId: String) : ProfileIntent
     data class DeleteNote(val noteId: String) : ProfileIntent
     data class UpdateDisplayName(val displayName: String) : ProfileIntent
+    data class CompleteProfile(val displayName: String, val email: String?) : ProfileIntent
     data class UpdateAvatar(val avatarKey: String) : ProfileIntent
     data class UploadAvatar(val filename: String, val contentType: String, val content: ByteArray) : ProfileIntent
     data class BindEmail(val email: String) : ProfileIntent

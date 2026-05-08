@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Mic
@@ -47,9 +49,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -61,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
@@ -80,6 +85,7 @@ import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.ui.util.BackHandler
+import com.digitaledu.feature.catalog.api.CatalogCategories
 import com.digitaledu.feature.catalog.api.CatalogIntent
 import com.digitaledu.feature.catalog.api.CourseProgress
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
@@ -88,6 +94,7 @@ import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.player.api.PlayerUiEntry
 import com.digitaledu.feature.player.api.PlayerUiState
 import com.digitaledu.feature.profile.api.ProfileIntent
+import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiEntry
 import com.digitaledu.feature.profile.api.ProfileUiState
 import digital_education_mobile.feature.home.`impl`.generated.resources.Res
@@ -140,6 +147,7 @@ private enum class HomeOverlayScreen {
     Glossary,
     Notes,
     Sos,
+    LearningPreview,
 }
 
 private enum class FavoritesTab {
@@ -164,8 +172,11 @@ fun HomeScreen(
     onProfileIntent: (ProfileIntent) -> Unit,
     onCreateHelpRequest: suspend (SosHelpRequestType, String) -> Unit,
     modifier: Modifier = Modifier,
-) {
+ ) {
     var overlayScreen by rememberSaveable { mutableStateOf(HomeOverlayScreen.None) }
+    var isProfileCompletionSkipped by rememberSaveable { mutableStateOf(false) }
+    var previewCourse by remember { mutableStateOf<CatalogCourse?>(null) }
+
 
     if (playerUiEntry.shouldShowFullscreen(playerUiState)) {
         if (overlayScreen == HomeOverlayScreen.Sos) {
@@ -184,6 +195,25 @@ fun HomeScreen(
             onHelpClick = { overlayScreen = HomeOverlayScreen.Sos },
             resolveUrl = resolveUrl,
             modifier = modifier,
+        )
+        return
+    }
+
+    val profileCompletionGateState = buildProfileCompletionGateState(
+        displayName = profileUiState.displayName,
+        isProfileLoaded = profileUiState.isProfileLoaded,
+        isSkipped = isProfileCompletionSkipped,
+    )
+    if (profileCompletionGateState.requiresCompletion) {
+        ProfileCompletionGateContent(
+            initialDisplayName = profileUiState.displayName,
+            initialEmail = profileUiState.email,
+            isSubmitting = profileUiState.isUpdatingDisplayName || profileUiState.isBindingEmail,
+            status = profileUiState.status,
+            onSubmit = { name, email -> onProfileIntent(ProfileIntent.CompleteProfile(name, email)) },
+            onSkip = { isProfileCompletionSkipped = true },
+            onDismissError = { onProfileIntent(ProfileIntent.DismissError) },
+            modifier = modifier.fillMaxSize(),
         )
         return
     }
@@ -336,6 +366,30 @@ fun HomeScreen(
             return@Scaffold
         }
 
+        if (overlayScreen == HomeOverlayScreen.LearningPreview) {
+            val course = previewCourse
+            if (course != null) {
+                LearningCoursePreviewContent(
+                    course = course,
+                    progress = catalogUiState.progressByCourseId[course.id],
+                    onBack = {
+                        previewCourse = null
+                        overlayScreen = HomeOverlayScreen.None
+                    },
+                    onStart = {
+                        previewCourse = null
+                        overlayScreen = HomeOverlayScreen.None
+                        onCatalogIntent(CatalogIntent.OpenCourse(course.slug))
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                )
+                return@Scaffold
+            }
+            overlayScreen = HomeOverlayScreen.None
+        }
+
         when (selectedTab) {
             HomeTab.Home -> {
                 HomeCoursesContent(
@@ -351,25 +405,18 @@ fun HomeScreen(
             }
 
             HomeTab.Learning -> {
-                Column(
+                LearningCoursesContent(
+                    uiState = catalogUiState,
+                    onOpenContinue = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
+                    onOpenCourse = { course ->
+                        previewCourse = course
+                        overlayScreen = HomeOverlayScreen.LearningPreview
+                    },
+                    onRefresh = { onCatalogIntent(CatalogIntent.RefreshCourses) },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
-                ) {
-                    Text(
-                        text = stringResource(Res.string.home_title_lesson),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = UiSpacing.lg, vertical = UiSpacing.md),
-                    )
-                    playerUiEntry.TabContent(
-                        uiState = playerUiState,
-                        onIntent = onPlayerIntent,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = UiSpacing.md),
-                    )
-                }
+                )
             }
 
             HomeTab.Profile -> {
@@ -392,6 +439,134 @@ fun HomeScreen(
                         .fillMaxSize()
                         .padding(innerPadding),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileCompletionGateContent(
+    initialDisplayName: String?,
+    initialEmail: String?,
+    isSubmitting: Boolean,
+    status: ProfileStatus,
+    onSubmit: (String, String?) -> Unit,
+    onSkip: () -> Unit,
+    onDismissError: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var displayName by rememberSaveable(initialDisplayName) {
+        mutableStateOf(initialDisplayName.orEmpty())
+    }
+    var email by rememberSaveable(initialEmail) {
+        mutableStateOf(initialEmail.orEmpty())
+    }
+    val formState = buildProfileCompletionFormState(displayName = displayName, email = email)
+    val errorMessage = (status as? ProfileStatus.Error)?.message
+
+    ErrorDialog(message = errorMessage, onDismiss = onDismissError)
+
+    Box(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.background)
+            .padding(UiSpacing.md),
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            shape = UiShapes.cardXl,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(UiSpacing.lg),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+            ) {
+                Text(
+                    text = "Как вас зовут?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Это имя будет видно в вашем профиле и прогрессе обучения.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = displayName,
+                    onValueChange = { displayName = it },
+                    enabled = !isSubmitting,
+                    singleLine = true,
+                    label = { Text("Ваше имя") },
+                    isError = formState.nameError != null && displayName.isNotEmpty(),
+                    supportingText = {
+                        if (formState.nameError != null && displayName.isNotEmpty()) {
+                            Text(formState.nameError)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    enabled = !isSubmitting,
+                    singleLine = true,
+                    label = { Text("Ваша почта") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    isError = formState.emailError != null,
+                    supportingText = {
+                        Text(
+                            text = formState.emailError
+                                ?: "Почта необязательна. Ее можно добавить позже в настройках.",
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = "Если вы выйдете из приложения, попросите сотрудника выдать новый QR-код для входа.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(
+                    onClick = { onSubmit(formState.normalizedName, formState.normalizedEmail) },
+                    enabled = formState.canSubmit && !isSubmitting,
+                    shape = UiShapes.cardLg,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = "Сохранить профиль и продолжить",
+                            role = Role.Button,
+                            enabled = formState.canSubmit && !isSubmitting,
+                        ),
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                        Spacer(modifier = Modifier.width(UiSpacing.xs))
+                    }
+                    Text("Сохранить и продолжить")
+                }
+                TextButton(
+                    onClick = onSkip,
+                    enabled = !isSubmitting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = "Пропустить заполнение профиля",
+                            role = Role.Button,
+                            enabled = !isSubmitting,
+                        ),
+                ) {
+                    Text("Пропустить")
+                }
             }
         }
     }
@@ -965,6 +1140,182 @@ private fun HomeCoursesContent(
                     course = course,
                     progress = uiState.progressByCourseId[course.id],
                     onClick = { onOpenCourse(course.slug) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LearningCoursesContent(
+    uiState: CatalogUiState,
+    onOpenContinue: (String) -> Unit,
+    onOpenCourse: (CatalogCourse) -> Unit,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var selectedCategoryId by rememberSaveable { mutableStateOf(CatalogCategories.ALL_ID) }
+    val continueCourse = uiState.resolveContinueCourseForLearning()
+    val filteredCourses = filterLearningCourses(
+        courses = uiState.courses,
+        query = query,
+        selectedCategoryId = selectedCategoryId,
+    )
+
+    if (uiState.isLoading && uiState.courses.isEmpty()) {
+        CenteredLoadingIndicator(modifier = modifier)
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.lg,
+            bottom = UiSpacing.xxl + UiSpacing.xxl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.lg),
+    ) {
+        item {
+            Text(
+                text = stringResource(Res.string.home_title_lesson),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
+        item {
+            LearningSearchField(
+                query = query,
+                onQueryChange = { query = it },
+                placeholder = stringResource(Res.string.home_search_placeholder),
+            )
+        }
+
+        item {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                contentPadding = PaddingValues(horizontal = UiSpacing.xxs),
+            ) {
+                items(
+                    items = CatalogCategories.all,
+                    key = { category -> category.id },
+                ) { category ->
+                    FilterChip(
+                        selected = category.id == selectedCategoryId,
+                        onClick = { selectedCategoryId = category.id },
+                        label = { Text(text = category.label) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    )
+                }
+            }
+        }
+
+        item {
+            ContinueLearningCard(
+                course = continueCourse,
+                progress = continueCourse?.let { uiState.progressByCourseId[it.id] },
+                onStart = {
+                    val slug = continueCourse?.slug
+                    if (slug != null) {
+                        onOpenContinue(slug)
+                    } else {
+                        onRefresh()
+                    }
+                },
+            )
+        }
+
+        item {
+            Text(
+                text = stringResource(Res.string.home_recommended_all),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
+        if (filteredCourses.isEmpty()) {
+            item {
+                Text(
+                    text = "Курсы не найдены",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            items(
+                items = filteredCourses,
+                key = { course -> course.id },
+            ) { course ->
+                RecommendedCourseCard(
+                    course = course,
+                    progress = uiState.progressByCourseId[course.id],
+                    onClick = { onOpenCourse(course) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LearningSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(UiShapes.cardLg)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .padding(UiSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Search,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = UiSpacing.xs),
+        )
+        BasicTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            textStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+            singleLine = true,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = UiSpacing.sm),
+            decorationBox = { innerTextField ->
+                if (query.isEmpty()) {
+                    Text(
+                        text = placeholder,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                innerTextField()
+            },
+        )
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(UiShapes.pill)
+                .background(MaterialTheme.colorScheme.primary)
+                .accessibilityTouchTarget
+                .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
+            contentAlignment = Alignment.Center,
+        ) {
+            AccessibilityScaledControlContainer {
+                Icon(
+                    imageVector = Icons.Filled.Mic,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         }

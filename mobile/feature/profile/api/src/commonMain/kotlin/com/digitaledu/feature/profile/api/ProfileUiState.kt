@@ -7,6 +7,7 @@ import com.digitaledu.core.model.progress.LessonNoteEntry
 
 data class ProfileUiState(
     val status: ProfileStatus = ProfileStatus.Idle,
+    val isProfileLoaded: Boolean = false,
     val accessibilitySettings: AccessibilitySettings = AccessibilitySettings(),
     val displayName: String? = null,
     val email: String? = null,
