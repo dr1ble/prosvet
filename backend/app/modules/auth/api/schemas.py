@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -5,17 +6,32 @@ from pydantic import BaseModel, Field
 
 class LoginIn(BaseModel):
     login: str = Field(min_length=3, max_length=120)
-    password: str = Field(min_length=8, max_length=256)
+    password: str = Field(min_length=6, max_length=256)
 
 
 class RegisterIn(BaseModel):
     full_name: str = Field(min_length=2, max_length=255)
     login: str = Field(min_length=3, max_length=120)
-    password: str = Field(min_length=8, max_length=256)
+    password: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
 
 
 class QrActivateIn(BaseModel):
     token: str = Field(min_length=8)
+
+
+class PersonalQrIssueIn(BaseModel):
+    user_id: UUID
+
+
+class PersonalQrIssueOut(BaseModel):
+    user_id: UUID
+    deep_link_url: str
+    expires_at: datetime
+
+
+class QrIssueOut(BaseModel):
+    deep_link_url: str
+    expires_at: datetime
 
 
 class RefreshTokenIn(BaseModel):
@@ -33,7 +49,7 @@ class PasswordRecoveryRequestOut(BaseModel):
 
 class PasswordRecoveryConfirmIn(BaseModel):
     reset_token: str = Field(min_length=6, max_length=6)
-    new_password: str = Field(min_length=8, max_length=256)
+    new_password: str = Field(min_length=6, max_length=256)
 
 
 class EmailBindIn(BaseModel):
@@ -41,8 +57,8 @@ class EmailBindIn(BaseModel):
 
 
 class PasswordChangeIn(BaseModel):
-    current_password: str = Field(min_length=8, max_length=256)
-    new_password: str = Field(min_length=8, max_length=256)
+    current_password: str = Field(min_length=6, max_length=256)
+    new_password: str = Field(min_length=6, max_length=256)
 
 
 class AccountSettingsIn(BaseModel):
@@ -60,6 +76,8 @@ class AuthResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user_id: UUID | None = None
+    initial_login: str | None = None
+    initial_password: str | None = None
 
 
 class AuthMeOut(BaseModel):

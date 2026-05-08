@@ -20,7 +20,10 @@ from app.modules.auth.api.schemas import (
     PasswordRecoveryConfirmIn,
     PasswordRecoveryRequestIn,
     PasswordRecoveryRequestOut,
+    PersonalQrIssueIn,
+    PersonalQrIssueOut,
     QrActivateIn,
+    QrIssueOut,
     RefreshTokenIn,
     RegisterIn,
     StatusOut,
@@ -28,8 +31,9 @@ from app.modules.auth.api.schemas import (
 from app.modules.auth.domain.errors import AuthError
 from app.modules.auth.domain.permissions import ROLE_PERMISSION_TEMPLATES
 from app.modules.users.models import User, UserRole
-from app.shared.auth.deps import get_current_user
+from app.shared.auth.deps import get_current_user, require_policy
 from app.shared.auth.policy_models import RbacPolicyRule
+from app.shared.auth.schemas import CurrentActor
 from app.shared.db.deps import get_db
 from app.shared.di.services import AuthServiceDep
 from app.shared.security.audit import log_login_attempt
@@ -57,6 +61,8 @@ _AUTH_ERROR_RU: dict[str, str] = {
     "Invalid password change data.": "Некорректные данные для смены пароля.",
     "Current password is incorrect.": "Текущий пароль указан неверно.",
     "New password must be different.": "Новый пароль должен отличаться от текущего.",
+    "QR target user is unavailable.": "Пользователь для QR-входа недоступен.",
+    "Personal QR can be issued only for learners.": "Персональный QR можно выдать только обучающемуся.",
     "QR token is invalid or expired.": "QR-токен недействителен или истёк.",
     "User is unavailable for QR activation.": "Пользователь недоступен для активации.",
     "Refresh token is invalid or expired.": "Токен обновления недействителен или истёк.",
@@ -183,6 +189,45 @@ def confirm_password_recovery(
     except AuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail=_localize_auth_error(exc.detail)) from exc
     return StatusOut(status="password_reset")
+
+
+@router.post("/qr/personal", response_model=PersonalQrIssueOut)
+@limiter.limit("20/minute")
+def issue_personal_qr(
+    request: Request,
+    payload: PersonalQrIssueIn,
+    service: AuthServiceDep,
+    actor: CurrentActor = Depends(require_policy("auth.qr.personal.issue")),
+) -> PersonalQrIssueOut:
+    try:
+        result = service.issue_personal_qr(
+            target_user_id=payload.user_id,
+            actor_user_id=actor.user_id,
+        )
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_auth_error(exc.detail)) from exc
+    return PersonalQrIssueOut(
+        user_id=result.user_id,
+        deep_link_url=result.deep_link_url,
+        expires_at=result.expires_at,
+    )
+
+
+@router.post("/qr/onboarding", response_model=QrIssueOut)
+@limiter.limit("20/minute")
+def issue_onboarding_qr(
+    request: Request,
+    service: AuthServiceDep,
+    actor: CurrentActor = Depends(require_policy("auth.qr.onboarding.issue")),
+) -> QrIssueOut:
+    try:
+        result = service.issue_onboarding_qr(actor_user_id=actor.user_id)
+    except AuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_auth_error(exc.detail)) from exc
+    return QrIssueOut(
+        deep_link_url=result.deep_link_url,
+        expires_at=result.expires_at,
+    )
 
 
 @router.post("/qr/activate", response_model=AuthResponse)

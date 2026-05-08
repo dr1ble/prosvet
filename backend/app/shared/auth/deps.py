@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, status
@@ -15,6 +16,7 @@ from app.shared.db.deps import get_db
 from app.shared.security.tokens import TokenError, parse_access_token
 
 _bearer = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 def _auth_error(detail: str) -> HTTPException:
@@ -65,6 +67,14 @@ def require_roles(*allowed_roles: UserRole) -> Callable[..., CurrentActor]:
 
     def _dependency(actor: CurrentActor = Depends(get_current_actor)) -> CurrentActor:
         if actor.role.value not in allowed:
+            logger.warning(
+                "RBAC role denied",
+                extra={
+                    "user_id": str(actor.user_id),
+                    "role": actor.role.value,
+                    "allowed_roles": sorted(allowed),
+                },
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Недостаточно прав для этой операции.",
@@ -103,6 +113,15 @@ def require_policy(policy_key: str) -> Callable[..., CurrentActor]:
             )
 
         if actor.role not in allowed_roles:
+            logger.warning(
+                "RBAC policy denied",
+                extra={
+                    "user_id": str(actor.user_id),
+                    "role": actor.role.value,
+                    "policy_key": policy_key,
+                    "allowed_roles": sorted(role.value for role in allowed_roles),
+                },
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Недостаточно прав для этой операции.",

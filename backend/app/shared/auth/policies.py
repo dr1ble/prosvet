@@ -32,6 +32,19 @@ POLICY_ROLE_MAP: dict[str, set[UserRole]] = {
         UserRole.MODERATOR,
         UserRole.ASSISTANT,
     },
+    "auth.qr.personal.issue": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
+    "auth.qr.onboarding.issue": {
+        UserRole.ADMINISTRATOR,
+        UserRole.MODERATOR,
+        UserRole.ASSISTANT,
+    },
+    "users.manage": {
+        UserRole.ADMINISTRATOR,
+    },
     "progress.view": {
         UserRole.ADMINISTRATOR,
         UserRole.MODERATOR,

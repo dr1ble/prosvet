@@ -30,6 +30,22 @@ class AuthRepository:
         qr_token.used_at = now
         qr_token.status = QrTokenStatus.USED.value
 
+    def create_qr_token(
+        self,
+        *,
+        issued_by_user_id: UUID | None,
+        token_hash: str,
+        expires_at: datetime,
+    ) -> QrLoginToken:
+        token = QrLoginToken(
+            issued_by_user_id=issued_by_user_id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+        self.db.add(token)
+        self.db.flush()
+        return token
+
     def get_user_by_login(self, login: str) -> User | None:
         stmt = select(User).where(User.login == login)
         return self.db.scalar(stmt)

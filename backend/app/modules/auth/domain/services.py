@@ -1,4 +1,5 @@
 import secrets
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -13,6 +14,10 @@ from app.shared.email import EmailDeliveryError, EmailSender
 from app.shared.security.hashing import stable_hash
 from app.shared.security.passwords import hash_password, verify_password
 from app.shared.security.tokens import generate_token, issue_access_token
+
+LOGIN_PASSWORD_MIN_LENGTH = 6
+REGISTRATION_PIN_LENGTH = 6
+QR_LOGIN_NUMBER_BOUND = 1_000_000
 
 
 def _utcnow() -> datetime:
@@ -32,6 +37,19 @@ def _is_valid_email(email: str) -> bool:
     return bool(local and separator and "." in domain and not email.startswith("@"))
 
 
+@dataclass(frozen=True)
+class PersonalQrIssueResult:
+    user_id: UUID
+    deep_link_url: str
+    expires_at: datetime
+
+
+@dataclass(frozen=True)
+class QrIssueResult:
+    deep_link_url: str
+    expires_at: datetime
+
+
 class AuthService:
     def __init__(self, db: Session, email_sender: EmailSender | None = None) -> None:
         self.db = db
@@ -43,7 +61,7 @@ class AuthService:
         normalized_login = _normalize_login(login)
         if len(normalized_login) < 3:
             raise AuthError("Invalid credentials.", status_code=401)
-        if len(password) < 8:
+        if len(password) < LOGIN_PASSWORD_MIN_LENGTH:
             raise AuthError("Invalid credentials.", status_code=401)
 
         user = self.repo.get_user_by_login(normalized_login)
@@ -71,7 +89,7 @@ class AuthService:
             raise AuthError("Invalid registration data.", status_code=400)
         if len(normalized_login) < 3:
             raise AuthError("Invalid registration data.", status_code=400)
-        if len(password) < 8:
+        if len(password) != REGISTRATION_PIN_LENGTH or not password.isdigit():
             raise AuthError("Invalid registration data.", status_code=400)
 
         existing_user = self.repo.get_user_by_login(normalized_login)
@@ -117,7 +135,7 @@ class AuthService:
 
     def confirm_password_recovery(self, reset_token: str, new_password: str) -> None:
         now = _utcnow()
-        if len(new_password) < 8:
+        if len(new_password) < LOGIN_PASSWORD_MIN_LENGTH:
             raise AuthError("Invalid recovery data.", status_code=400)
 
         token_hash = stable_hash(reset_token, settings.security_pepper)
@@ -144,7 +162,7 @@ class AuthService:
         return self.repo.bind_email(user=user, email=normalized_email)
 
     def change_password(self, user: User, current_password: str, new_password: str) -> User:
-        if len(current_password) < 8 or len(new_password) < 8:
+        if len(current_password) < LOGIN_PASSWORD_MIN_LENGTH or len(new_password) < LOGIN_PASSWORD_MIN_LENGTH:
             raise AuthError("Invalid password change data.", status_code=400)
         if not user.password_hash or not verify_password(current_password, user.password_hash):
             raise AuthError("Current password is incorrect.", status_code=400)
@@ -167,6 +185,47 @@ class AuthService:
             profile_visible=profile_visible,
         )
 
+    def issue_personal_qr(
+        self,
+        target_user_id: UUID,
+        actor_user_id: UUID,
+    ) -> PersonalQrIssueResult:
+        del actor_user_id
+        target_user = self.repo.get_user_by_id(target_user_id)
+        if target_user is None or target_user.status != UserStatus.ACTIVE:
+            raise AuthError("QR target user is unavailable.", status_code=404)
+        if target_user.role != UserRole.USER:
+            raise AuthError("Personal QR can be issued only for learners.", status_code=422)
+
+        token = generate_token(24)
+        now = _utcnow()
+        expires_at = now + timedelta(hours=max(1, settings.qr_ttl_hours))
+        self.repo.create_qr_token(
+            issued_by_user_id=target_user.id,
+            token_hash=stable_hash(token, settings.security_pepper),
+            expires_at=expires_at,
+        )
+        return PersonalQrIssueResult(
+            user_id=target_user.id,
+            deep_link_url=f"digitaledu://auth/qr/{token}",
+            expires_at=expires_at,
+        )
+
+    def issue_onboarding_qr(self, actor_user_id: UUID) -> QrIssueResult:
+        del actor_user_id
+        token = generate_token(24)
+        now = _utcnow()
+        expires_at = now + timedelta(hours=max(1, settings.qr_ttl_hours))
+        self.repo.create_qr_token(
+            issued_by_user_id=None,
+            token_hash=stable_hash(token, settings.security_pepper),
+            expires_at=expires_at,
+        )
+        return QrIssueResult(
+            deep_link_url=f"digitaledu://auth/qr/{token}",
+            expires_at=expires_at,
+        )
+
     def activate_qr(self, token: str) -> AuthResponse:
         now = _utcnow()
         token_hash = stable_hash(token, settings.security_pepper)
@@ -177,9 +236,17 @@ class AuthService:
 
         self.repo.mark_qr_used(qr_token, now)
 
-        # For now, create a user for one-time QR flow if not pre-bound.
+        initial_login: str | None = None
+        initial_password: str | None = None
+
         if qr_token.issued_by_user_id is None:
-            created_user = self.repo.create_user()
+            initial_login = self._generate_qr_login()
+            initial_password = self._generate_six_digit_pin()
+            created_user = self.repo.create_user(
+                login=initial_login,
+                password_hash=hash_password(initial_password),
+                display_name=f"Пользователь {initial_login.removeprefix('user')}",
+            )
             user_id = created_user.id
             role = created_user.role.value
         else:
@@ -190,7 +257,20 @@ class AuthService:
             role = user.role.value
 
         auth_response = self._issue_session_tokens(user_id=user_id, role=role, now=now)
+        auth_response.initial_login = initial_login
+        auth_response.initial_password = initial_password
         return auth_response
+
+    def _generate_qr_login(self) -> str:
+        for _ in range(10):
+            suffix = f"{secrets.randbelow(QR_LOGIN_NUMBER_BOUND):06d}"
+            login = f"user{suffix}"
+            if self.repo.get_user_by_login(login) is None:
+                return login
+        raise AuthError("Could not generate QR login.", status_code=500)
+
+    def _generate_six_digit_pin(self) -> str:
+        return f"{secrets.randbelow(QR_LOGIN_NUMBER_BOUND):06d}"
 
     def refresh_session(self, refresh_token: str) -> AuthResponse:
         now = _utcnow()

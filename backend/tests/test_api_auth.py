@@ -60,7 +60,7 @@ class TestAuthRegisterEndpoints:
         login = f"mobile_{uuid4().hex[:10]}"
         response = client.post(
             "/api/v1/auth/register",
-            json={"full_name": "Иван Иванов", "login": login, "password": "password123"},
+            json={"full_name": "Иван Иванов", "login": login, "password": "123456"},
         )
         assert response.status_code in (200, 429)
         if response.status_code == 200:
