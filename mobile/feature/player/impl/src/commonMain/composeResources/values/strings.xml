@@ -86,12 +86,21 @@
     <string name="video_duration">%1$s</string>
     <string name="video_transcript_title">Кратко о видео</string>
     <string name="video_no_transcript">Краткое описание видео пока недоступно.</string>
+    <string name="video_unavailable_title">Видео недоступно</string>
+    <string name="video_unavailable_message">Не удалось открыть видео. Используйте текстовое описание ниже.</string>
     <string name="video_play">Запустить видео</string>
     <string name="video_pause">Поставить на паузу</string>
 
     <string name="quiz_progress">Вопрос %1$d из %2$d</string>
     <string name="quiz_multiple_pending">Раздел в разработке: множественный выбор</string>
-    <string name="quiz_matching_pending">Раздел в разработке: сопоставление</string>
+    <string name="quiz_matching_prompt">Выберите пункт слева, затем подходящий вариант справа.</string>
+    <string name="quiz_matching_left">Понятия</string>
+    <string name="quiz_matching_right">Варианты</string>
+    <string name="quiz_matching_selected">Выбрано: %1$s</string>
+    <string name="quiz_select_correct_answer">Выберите правильный ответ, чтобы продолжить.</string>
+    <string name="quiz_correct_answer">Верно. Можно продолжать.</string>
+    <string name="quiz_wrong_answer">Ответ неверный. Попробуйте ещё раз.</string>
+    <string name="quiz_attempts">Попыток: %1$d</string>
     <string name="quiz_previous">Предыдущий</string>
     <string name="quiz_back">Назад</string>
     <string name="quiz_next">Далее</string>

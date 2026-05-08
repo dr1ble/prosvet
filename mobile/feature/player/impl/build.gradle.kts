@@ -37,6 +37,11 @@ kotlin {
             implementation(libs.koin.core)
         }
 
+        androidMain.dependencies {
+            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.androidx.media3.ui)
+        }
+
         jvmTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)

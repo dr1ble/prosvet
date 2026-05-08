@@ -40,12 +40,19 @@ import com.digitaledu.feature.player.api.PlayerIntent
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
 import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_back
 import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_continue
+import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_correct_answer
 import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_finish
-import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_matching_pending
+import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_matching_left
+import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_matching_prompt
+import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_matching_right
+import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_matching_selected
 import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_multiple_pending
 import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_next
+import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_select_correct_answer
 import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_previous
 import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_progress
+import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_attempts
+import digital_education_mobile.feature.player.`impl`.generated.resources.quiz_wrong_answer
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -61,8 +68,8 @@ fun QuizStory(
 ) {
     var currentQuestionIndex by remember { mutableStateOf(0) }
     val currentQuestion = payload.questions.getOrNull(currentQuestionIndex)
-    
-    // Track answers state (implementation pending)
+    var answersState by remember(payload.questions) { mutableStateOf(QuizAnswersState()) }
+    var selectedMatchingLeftId by remember(currentQuestion?.id) { mutableStateOf<String?>(null) }
 
     Box(
         modifier = modifier
@@ -100,26 +107,142 @@ fun QuizStory(
                 
                 Spacer(modifier = Modifier.height(UiSpacing.xl))
                 
-                // Options (Placeholder logic for now)
                 when (currentQuestion) {
                     is SingleChoiceQuestion -> {
+                        val selectedIds = answersState.selectedOptionIds(currentQuestion.id)
                         currentQuestion.options.forEach { option ->
                             QuizOptionItem(
                                 text = option.text,
-                                isSelected = false,
-                                onClick = { }
+                                isSelected = option.id in selectedIds,
+                                onClick = {
+                                    answersState = answersState.answerSingleChoice(
+                                        question = currentQuestion,
+                                        selectedOptionId = option.id,
+                                    )
+                                },
                             )
                             Spacer(modifier = Modifier.height(UiSpacing.xs))
                         }
                     }
                     is MultipleChoiceQuestion -> {
-                        // Handle logic
-                        Text(stringResource(Res.string.quiz_multiple_pending))
+                        val selectedIds = answersState.selectedOptionIds(currentQuestion.id)
+                        currentQuestion.options.forEach { option ->
+                            QuizOptionItem(
+                                text = option.text,
+                                isSelected = option.id in selectedIds,
+                                onClick = {
+                                    val nextSelectedIds = if (option.id in selectedIds) {
+                                        selectedIds - option.id
+                                    } else {
+                                        selectedIds + option.id
+                                    }
+                                    answersState = answersState.answerMultipleChoice(
+                                        question = currentQuestion,
+                                        selectedOptionIds = nextSelectedIds,
+                                    )
+                                },
+                            )
+                            Spacer(modifier = Modifier.height(UiSpacing.xs))
+                        }
                     }
                     is MatchingQuestion -> {
-                        // Handle logic
-                        Text(stringResource(Res.string.quiz_matching_pending))
+                        Text(
+                            text = stringResource(Res.string.quiz_matching_prompt),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(UiSpacing.md))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(UiSpacing.md),
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.quiz_matching_left),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                )
+                                currentQuestion.items.forEach { item ->
+                                    val selectedRightId = answersState.selectedMatchingRightId(
+                                        currentQuestion.id,
+                                        item.id,
+                                    )
+                                    val selectedRight = currentQuestion.items.firstOrNull {
+                                        it.id == selectedRightId
+                                    }?.right
+                                    QuizOptionItem(
+                                        text = if (selectedRight == null) {
+                                            item.left
+                                        } else {
+                                            "${item.left}\n${stringResource(Res.string.quiz_matching_selected, selectedRight)}"
+                                        },
+                                        isSelected = selectedMatchingLeftId == item.id,
+                                        onClick = { selectedMatchingLeftId = item.id },
+                                    )
+                                }
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.quiz_matching_right),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                )
+                                currentQuestion.items.forEach { item ->
+                                    QuizOptionItem(
+                                        text = item.right,
+                                        isSelected = false,
+                                        onClick = {
+                                            val leftId = selectedMatchingLeftId ?: return@QuizOptionItem
+                                            answersState = answersState.answerMatching(
+                                                question = currentQuestion,
+                                                leftItemId = leftId,
+                                                rightItemId = item.id,
+                                            )
+                                            selectedMatchingLeftId = null
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
+                }
+
+                val canContinue = answersState.canContinue(currentQuestion)
+                val attemptCount = answersState.attemptCount(currentQuestion.id)
+                if (answersState.hasAnswered(currentQuestion.id)) {
+                    Text(
+                        text = if (canContinue) {
+                            stringResource(Res.string.quiz_correct_answer)
+                        } else {
+                            stringResource(Res.string.quiz_wrong_answer)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (canContinue) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                    )
+                    Text(
+                        text = stringResource(Res.string.quiz_attempts, attemptCount),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else if (currentQuestion is SingleChoiceQuestion ||
+                    currentQuestion is MultipleChoiceQuestion ||
+                    currentQuestion is MatchingQuestion
+                ) {
+                    Text(
+                        text = stringResource(Res.string.quiz_select_correct_answer),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 
                 Spacer(modifier = Modifier.height(UiSpacing.xl))
@@ -164,6 +287,7 @@ fun QuizStory(
                     if (currentQuestionIndex < payload.questions.lastIndex) {
                         Button(
                             onClick = { currentQuestionIndex++ },
+                            enabled = answersState.canContinue(currentQuestion),
                             modifier = Modifier
                                 .accessibilityTouchTarget
                                 .accessibilitySemantics(
@@ -178,6 +302,7 @@ fun QuizStory(
                     } else {
                         Button(
                             onClick = { onIntent(PlayerIntent.Next) },
+                            enabled = answersState.canContinue(currentQuestion),
                             modifier = Modifier
                                 .accessibilityTouchTarget
                                 .accessibilitySemantics(

@@ -14,13 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +45,8 @@ import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
+import com.digitaledu.core.ui.util.BackHandler
+import com.digitaledu.core.ui.util.rememberErrorHapticFeedback
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.content.Hotspot
@@ -60,7 +60,6 @@ import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_hint
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_load_error
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_screen_image
-import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -88,6 +87,9 @@ fun SimulationScreen(
     var imageWidth by remember { mutableStateOf(0) }
     var imageHeight by remember { mutableStateOf(0) }
     val discoveredLabels = remember(payload) { mutableStateListOf<String>() }
+    var wrongTapCount by remember(payload) { mutableStateOf(0) }
+    val targetHotspot = payload.hotspots.firstOrNull()
+    val performErrorHapticFeedback = rememberErrorHapticFeedback()
     val trainerState = buildCyberTrainerState(
         screenTitle = screenTitle,
         payload = payload,
@@ -113,7 +115,28 @@ fun SimulationScreen(
             .build()
     }
     
-    Box(modifier = modifier.fillMaxSize()) {
+    BackHandler {
+        if (payload.hotspots.isNotEmpty()) {
+            return@BackHandler
+        }
+        onDismissHint()
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+            ) {
+                if (payload.hotspots.isNotEmpty()) {
+                    wrongTapCount += 1
+                    if (wrongTapCount == 1) {
+                        performErrorHapticFeedback()
+                    }
+                }
+            }
+    ) {
         // Background image
         SubcomposeAsyncImage(
             model = imageRequest,
@@ -156,6 +179,7 @@ fun SimulationScreen(
                     imageWidth = imageWidth,
                     imageHeight = imageHeight,
                     onClick = {
+                        wrongTapCount = 0
                         val label = hotspot.label.trim()
                         if (label.isNotEmpty() && label !in discoveredLabels) {
                             discoveredLabels += label
@@ -166,7 +190,34 @@ fun SimulationScreen(
             }
         }
 
-        if (trainerState.isEnabled) {
+        if (wrongTapCount >= 2 && targetHotspot != null && imageWidth > 0 && imageHeight > 0) {
+            AdaptiveTargetHighlight(
+                hotspot = targetHotspot,
+                imageWidth = imageWidth,
+                imageHeight = imageHeight,
+                showPointer = wrongTapCount >= 3,
+            )
+        }
+
+        activeHotspotHint?.let { hotspot ->
+            InlineSimulationHint(
+                hotspot = hotspot,
+                onDismiss = onDismissHint,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(UiSpacing.md),
+            )
+        }
+
+        if (wrongTapCount >= 3 && targetHotspot != null) {
+            InlineSimulationHint(
+                hotspot = targetHotspot,
+                onDismiss = { wrongTapCount = 0 },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(UiSpacing.md),
+            )
+        } else if (trainerState.isEnabled) {
             CyberTrainerPanel(
                 state = trainerState,
                 modifier = Modifier
@@ -174,26 +225,6 @@ fun SimulationScreen(
                     .padding(UiSpacing.md),
             )
         }
-    }
-    
-    // Hint dialog
-    activeHotspotHint?.let { hotspot ->
-        AlertDialog(
-            onDismissRequest = onDismissHint,
-            title = {
-                Text(text = hotspot.label.takeIf { it.isNotBlank() } ?: stringResource(Res.string.simulation_hint))
-            },
-            text = {
-                Text(text = hotspot.hint)
-            },
-            confirmButton = {
-                TextButton(onClick = onDismissHint) {
-                    AccessibilityScaledControlContainer {
-                        Text(stringResource(Res.string.close))
-                    }
-                }
-            },
-        )
     }
 }
 
@@ -254,6 +285,92 @@ private fun CyberTrainerPanel(
     }
 }
 
+@Composable
+private fun InlineSimulationHint(
+    hotspot: Hotspot,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = UiShapes.cardLg,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        tonalElevation = 6.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+        ) {
+            Text(
+                text = hotspot.label.takeIf { it.isNotBlank() } ?: stringResource(Res.string.simulation_hint),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = hotspot.hint,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(Res.string.close),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(label = stringResource(Res.string.close), role = Role.Button)
+                    .clickable(onClick = onDismiss),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveTargetHighlight(
+    hotspot: Hotspot,
+    imageWidth: Int,
+    imageHeight: Int,
+    showPointer: Boolean,
+) {
+    val density = LocalDensity.current
+    val bounds = calculateHotspotBounds(
+        hotspot = hotspot,
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
+    )
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(bounds.x, bounds.y) }
+            .size(
+                width = with(density) { bounds.width.toDp() },
+                height = with(density) { bounds.height.toDp() },
+            )
+            .border(
+                width = if (showPointer) 4.dp else 3.dp,
+                color = if (showPointer) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary,
+                shape = UiShapes.cardSm,
+            )
+            .background(
+                color = if (showPointer) {
+                    MaterialTheme.colorScheme.tertiary.copy(alpha = UiOpacity.medium)
+                } else {
+                    MaterialTheme.colorScheme.secondary.copy(alpha = UiOpacity.medium)
+                },
+                shape = UiShapes.cardSm,
+            ),
+    ) {
+        if (showPointer) {
+            Text(
+                text = "↑",
+                color = MaterialTheme.colorScheme.onTertiary,
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        }
+    }
+}
+
 /**
  * Renders a single clickable hotspot overlay.
  * 
@@ -267,19 +384,18 @@ private fun HotspotOverlay(
     onClick: () -> Unit,
 ) {
     val density = LocalDensity.current
-    
-    // Convert percentages to pixels
-    val xPx = (imageWidth * hotspot.x / 100f).roundToInt()
-    val yPx = (imageHeight * hotspot.y / 100f).roundToInt()
-    val widthPx = (imageWidth * hotspot.width / 100f).roundToInt()
-    val heightPx = (imageHeight * hotspot.height / 100f).roundToInt()
-    
+    val bounds = calculateHotspotBounds(
+        hotspot = hotspot,
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
+    )
+
     Box(
         modifier = Modifier
-            .offset { IntOffset(xPx, yPx) }
+            .offset { IntOffset(bounds.x, bounds.y) }
             .size(
-                width = with(density) { widthPx.toDp() },
-                height = with(density) { heightPx.toDp() },
+                width = with(density) { bounds.width.toDp() },
+                height = with(density) { bounds.height.toDp() },
             )
             .clip(UiShapes.cardSm)
             .background(MaterialTheme.colorScheme.primary.copy(alpha = UiOpacity.medium))
