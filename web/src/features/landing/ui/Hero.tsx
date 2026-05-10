@@ -1,156 +1,226 @@
 "use client";
 
-import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { ArrowRight, PlayCircle, Star } from "lucide-react";
-
-const trustMetrics = [
-  { value: "120+", label: "сценариев по гос- и бытовым сервисам" },
-  { value: "87%", label: "завершают модуль с первого прохода" },
-  { value: "24/7", label: "доступ для граждан и кураторов" },
-];
+import { ShieldCheck } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden px-4 py-10 sm:px-6 sm:py-12 lg:py-14">
+    <section className="relative isolate flex min-h-[calc(100svh-72px)] items-start overflow-hidden px-4 pb-12 pt-8 sm:px-6 sm:pb-14 sm:pt-10 lg:pb-16 lg:pt-10">
       <div className="pointer-events-none absolute inset-0 -z-20 bg-grid" />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-white via-slate-50 to-slate-100/60" />
-      <div className="pointer-events-none absolute -left-24 top-12 -z-10 h-72 w-72 rounded-full bg-brand-300/25 blur-3xl" />
-      <div className="pointer-events-none absolute -right-16 top-6 -z-10 h-72 w-72 rounded-full bg-cta-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute -left-32 top-0 -z-10 h-80 w-80 rounded-full bg-brand-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-20 -z-10 h-80 w-80 rounded-full bg-cta-500/20 blur-3xl" />
 
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1.22fr_0.78fr]">
-        <div>
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14">
+        <div className="lg:max-w-[640px]">
           <motion.p
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+            transition={{ duration: 0.45 }}
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
           >
-            <span className="inline-flex h-2 w-2 rounded-full bg-brand-500" />
+            <ShieldCheck className="h-4 w-4 text-brand-500" />
             Социальный цифровой проект
           </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-            className="text-4xl font-extrabold leading-[1.05] text-slate-900 sm:text-5xl md:text-6xl"
+            transition={{ duration: 0.55, delay: 0.05 }}
+            className="hyphens-none text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:text-5xl sm:leading-[1.04] lg:text-[3.5rem]"
           >
-            <span className="block">Просвет</span>
-            <span className="mt-2 block bg-gradient-to-r from-brand-500 to-cta-500 bg-clip-text text-transparent">
-              платформа цифровой адаптации
+            <span className="block">Учим старшее поколение пользоваться</span>
+            <span className="block bg-gradient-to-r from-brand-500 to-cta-500 bg-clip-text text-transparent">
+              цифровыми сервисами
             </span>
+            <span className="block">без риска ошибиться</span>
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 22 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.12 }}
-            className="mt-6 max-w-2xl text-balance text-lg leading-8 text-slate-600"
+            transition={{ duration: 0.5, delay: 0.12 }}
+            className="mt-7 max-w-xl text-pretty text-lg leading-8 text-slate-600 lg:text-xl lg:leading-9"
           >
-            Обучение в безопасной среде для работы с Госуслугами, банком,
-            медицинскими и городскими сервисами без риска ошибок. Граждане могут
-            проходить программу самостоятельно или с сопровождением.
+            Безопасные симуляции Госуслуг, банков и городских сервисов,
+            видеоуроки и памятки — в мобильном приложении и под сопровождением
+            кураторов.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-9 flex flex-col gap-3 sm:flex-row"
+            transition={{ duration: 0.5, delay: 0.18 }}
+            className="mt-8 flex flex-col gap-3 sm:flex-row"
           >
-            <Link
-              href="/auth"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-7 py-3 text-base font-bold text-white transition hover:-translate-y-0.5 hover:bg-brand-500"
-            >
-              Открыть кабинет куратора
-              <ArrowRight className="h-4 w-4" />
-            </Link>
             <a
               href="#features"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-3 text-base font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:border-brand-500/40"
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-900 px-7 py-3 text-base font-bold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-brand-600"
             >
-              <PlayCircle className="h-5 w-5 text-brand-500" />
-              Посмотреть возможности
+              Узнать возможности
+            </a>
+            <a
+              href="#about"
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-7 py-3 text-base font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:border-brand-500/40"
+            >
+              О платформе
             </a>
           </motion.div>
-
-          <motion.ul
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.35 }}
-            className="mt-9 grid gap-3 text-sm text-slate-600 sm:grid-cols-3"
-          >
-            {trustMetrics.map((item) => (
-              <li
-                key={item.label}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
-              >
-                <p className="text-xl font-extrabold text-slate-900">
-                  {item.value}
-                </p>
-                <p className="mt-1 leading-5">{item.label}</p>
-              </li>
-            ))}
-          </motion.ul>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.65, delay: 0.16 }}
-          className="relative"
-        >
-          <div className="absolute -left-8 -top-8 h-36 w-36 rounded-full bg-brand-500/25 blur-3xl" />
-          <div className="absolute -bottom-10 right-2 h-44 w-44 rounded-full bg-cta-500/20 blur-3xl" />
-
-          <article className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-300/30">
-            <div className="mb-5 flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-500">
-                Учебный сценарий
-              </p>
-              <p className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                25 мин
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-brand-500/25 bg-brand-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">
-                  Шаг 1
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
-                  Видеоинструкция: запись к врачу через Госуслуги
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Шаг 2
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
-                  Симуляция: выбор поликлиники и времени приема
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Шаг 3
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
-                  Квиз и памятка: перенос и отмена записи
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center justify-between rounded-2xl bg-slate-900 px-4 py-3 text-white">
-              <p className="text-sm font-semibold">Эффект программы</p>
-              <p className="inline-flex items-center gap-1 text-sm font-bold">
-                <Star className="h-4 w-4 text-amber-400" />
-                Вы освоили базовые цифровые сервисы
-              </p>
-            </div>
-          </article>
-        </motion.div>
+        <PhoneFan />
       </div>
     </section>
+  );
+}
+
+function PhoneFan() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, delay: 0.2 }}
+      className="relative mx-auto h-[560px] w-full max-w-[510px] sm:h-[600px] lg:-mt-6"
+      aria-hidden
+    >
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-500/15 blur-3xl" />
+        <div className="absolute right-2 top-1/3 h-56 w-56 rounded-full bg-cta-500/20 blur-3xl" />
+      </div>
+
+      <FanPhone
+        side="left"
+        rotate={-10}
+        offsetY={28}
+        z={1}
+        delay={0}
+        buttonsSide="left"
+      >
+        <ScreenshotImage src="/mockups/learning.png" alt="Каталог обучения" />
+      </FanPhone>
+
+      <FanPhone
+        side="right"
+        rotate={10}
+        offsetY={28}
+        z={2}
+        delay={0.1}
+        buttonsSide="right"
+      >
+        <ScreenshotImage src="/mockups/profile.png" alt="Профиль и прогресс" />
+      </FanPhone>
+
+      <FanPhone
+        side="center"
+        rotate={0}
+        offsetY={56}
+        z={3}
+        delay={0.2}
+        buttonsSide="right"
+      >
+        <ScreenshotImage
+          src="/mockups/welcome.png"
+          alt="Добро пожаловать в Просвет"
+        />
+      </FanPhone>
+    </motion.div>
+  );
+}
+
+function FanPhone({
+  children,
+  side,
+  rotate,
+  offsetY,
+  z,
+  delay,
+  buttonsSide,
+}: {
+  children: React.ReactNode;
+  side: "left" | "center" | "right";
+  rotate: number;
+  offsetY: number;
+  z: number;
+  delay: number;
+  buttonsSide: "left" | "right";
+}) {
+  const positionClass =
+    side === "left"
+      ? "left-0 bottom-0"
+      : side === "right"
+        ? "right-0 bottom-0"
+        : "left-1/2 bottom-0";
+
+  const restingX = side === "center" ? "-50%" : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50, rotate: rotate * 0.5, x: restingX }}
+      animate={{ opacity: 1, y: -offsetY, rotate, x: restingX }}
+      transition={{ duration: 0.7, delay, ease: "easeOut" }}
+      className={`absolute ${positionClass}`}
+      style={{ zIndex: z, transformOrigin: "bottom center" }}
+    >
+      <PhoneDevice buttonsSide={buttonsSide}>{children}</PhoneDevice>
+    </motion.div>
+  );
+}
+
+function PhoneDevice({
+  children,
+  buttonsSide,
+}: {
+  children: React.ReactNode;
+  buttonsSide: "left" | "right";
+}) {
+  return (
+    <div className="relative h-[480px] w-[234px]">
+      {/* Side buttons */}
+      {buttonsSide === "left" ? (
+        <>
+          <span className="absolute -left-[3px] top-[88px] h-7 w-[3px] rounded-l bg-slate-700" />
+          <span className="absolute -left-[3px] top-[132px] h-11 w-[3px] rounded-l bg-slate-700" />
+          <span className="absolute -left-[3px] top-[188px] h-11 w-[3px] rounded-l bg-slate-700" />
+          <span className="absolute -right-[3px] top-[142px] h-16 w-[3px] rounded-r bg-slate-700" />
+        </>
+      ) : (
+        <>
+          <span className="absolute -right-[3px] top-[88px] h-7 w-[3px] rounded-r bg-slate-700" />
+          <span className="absolute -right-[3px] top-[132px] h-11 w-[3px] rounded-r bg-slate-700" />
+          <span className="absolute -right-[3px] top-[188px] h-11 w-[3px] rounded-r bg-slate-700" />
+          <span className="absolute -left-[3px] top-[142px] h-16 w-[3px] rounded-l bg-slate-700" />
+        </>
+      )}
+
+      {/* Outer frame: titanium-like gradient */}
+      <div className="relative h-full w-full rounded-[2.6rem] bg-gradient-to-br from-slate-800 via-slate-900 to-black p-[10px] shadow-[0_30px_60px_-15px_rgba(15,23,42,0.55),0_8px_24px_-8px_rgba(15,23,42,0.45)] ring-1 ring-black/40">
+        {/* Inner bezel highlight */}
+        <div className="absolute inset-0 rounded-[2.6rem] ring-1 ring-inset ring-white/10" />
+
+        {/* Screen */}
+        <div className="relative h-full w-full overflow-hidden rounded-[2rem] bg-[#f7f9fb]">
+          {/* Screen content */}
+          <div className="relative z-10 h-full w-full">{children}</div>
+
+          {/* Glossy reflection */}
+          <div className="pointer-events-none absolute inset-0 z-20 rounded-[2rem] bg-gradient-to-br from-white/20 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-1/3 rounded-r-[2rem] bg-gradient-to-l from-white/10 to-transparent" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScreenshotImage({ src, alt }: { src: string; alt: string }) {
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes="234px"
+      priority
+      className="object-cover"
+    />
   );
 }

@@ -1,6 +1,8 @@
 import { Github, Mail } from "lucide-react";
 import type { ComponentType } from "react";
 
+import { ProsvetLogo } from "./ProsvetLogo";
+
 type SocialIcon = ComponentType<{ className?: string }>;
 
 function VkIcon({ className }: { className?: string }) {
@@ -51,10 +53,11 @@ export function Footer() {
       <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-8">
         <div className="flex flex-col justify-between gap-7 border-b border-white/10 pb-7 md:flex-row md:items-end">
           <div className="max-w-md">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-300">
-              Просвет
-            </p>
-            <h3 className="mt-3 text-2xl font-extrabold text-white">
+            <ProsvetLogo
+              size={36}
+              textClassName="text-xl font-extrabold tracking-tight text-white"
+            />
+            <h3 className="mt-4 text-2xl font-extrabold text-white">
               Цифровая поддержка старшего поколения.
             </h3>
             <p className="mt-3 text-sm leading-7 text-slate-300">

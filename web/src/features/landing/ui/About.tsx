@@ -1,18 +1,42 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
+import {
+  ClipboardCheck,
+  HandHeart,
+  LineChart,
+  MousePointerClick,
+} from "lucide-react";
 
-const metrics = [
-  { value: "100%", label: "ориентация на граждан старшего возраста" },
-  { value: "120+", label: "сценариев по жизненным ситуациям" },
-  { value: "No-Code", label: "создание курсов и сценариев без кода" },
-  { value: "24/7", label: "доступ к урокам, практике и памяткам" },
+const capabilities = [
+  {
+    icon: MousePointerClick,
+    title: "No-Code конструктор курсов",
+    text: "Методолог собирает уроки из текста, видео, квиза и многоэкранных симуляций без программирования.",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Модерация перед публикацией",
+    text: "Каждая версия проходит одобрение модератором — с историей и комментариями.",
+  },
+  {
+    icon: HandHeart,
+    title: "Настройки доступности",
+    text: "Размер шрифта, жирный текст, высокий контраст и фильтр тремора.",
+  },
+  {
+    icon: LineChart,
+    title: "Аналитика по урокам",
+    text: "Время прохождения, количество ошибок и уровень подсказки — по каждой сессии.",
+  },
 ];
 
 export function About() {
   return (
-    <section className="relative overflow-hidden px-4 py-12 sm:px-6 sm:py-14">
+    <section
+      id="about"
+      className="relative overflow-hidden px-4 py-12 sm:px-6 sm:py-14"
+    >
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-white via-slate-50 to-slate-100/70" />
 
       <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center">
@@ -57,29 +81,24 @@ export function About() {
             сопровождения участников.
           </p>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-2">
-            {metrics.map((metric) => (
-              <article
-                key={metric.label}
+          <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+            {capabilities.map(({ icon: Icon, title, text }) => (
+              <li
+                key={title}
                 className="rounded-2xl border border-slate-200 bg-white p-4"
               >
-                <p className="text-2xl font-extrabold text-slate-900">
-                  {metric.value}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  {metric.label}
-                </p>
-              </article>
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-500/10 text-brand-600">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <p className="text-base font-semibold text-slate-900">
+                    {title}
+                  </p>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-600">{text}</p>
+              </li>
             ))}
-          </div>
-
-          <a
-            href="/dashboard"
-            className="mt-8 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-brand-500/50 hover:text-brand-600"
-          >
-            Открыть панель координатора
-            <ArrowUpRight className="h-4 w-4" />
-          </a>
+          </ul>
         </motion.div>
       </div>
     </section>
