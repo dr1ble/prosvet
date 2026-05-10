@@ -8,6 +8,14 @@ from app.modules.catalog.infra.models import (
     CourseReleaseScreen,
     LessonTask,
 )
+from app.modules.diagnostics.infra.models import (
+    DiagnosticAnswer,
+    DiagnosticAttempt,
+    DiagnosticCompetencyScore,
+    DiagnosticQuestion,
+    DiagnosticQuestionBank,
+    LearningTrajectoryItem,
+)
 from app.modules.groups.infra.models import (
     GroupCourseAssignment,
     GroupCourseAssignmentTargetUser,
@@ -30,6 +38,12 @@ __all__ = [
     "LessonTask",
     "CourseRelease",
     "CourseReleaseScreen",
+    "DiagnosticQuestionBank",
+    "DiagnosticQuestion",
+    "DiagnosticAttempt",
+    "DiagnosticAnswer",
+    "DiagnosticCompetencyScore",
+    "LearningTrajectoryItem",
     "LearningGroup",
     "GroupMembership",
     "GroupCourseAssignment",

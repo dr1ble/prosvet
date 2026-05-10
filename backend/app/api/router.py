@@ -4,6 +4,7 @@ from app.api.health import router as health_router
 from app.api.metrics import router as metrics_router
 from app.modules.auth.api.router import router as auth_router
 from app.modules.catalog.api.router import router as catalog_router
+from app.modules.diagnostics.api.router import router as diagnostics_router
 from app.modules.groups.api.router import router as groups_router
 from app.modules.moderation.api.router import router as moderation_router
 from app.modules.progress.api.router import router as progress_router
@@ -18,6 +19,7 @@ api_router.include_router(health_router)
 api_router.include_router(metrics_router)
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_router.include_router(catalog_router, prefix="/catalog", tags=["catalog"])
+api_router.include_router(diagnostics_router, prefix="/diagnostics", tags=["diagnostics"])
 api_router.include_router(groups_router, prefix="/groups", tags=["groups"])
 api_router.include_router(moderation_router, prefix="/moderation", tags=["moderation"])
 api_router.include_router(progress_router, prefix="/progress", tags=["progress"])

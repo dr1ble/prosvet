@@ -18,6 +18,7 @@ from app.main import app
 from app.modules.auth.infra import models as _auth_models  # noqa: F401
 from app.modules.catalog.infra import models as _catalog_models  # noqa: F401
 from app.modules.catalog.infra.models import Course, CourseRelease
+from app.modules.diagnostics.infra import models as _diagnostics_models  # noqa: F401
 from app.modules.groups.infra import models as _groups_models  # noqa: F401
 from app.modules.moderation.infra import models as _moderation_models  # noqa: F401
 from app.modules.progress.infra import models as _progress_models  # noqa: F401
