@@ -1122,6 +1122,59 @@ class CatalogService:
         course.status = CourseStatus.ACTIVE.value
         return release
 
+    def submit_course_for_review(
+        self,
+        course_id: UUID,
+        version: str,
+        changelog: str | None = None,
+    ) -> CourseRelease:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+
+        if course.status == CourseStatus.ARCHIVED.value:
+            raise CatalogError("Cannot publish archived course.", status_code=400)
+
+        validation = self.validate_course(course_id)
+        if not validation["valid"]:
+            reasons = "; ".join(error["message"] for error in validation["errors"][:3])
+            suffix = "" if len(validation["errors"]) <= 3 else "; ..."
+            raise CatalogError(
+                f"Course validation failed: {reasons}{suffix}",
+                status_code=422,
+            )
+
+        existing = self.repo.get_release_by_version(course_id=course.id, version=version)
+        if existing is not None:
+            raise CatalogError("Release version already exists.", status_code=409)
+
+        release = self.repo.create_release(
+            course_id=course.id,
+            version=version,
+            changelog=changelog,
+            status=ReleaseStatus.PENDING_REVIEW.value,
+            published_at=None,
+        )
+
+        lessons = self.repo.list_lessons_by_course(course_id, include_archived=False)
+        order = 1
+        for lesson in lessons:
+            tasks = self.repo.list_tasks_by_lesson(lesson.id)
+            for task in tasks:
+                screens = _build_task_release_screens(task, lesson, self.db, base_order=order)
+                for screen in screens:
+                    self.repo.add_release_screen(
+                        release_id=release.id,
+                        screen_key=screen["screen_key"],
+                        title=screen["title"],
+                        order_index=screen["order_index"],
+                        payload=screen["payload"],
+                        checksum=_checksum_payload(screen["payload"]),
+                    )
+                    order = screen["order_index"] + 1
+
+        return release
+
     def rollback_course(
         self,
         course_id: UUID,

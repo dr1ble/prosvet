@@ -3,11 +3,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { fetchAdminAuthMeServer } from "@/features/auth/server";
+import { ModerationDecisionForm } from "@/features/moderation/ModerationDecisionForm";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
 import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage } from "@/shared/i18n/lang";
-import { getUiMessages } from "@/shared/i18n/messages";
-import { DataState } from "@/shared/ui/data-state";
 
 import styles from "../../moderation.module.css";
 
@@ -23,7 +22,6 @@ export default async function ApprovePage({
   const { releaseId } = await params;
   const sp = await searchParams;
   const language = resolveLanguage(sp.lang);
-  const messages = getUiMessages(language);
 
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ?? "";
@@ -77,21 +75,41 @@ export default async function ApprovePage({
           </div>
           <p className={styles.subtitle}>
             {language === "ru"
-              ? `Вы одобряете публикацию версии ${releaseId}.`
-              : `You are approving release ${releaseId}.`}
+              ? `Подтвердите одобрение версии ${releaseId}. После одобрения она становится доступна для публикации.`
+              : `Confirm approval of release ${releaseId}. Approved releases can be published.`}
           </p>
         </div>
       </header>
 
       <section className={styles.workspace}>
-        <DataState
-          title={language === "ru" ? "Одобрено" : "Approved"}
-          description={
-            language === "ru"
-              ? "Версия одобрена и готова к публикации."
-              : "Release has been approved and is ready for publication."
-          }
-          tone="neutral"
+        <ModerationDecisionForm
+          releaseId={releaseId}
+          action="approve"
+          language={language}
+          moderationHref={moderationHref}
+          labels={{
+            submit: language === "ru" ? "Одобрить" : "Approve",
+            submitting: language === "ru" ? "Одобрение…" : "Approving…",
+            success:
+              language === "ru"
+                ? "Версия одобрена. Возвращаемся к очереди модерации…"
+                : "Release approved. Returning to the moderation queue…",
+            cancel: language === "ru" ? "Отмена" : "Cancel",
+            commentLabel:
+              language === "ru"
+                ? "Комментарий (необязательно)"
+                : "Comment (optional)",
+            commentPlaceholder:
+              language === "ru"
+                ? "Опишите, почему одобряете эту версию."
+                : "Describe why you are approving this version.",
+            commentRequiredError:
+              language === "ru" ? "Поле обязательно." : "Comment is required.",
+            commentMinLengthError:
+              language === "ru"
+                ? "Минимум 10 символов."
+                : "Minimum 10 characters.",
+          }}
         />
       </section>
     </main>

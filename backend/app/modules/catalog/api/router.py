@@ -881,6 +881,42 @@ def publish_course(
 
 
 @router.post(
+    "/courses/{course_id}/submit_for_review",
+    response_model=CourseReleaseOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def submit_course_for_review(
+    course_id: UUID,
+    payload: CoursePublishIn,
+    service: CatalogServiceDep,
+    db: Session = Depends(get_db),
+    actor: CurrentActor = Depends(require_policy("catalog.release.submit_review")),
+) -> CourseReleaseOut:
+    _ensure_methodologist_course_access(service, actor, course_id)
+    try:
+        release = service.submit_course_for_review(
+            course_id=course_id,
+            version=payload.version,
+            changelog=payload.changelog,
+        )
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
+
+    # Record moderation history entry so the release is traceable in the queue.
+    from app.modules.moderation.infra.repository import ModerationRepository
+
+    moderation_repo = ModerationRepository(db)
+    moderation_repo.create_history_entry(
+        release_id=release.id,
+        from_status="draft",
+        to_status="pending_review",
+        actor_user_id=actor.user_id,
+        reason=payload.changelog,
+    )
+    return _to_release_out(release, screen_count=0)
+
+
+@router.post(
     "/courses/{course_id}/rollback",
     response_model=CourseReleaseOut,
 )

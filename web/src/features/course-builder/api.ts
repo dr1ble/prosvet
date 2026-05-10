@@ -181,7 +181,7 @@ export async function publishCourse(
   version: string,
   changelog?: string,
 ): Promise<{ id: string; version: string }> {
-  return fetchJson(`/catalog/courses/${courseId}/publish`, {
+  return fetchJson(`/catalog/courses/${courseId}/submit_for_review`, {
     method: "POST",
     body: JSON.stringify({ version, changelog }),
   });

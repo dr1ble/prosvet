@@ -3,11 +3,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { fetchAdminAuthMeServer } from "@/features/auth/server";
+import { ModerationDecisionForm } from "@/features/moderation/ModerationDecisionForm";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
 import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage } from "@/shared/i18n/lang";
-import { getUiMessages } from "@/shared/i18n/messages";
-import { DataState } from "@/shared/ui/data-state";
 
 import styles from "../../moderation.module.css";
 
@@ -23,7 +22,6 @@ export default async function RejectPage({
   const { releaseId } = await params;
   const sp = await searchParams;
   const language = resolveLanguage(sp.lang);
-  const messages = getUiMessages(language);
 
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(ADMIN_ACCESS_COOKIE)?.value ?? "";
@@ -77,21 +75,41 @@ export default async function RejectPage({
           </div>
           <p className={styles.subtitle}>
             {language === "ru"
-              ? `Версия ${releaseId} отклонена. Автор может внести исправления и отправить повторно.`
-              : `Release ${releaseId} has been rejected. The author can make changes and resubmit.`}
+              ? `Укажите причину отклонения версии ${releaseId}. Автор сможет внести правки и отправить снова.`
+              : `Provide a reason for rejecting release ${releaseId}. The author will be able to make edits and resubmit.`}
           </p>
         </div>
       </header>
 
       <section className={styles.workspace}>
-        <DataState
-          title={language === "ru" ? "Отклонено" : "Rejected"}
-          description={
-            language === "ru"
-              ? "Версия отклонена. Укажите причину в комментарии."
-              : "Release has been rejected. Please provide a reason in the comment."
-          }
-          tone="error"
+        <ModerationDecisionForm
+          releaseId={releaseId}
+          action="reject"
+          language={language}
+          moderationHref={moderationHref}
+          labels={{
+            submit: language === "ru" ? "Отклонить" : "Reject",
+            submitting: language === "ru" ? "Отклонение…" : "Rejecting…",
+            success:
+              language === "ru"
+                ? "Версия отклонена. Возвращаемся к очереди модерации…"
+                : "Release rejected. Returning to the moderation queue…",
+            cancel: language === "ru" ? "Отмена" : "Cancel",
+            commentLabel:
+              language === "ru"
+                ? "Причина отклонения (обязательно, минимум 10 символов)"
+                : "Rejection reason (required, min 10 characters)",
+            commentPlaceholder:
+              language === "ru"
+                ? "Опишите, что именно нужно исправить."
+                : "Describe what should be fixed.",
+            commentRequiredError:
+              language === "ru" ? "Поле обязательно." : "Comment is required.",
+            commentMinLengthError:
+              language === "ru"
+                ? "Минимум 10 символов."
+                : "Minimum 10 characters.",
+          }}
         />
       </section>
     </main>

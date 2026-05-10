@@ -182,7 +182,7 @@ export default async function ReviewPage({
     theory_video: language === "ru" ? "Видео" : "Video",
     quiz: language === "ru" ? "Квиз" : "Quiz",
     simulation: language === "ru" ? "Симуляция" : "Simulation",
-    cheat_sheet: language === "ru" ? "Шпаргалка" : "Cheat Sheet",
+    cheat_sheet: language === "ru" ? "Памятка" : "Cheat Sheet",
   };
 
   return (

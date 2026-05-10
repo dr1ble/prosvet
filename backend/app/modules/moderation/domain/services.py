@@ -53,6 +53,14 @@ class ModerationService:
 
         decided_at = _utcnow()
         self.repo.update_release_status(release, new_status="published", published_at=decided_at)
+
+        # Activate the course when a release becomes published.
+        from app.modules.catalog.infra.models import Course, CourseStatus
+
+        course = self.db.get(Course, release.course_id)
+        if course is not None and course.status != CourseStatus.ARCHIVED.value:
+            course.status = CourseStatus.ACTIVE.value
+
         review = self.repo.create_review(
             release_id=release.id,
             reviewer_user_id=actor_id,
