@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import Select, select
@@ -55,6 +56,14 @@ class SupportRepository:
             stmt = stmt.where(CourseHelpRequest.course_id == course_id)
         return list(self.db.scalars(stmt).all())
 
+    def list_help_requests_for_requester(self, requester_id: UUID) -> list[CourseHelpRequest]:
+        stmt: Select[tuple[CourseHelpRequest]] = (
+            select(CourseHelpRequest)
+            .where(CourseHelpRequest.requester_id == requester_id)
+            .order_by(CourseHelpRequest.created_at.desc())
+        )
+        return list(self.db.scalars(stmt).all())
+
     def get_help_request(self, request_id: UUID) -> CourseHelpRequest | None:
         return self.db.get(CourseHelpRequest, request_id)
 
@@ -69,8 +78,20 @@ class SupportRepository:
         item.status = status
         item.staff_comment = staff_comment
         item.assigned_to_id = assigned_to_id
+        if staff_comment is not None:
+            item.student_viewed_staff_reply_at = None
         self.db.flush()
         return item
+
+    def mark_staff_replies_viewed(self, requester_id: UUID) -> None:
+        now = datetime.now(timezone.utc)
+        stmt: Select[tuple[CourseHelpRequest]] = select(CourseHelpRequest).where(
+            CourseHelpRequest.requester_id == requester_id,
+            CourseHelpRequest.staff_comment.is_not(None),
+        )
+        for item in self.db.scalars(stmt).all():
+            item.student_viewed_staff_reply_at = now
+        self.db.flush()
 
     def get_course_titles(self, course_ids: set[UUID]) -> dict[UUID, str]:
         if not course_ids:

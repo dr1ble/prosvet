@@ -7,6 +7,7 @@ from app.modules.support.api.schemas import (
     HelpRequestOut,
     HelpRequestsOut,
     HelpRequestUpdateIn,
+    MyHelpRequestsOut,
 )
 from app.modules.support.domain.errors import SupportError
 from app.shared.auth.deps import require_policy
@@ -64,6 +65,24 @@ def list_help_requests(
     except SupportError as exc:
         raise HTTPException(status_code=exc.status_code, detail=_localize_support_error(exc.detail)) from exc
     return HelpRequestsOut(requests=requests)
+
+
+@router.get("/help-requests/me", response_model=MyHelpRequestsOut)
+def list_my_help_requests(
+    service: SupportServiceDep,
+    actor: CurrentActor = Depends(require_policy("support.request.create")),
+) -> MyHelpRequestsOut:
+    requests, has_unread = service.list_my_help_requests(requester_id=actor.user_id)
+    return MyHelpRequestsOut(requests=requests, has_unread_staff_replies=has_unread)
+
+
+@router.post("/help-requests/me/mark-replies-read")
+def mark_my_help_replies_read(
+    service: SupportServiceDep,
+    actor: CurrentActor = Depends(require_policy("support.request.create")),
+) -> dict[str, bool]:
+    service.mark_my_help_replies_read(requester_id=actor.user_id)
+    return {"ok": True}
 
 
 @router.patch("/help-requests/{request_id}", response_model=HelpRequestOut)

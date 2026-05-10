@@ -108,3 +108,45 @@ class MyLessonNotesOut(BaseModel):
 
     user_id: UUID
     notes: list[LessonNoteOut]
+
+
+class LessonSessionAnalyticsCreateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lesson_id: UUID
+    course_id: UUID
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    error_attempts: int = Field(default=0, ge=0)
+    hint_level_max: int = Field(default=0, ge=0, le=3)
+    result: str = Field(pattern=r"^(completed|abandoned)$")
+
+
+class LessonSessionAnalyticsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    user_id: UUID
+    course_id: UUID
+    lesson_id: UUID
+    duration_seconds: int = Field(ge=0)
+    error_attempts: int = Field(ge=0)
+    hint_level_max: int = Field(ge=0, le=3)
+    result: str
+    started_at: datetime
+    finished_at: datetime
+    created_at: datetime
+
+
+class LessonAnalyticsOverviewRowOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lesson_id: UUID
+    lesson_title: str
+    course_id: UUID
+    course_title: str
+    sessions_count: int = Field(ge=0)
+    completed_sessions_count: int = Field(ge=0)
+    avg_duration_seconds: float = Field(ge=0)
+    avg_error_attempts: float = Field(ge=0)
+    hint_level3_share: float = Field(ge=0, le=1)

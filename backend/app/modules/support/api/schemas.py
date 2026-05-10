@@ -36,9 +36,15 @@ class HelpRequestOut(BaseModel):
     status: str
     message: str
     staff_comment: str | None = None
+    is_staff_reply_unread: bool = False
     created_at: datetime
     updated_at: datetime
 
 
 class HelpRequestsOut(BaseModel):
     requests: list[HelpRequestOut]
+
+
+class MyHelpRequestsOut(BaseModel):
+    requests: list[HelpRequestOut]
+    has_unread_staff_replies: bool

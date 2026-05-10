@@ -63,6 +63,10 @@ class CourseHelpRequest(Base):
     )
     message: Mapped[str] = mapped_column(Text, nullable=False)
     staff_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    student_viewed_staff_reply_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

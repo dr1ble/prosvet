@@ -21,6 +21,10 @@ class _FakeProgressRepo:
         self.note_rows = []
         self.created_note_args = None
         self.deleted_note_args = None
+        self.lesson_exists = True
+        self.last_created_session = None
+        self.last_analytics_overview_args = None
+        self.lesson_analytics_rows = []
 
     def list_assignments(self, group_id=None, course_id=None):
         return []
@@ -59,6 +63,59 @@ class _FakeProgressRepo:
 
     def unlock_glossary_terms(self, user_id, lesson_id):
         self.unlocked_glossary_args = (user_id, lesson_id)
+
+    def get_lesson_course_id(self, lesson_id):
+        return None
+
+    def is_course_completed(self, user_id, course_id):
+        return False
+
+    def lesson_exists_in_course(self, *, lesson_id, course_id):
+        return self.lesson_exists
+
+    def create_lesson_session_analytics(
+        self,
+        *,
+        user_id,
+        course_id,
+        lesson_id,
+        started_at,
+        finished_at,
+        error_attempts,
+        hint_level_max,
+        result,
+    ):
+        self.last_created_session = {
+            "user_id": user_id,
+            "course_id": course_id,
+            "lesson_id": lesson_id,
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "error_attempts": error_attempts,
+            "hint_level_max": hint_level_max,
+            "result": result,
+        }
+        return SimpleNamespace(
+            id=uuid4(),
+            user_id=user_id,
+            course_id=course_id,
+            lesson_id=lesson_id,
+            duration_seconds=120,
+            error_attempts=error_attempts,
+            hint_level_max=hint_level_max,
+            result=result,
+            started_at=started_at,
+            finished_at=finished_at,
+            created_at=datetime.now(timezone.utc),
+        )
+
+    def get_lesson_analytics_overview(self, *, course_id, started_from, finished_to):
+        self.last_analytics_overview_args = {
+            "course_id": course_id,
+            "started_from": started_from,
+            "finished_to": finished_to,
+        }
+        return self.lesson_analytics_rows
 
     def list_user_glossary_terms(self, user_id):
         return self.glossary_rows
@@ -239,3 +296,82 @@ def test_progress_service_returns_user_notes() -> None:
     assert len(result.notes) == 1
     assert result.notes[0].content == "Моя заметка"
     assert result.notes[0].lesson_title == "Урок"
+
+
+def test_progress_service_creates_lesson_session_analytics_entry() -> None:
+    service, fake_repo = _build_service_with_fake_repo()
+    user_id = uuid4()
+    course_id = uuid4()
+    lesson_id = uuid4()
+    started_at = datetime.now(timezone.utc) - timedelta(minutes=2)
+    finished_at = datetime.now(timezone.utc)
+
+    result = service.create_lesson_session_analytics(
+        user_id=user_id,
+        course_id=course_id,
+        lesson_id=lesson_id,
+        started_at=started_at,
+        finished_at=finished_at,
+        error_attempts=3,
+        hint_level_max=2,
+        result="completed",
+    )
+
+    assert result.user_id == user_id
+    assert result.course_id == course_id
+    assert result.lesson_id == lesson_id
+    assert fake_repo.last_created_session is not None
+    assert fake_repo.last_created_session["error_attempts"] == 3
+    assert fake_repo.last_created_session["hint_level_max"] == 2
+    assert fake_repo.last_created_session["result"] == "completed"
+
+
+def test_progress_service_rejects_session_when_lesson_not_in_course() -> None:
+    service, fake_repo = _build_service_with_fake_repo()
+    fake_repo.lesson_exists = False
+
+    with pytest.raises(ProgressError) as exc_info:
+        service.create_lesson_session_analytics(
+            user_id=uuid4(),
+            course_id=uuid4(),
+            lesson_id=uuid4(),
+            started_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            finished_at=datetime.now(timezone.utc),
+            error_attempts=0,
+            hint_level_max=0,
+            result="abandoned",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Lesson not found."
+
+
+def test_progress_service_requests_lesson_analytics_with_period_window() -> None:
+    service, fake_repo = _build_service_with_fake_repo()
+    lesson_id = uuid4()
+    course_id = uuid4()
+    fake_repo.lesson_analytics_rows = [
+        SimpleNamespace(
+            lesson_id=lesson_id,
+            lesson_title="Урок 1",
+            course_id=course_id,
+            course_title="Курс 1",
+            sessions_count=5,
+            completed_sessions_count=4,
+            avg_duration_seconds=95.0,
+            avg_error_attempts=1.2,
+            hint_level3_share=0.25,
+        )
+    ]
+
+    rows = service.get_lesson_analytics_overview(
+        course_id=course_id,
+        period="7d",
+    )
+
+    assert len(rows) == 1
+    assert rows[0].lesson_id == lesson_id
+    assert fake_repo.last_analytics_overview_args is not None
+    assert fake_repo.last_analytics_overview_args["course_id"] == course_id
+    assert fake_repo.last_analytics_overview_args["started_from"] is not None
+    assert fake_repo.last_analytics_overview_args["finished_to"] is not None

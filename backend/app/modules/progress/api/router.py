@@ -5,10 +5,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.modules.progress.api.schemas import (
+    LessonAnalyticsOverviewRowOut,
     LessonNoteCreateIn,
     LessonNoteOut,
     LessonProgressOut,
     LessonProgressUpsertIn,
+    LessonSessionAnalyticsCreateIn,
+    LessonSessionAnalyticsOut,
     MyGlossaryOut,
     MyLessonNotesOut,
     MyProgressOut,
@@ -129,6 +132,27 @@ def upsert_own_lesson_progress(
     )
 
 
+@router.post("/session/self", response_model=LessonSessionAnalyticsOut)
+def create_own_lesson_session_analytics(
+    payload: LessonSessionAnalyticsCreateIn,
+    service: ProgressServiceDep,
+    _actor: CurrentActor = Depends(require_policy("progress.upsert.self")),
+) -> LessonSessionAnalyticsOut:
+    try:
+        return service.create_lesson_session_analytics(
+            user_id=_actor.user_id,
+            course_id=payload.course_id,
+            lesson_id=payload.lesson_id,
+            started_at=payload.started_at,
+            finished_at=payload.finished_at,
+            error_attempts=payload.error_attempts,
+            hint_level_max=payload.hint_level_max,
+            result=payload.result,
+        )
+    except ProgressError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
+
+
 @router.get("/overview", response_model=list[ProgressOverviewRowOut])
 def get_progress_overview(
     service: ProgressServiceDep,
@@ -163,6 +187,26 @@ def get_progress_timeseries(
 ) -> list[ProgressTimeseriesPointOut]:
     try:
         return service.get_timeseries(
+            period=period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+    except ProgressError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_progress_error(exc.detail)) from exc
+
+
+@router.get("/analytics/lessons", response_model=list[LessonAnalyticsOverviewRowOut])
+def get_lesson_analytics_overview(
+    service: ProgressServiceDep,
+    course_id: UUID | None = Query(default=None),
+    period: Literal["all", "7d", "14d", "30d", "90d", "custom"] = Query(default="all"),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    _actor: CurrentActor = Depends(require_policy("progress.view")),
+) -> list[LessonAnalyticsOverviewRowOut]:
+    try:
+        return service.get_lesson_analytics_overview(
+            course_id=course_id,
             period=period,
             date_from=date_from,
             date_to=date_to,

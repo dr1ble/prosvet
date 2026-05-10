@@ -4,9 +4,12 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.modules.diagnostics.domain.services import DiagnosticsService
 from app.modules.progress.api.schemas import (
     GlossaryTermOut,
+    LessonAnalyticsOverviewRowOut,
     LessonNoteOut,
+    LessonSessionAnalyticsOut,
     MyCourseProgressOut,
     MyGlossaryOut,
     MyLessonNotesOut,
@@ -171,7 +174,93 @@ class ProgressService:
         item = self.repo.upsert_lesson_progress(user_id=user_id, lesson_id=lesson_id, status=status)
         if status == "completed":
             self.repo.unlock_glossary_terms(user_id=user_id, lesson_id=lesson_id)
+            course_id = self.repo.get_lesson_course_id(lesson_id)
+            if course_id is not None and self.repo.is_course_completed_by_user(
+                user_id=user_id,
+                course_id=course_id,
+            ):
+                DiagnosticsService(self.db).apply_course_completion(
+                    user_id=user_id,
+                    course_id=course_id,
+                )
         return item
+
+    def create_lesson_session_analytics(
+        self,
+        *,
+        user_id: UUID,
+        course_id: UUID,
+        lesson_id: UUID,
+        started_at: datetime | None,
+        finished_at: datetime | None,
+        error_attempts: int,
+        hint_level_max: int,
+        result: str,
+    ) -> LessonSessionAnalyticsOut:
+        if not self.repo.lesson_exists_in_course(lesson_id=lesson_id, course_id=course_id):
+            raise ProgressError("Lesson not found.", status_code=404)
+        now = datetime.now(timezone.utc)
+        started = started_at or now
+        finished = finished_at or now
+        if finished < started:
+            raise ProgressError("date_from must be less than or equal to date_to.", status_code=422)
+
+        item = self.repo.create_lesson_session_analytics(
+            user_id=user_id,
+            course_id=course_id,
+            lesson_id=lesson_id,
+            started_at=started,
+            finished_at=finished,
+            error_attempts=error_attempts,
+            hint_level_max=hint_level_max,
+            result=result,
+        )
+        return LessonSessionAnalyticsOut(
+            id=item.id,
+            user_id=item.user_id,
+            course_id=item.course_id,
+            lesson_id=item.lesson_id,
+            duration_seconds=item.duration_seconds,
+            error_attempts=item.error_attempts,
+            hint_level_max=item.hint_level_max,
+            result=item.result,
+            started_at=item.started_at,
+            finished_at=item.finished_at,
+            created_at=item.created_at,
+        )
+
+    def get_lesson_analytics_overview(
+        self,
+        *,
+        course_id: UUID | None,
+        period: Literal["all", "7d", "14d", "30d", "90d", "custom"] = "all",
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[LessonAnalyticsOverviewRowOut]:
+        started_from, finished_to = self._resolve_time_window(
+            period=period,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        rows = self.repo.get_lesson_analytics_overview(
+            course_id=course_id,
+            started_from=started_from,
+            finished_to=finished_to,
+        )
+        return [
+            LessonAnalyticsOverviewRowOut(
+                lesson_id=row.lesson_id,
+                lesson_title=row.lesson_title,
+                course_id=row.course_id,
+                course_title=row.course_title,
+                sessions_count=row.sessions_count,
+                completed_sessions_count=row.completed_sessions_count,
+                avg_duration_seconds=row.avg_duration_seconds,
+                avg_error_attempts=row.avg_error_attempts,
+                hint_level3_share=row.hint_level3_share,
+            )
+            for row in rows
+        ]
 
     def get_my_progress(self, user_id: UUID) -> MyProgressOut:
         course_ids = self.repo.get_courses_with_progress_for_user(user_id)

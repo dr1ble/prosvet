@@ -25,7 +25,7 @@ from app.modules.groups.infra.models import (
     LearningGroup,
 )
 from app.modules.moderation.infra.models import ReleaseReview, ReleaseStatusHistory
-from app.modules.progress.infra.models import LessonProgress
+from app.modules.progress.infra.models import LessonProgress, LessonSessionAnalytics
 from app.modules.simulation.infra.models import SimulationDraft, SimulationMediaAsset
 from app.modules.support.infra.models import CourseHelpRequest
 from app.modules.users.models import User
@@ -55,6 +55,7 @@ __all__ = [
     "ReleaseReview",
     "ReleaseStatusHistory",
     "LessonProgress",
+    "LessonSessionAnalytics",
     "SimulationDraft",
     "SimulationMediaAsset",
     "CourseHelpRequest",

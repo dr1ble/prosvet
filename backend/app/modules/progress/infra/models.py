@@ -118,3 +118,43 @@ class UserLessonNote(Base):
         onupdate=_utcnow,
         nullable=False,
     )
+
+
+class LessonSessionResult(str, enum.Enum):
+    COMPLETED = "completed"
+    ABANDONED = "abandoned"
+
+
+class LessonSessionAnalytics(Base):
+    __tablename__ = "lesson_session_analytics"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    course_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    lesson_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("course_lessons.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    duration_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    error_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    hint_level_max: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    result: Mapped[str] = mapped_column(
+        String(16),
+        default=LessonSessionResult.COMPLETED.value,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import Date, Integer, cast, func, select
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.infra.models import Course, CourseLesson, LessonStatus
@@ -17,6 +17,8 @@ from app.modules.progress.infra.models import (
     LessonGlossaryTerm,
     LessonProgress,
     LessonProgressStatus,
+    LessonSessionAnalytics,
+    LessonSessionResult,
     UserGlossaryTerm,
     UserLessonNote,
 )
@@ -52,6 +54,19 @@ class UserLessonNoteRow:
     content: str
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True)
+class LessonAnalyticsOverviewRow:
+    lesson_id: UUID
+    lesson_title: str
+    course_id: UUID
+    course_title: str
+    sessions_count: int
+    completed_sessions_count: int
+    avg_duration_seconds: float
+    avg_error_attempts: float
+    hint_level3_share: float
 
 
 class ProgressRepository:
@@ -134,6 +149,19 @@ class ProgressRepository:
         )
         rows = self.db.execute(stmt).all()
         return {course_id: int(count) for course_id, count in rows}
+
+    def get_lesson_course_id(self, lesson_id: UUID) -> UUID | None:
+        return self.db.scalar(select(CourseLesson.course_id).where(CourseLesson.id == lesson_id))
+
+    def is_course_completed_by_user(self, *, user_id: UUID, course_id: UUID) -> bool:
+        total_lessons = self.get_course_lessons_count({course_id}).get(course_id, 0)
+        if total_lessons == 0:
+            return False
+        completed_lessons = self.get_completed_lessons_count(
+            course_ids={course_id},
+            user_ids={user_id},
+        ).get((course_id, user_id), 0)
+        return completed_lessons >= total_lessons
 
     def get_completed_lessons_count(
         self,
@@ -357,3 +385,117 @@ class ProgressRepository:
             .distinct()
         )
         return {row[0] for row in self.db.execute(stmt).all()}
+
+    def _normalize_timestamp(self, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+    def lesson_exists_in_course(self, *, lesson_id: UUID, course_id: UUID) -> bool:
+        stmt = select(CourseLesson.id).where(
+            CourseLesson.id == lesson_id,
+            CourseLesson.course_id == course_id,
+        )
+        return self.db.scalar(stmt) is not None
+
+    def create_lesson_session_analytics(
+        self,
+        *,
+        user_id: UUID,
+        course_id: UUID,
+        lesson_id: UUID,
+        started_at: datetime,
+        finished_at: datetime,
+        error_attempts: int,
+        hint_level_max: int,
+        result: str,
+    ) -> LessonSessionAnalytics:
+        started = self._normalize_timestamp(started_at)
+        finished = self._normalize_timestamp(finished_at)
+        duration_seconds = int(max((finished - started).total_seconds(), 0))
+
+        item = LessonSessionAnalytics(
+            user_id=user_id,
+            course_id=course_id,
+            lesson_id=lesson_id,
+            started_at=started,
+            finished_at=finished,
+            duration_seconds=duration_seconds,
+            error_attempts=max(error_attempts, 0),
+            hint_level_max=min(max(hint_level_max, 0), 3),
+            result=result,
+        )
+        self.db.add(item)
+        self.db.flush()
+        return item
+
+    def get_lesson_analytics_overview(
+        self,
+        *,
+        course_id: UUID | None,
+        started_from: datetime | None,
+        finished_to: datetime | None,
+    ) -> list[LessonAnalyticsOverviewRow]:
+        completed_case = func.sum(
+            func.cast(LessonSessionAnalytics.result == LessonSessionResult.COMPLETED.value, Integer)
+        )
+        hint_level3_case = func.sum(func.cast(LessonSessionAnalytics.hint_level_max >= 3, Integer))
+
+        stmt = (
+            select(
+                LessonSessionAnalytics.lesson_id,
+                CourseLesson.title,
+                LessonSessionAnalytics.course_id,
+                Course.title,
+                func.count(LessonSessionAnalytics.id),
+                completed_case,
+                func.avg(LessonSessionAnalytics.duration_seconds),
+                func.avg(LessonSessionAnalytics.error_attempts),
+                func.coalesce(
+                    hint_level3_case / func.nullif(func.count(LessonSessionAnalytics.id), 0),
+                    0.0,
+                ),
+            )
+            .join(CourseLesson, CourseLesson.id == LessonSessionAnalytics.lesson_id)
+            .join(Course, Course.id == LessonSessionAnalytics.course_id)
+            .group_by(
+                LessonSessionAnalytics.lesson_id,
+                CourseLesson.title,
+                LessonSessionAnalytics.course_id,
+                Course.title,
+            )
+            .order_by(func.avg(LessonSessionAnalytics.error_attempts).desc())
+        )
+
+        if course_id is not None:
+            stmt = stmt.where(LessonSessionAnalytics.course_id == course_id)
+        if started_from is not None:
+            stmt = stmt.where(LessonSessionAnalytics.started_at >= started_from)
+        if finished_to is not None:
+            stmt = stmt.where(LessonSessionAnalytics.finished_at <= finished_to)
+
+        rows = self.db.execute(stmt).all()
+        return [
+            LessonAnalyticsOverviewRow(
+                lesson_id=lesson_id,
+                lesson_title=lesson_title,
+                course_id=row_course_id,
+                course_title=course_title,
+                sessions_count=int(sessions_count or 0),
+                completed_sessions_count=int(completed_count or 0),
+                avg_duration_seconds=float(avg_duration or 0.0),
+                avg_error_attempts=float(avg_errors or 0.0),
+                hint_level3_share=float(hint_level3_share or 0.0),
+            )
+            for (
+                lesson_id,
+                lesson_title,
+                row_course_id,
+                course_title,
+                sessions_count,
+                completed_count,
+                avg_duration,
+                avg_errors,
+                hint_level3_share,
+            ) in rows
+        ]

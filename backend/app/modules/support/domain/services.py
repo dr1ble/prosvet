@@ -26,6 +26,7 @@ class HelpRequestDto:
     status: str
     message: str
     staff_comment: str | None
+    is_staff_reply_unread: bool
     created_at: datetime
     updated_at: datetime
 
@@ -93,6 +94,15 @@ class SupportService:
         )
         return self._to_dto(item)
 
+    def list_my_help_requests(self, *, requester_id: UUID) -> tuple[list[HelpRequestDto], bool]:
+        items = self.repo.list_help_requests_for_requester(requester_id)
+        requests = self._to_dtos(items)
+        has_unread = any(item.is_staff_reply_unread for item in requests)
+        return requests, has_unread
+
+    def mark_my_help_replies_read(self, *, requester_id: UUID) -> None:
+        self.repo.mark_staff_replies_viewed(requester_id)
+
     def _to_dtos(self, items: list[CourseHelpRequest]) -> list[HelpRequestDto]:
         course_titles = self.repo.get_course_titles({item.course_id for item in items if item.course_id})
         lesson_titles = self.repo.get_lesson_titles({item.lesson_id for item in items if item.lesson_id})
@@ -130,9 +140,18 @@ class SupportService:
             status=item.status,
             message=item.message,
             staff_comment=item.staff_comment,
+            is_staff_reply_unread=self._is_staff_reply_unread(item),
             created_at=item.created_at,
             updated_at=item.updated_at,
         )
+
+    @staticmethod
+    def _is_staff_reply_unread(item: CourseHelpRequest) -> bool:
+        if not item.staff_comment:
+            return False
+        if item.student_viewed_staff_reply_at is None:
+            return True
+        return item.student_viewed_staff_reply_at < item.updated_at
 
     @staticmethod
     def _normalize_request_type(value: str) -> str:
