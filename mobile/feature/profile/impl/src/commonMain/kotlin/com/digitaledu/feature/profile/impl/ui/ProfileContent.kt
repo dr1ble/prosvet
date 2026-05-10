@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Contrast
@@ -37,6 +38,8 @@ import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -97,7 +100,6 @@ import digital_education_mobile.feature.profile.`impl`.generated.resources.profi
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_reset
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_large_text
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_preview
-import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_controls_size
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_tremor
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_voice
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account
@@ -133,6 +135,8 @@ private enum class ProfileSection {
     Progress,
     Accessibility,
     Account,
+    Memos,
+    MemoDetail,
 }
 
 @Composable
@@ -146,6 +150,7 @@ fun ProfileContent(
 ) {
     val isLoggingOut = uiState.status is ProfileStatus.LoggingOut
     var section by rememberSaveable { mutableStateOf(ProfileSection.Main) }
+    var selectedMemoId by rememberSaveable { mutableStateOf<String?>(null) }
 
     SuccessDialog(
         message = uiState.successMessage,
@@ -166,16 +171,52 @@ fun ProfileContent(
                 favoriteCourseCount = uiState.favoriteCourseCount,
                 glossaryTermCount = uiState.glossaryTerms.size,
                 noteCount = uiState.notes.size,
+                memoCount = uiState.memos.size,
                 isLoadingProgress = uiState.isLoadingProgress,
                 onOpenFavorites = onOpenFavorites,
                 onOpenGlossary = onOpenGlossary,
                 onOpenNotes = onOpenNotes,
+                onOpenMemos = {
+                    onIntent(ProfileIntent.RefreshMemos)
+                    section = ProfileSection.Memos
+                },
                 onOpenProgress = { section = ProfileSection.Progress },
                 onOpenAccessibility = { section = ProfileSection.Accessibility },
                 onOpenAccount = { section = ProfileSection.Account },
                 onLogout = { onIntent(ProfileIntent.Logout) },
                 modifier = modifier,
             )
+        }
+
+        ProfileSection.Memos -> {
+            MemosListContent(
+                memos = uiState.memos,
+                onOpenMemo = { memoId ->
+                    selectedMemoId = memoId
+                    section = ProfileSection.MemoDetail
+                },
+                onBack = { section = ProfileSection.Main },
+                modifier = modifier,
+            )
+        }
+
+        ProfileSection.MemoDetail -> {
+            val memo = uiState.memos.firstOrNull { it.id == selectedMemoId }
+            if (memo == null) {
+                section = ProfileSection.Memos
+                selectedMemoId = null
+            } else {
+                MemoDetailContent(
+                    memo = memo,
+                    onBack = { section = ProfileSection.Memos },
+                    onDelete = {
+                        onIntent(ProfileIntent.DeleteMemo(memo.id))
+                        selectedMemoId = null
+                        section = ProfileSection.Memos
+                    },
+                    modifier = modifier,
+                )
+            }
         }
 
         ProfileSection.Progress -> {
@@ -194,7 +235,6 @@ fun ProfileContent(
             AccessibilitySettingsContent(
                 settings = uiState.accessibilitySettings,
                 onSetFontScale = { onIntent(ProfileIntent.SetFontScale(it)) },
-                onSetControlScale = { onIntent(ProfileIntent.SetControlScale(it)) },
                 onSetBoldText = { onIntent(ProfileIntent.SetBoldText(it)) },
                 onResetAccessibility = { onIntent(ProfileIntent.ResetAccessibility) },
                 onSetHighContrast = { onIntent(ProfileIntent.SetHighContrast(it)) },
@@ -248,10 +288,12 @@ private fun ProfileMain(
     favoriteCourseCount: Int,
     glossaryTermCount: Int,
     noteCount: Int,
+    memoCount: Int,
     isLoadingProgress: Boolean,
     onOpenFavorites: () -> Unit,
     onOpenGlossary: () -> Unit,
     onOpenNotes: () -> Unit,
+    onOpenMemos: () -> Unit,
     onOpenProgress: () -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenAccount: () -> Unit,
@@ -317,9 +359,11 @@ private fun ProfileMain(
         item {
             QuickProfileActions(
                 favoriteCourseCount = favoriteCourseCount,
+                memoCount = memoCount,
                 onOpenFavorites = onOpenFavorites,
                 onOpenGlossary = onOpenGlossary,
                 onOpenNotes = onOpenNotes,
+                onOpenMemos = onOpenMemos,
             )
         }
 
@@ -456,9 +500,11 @@ private fun ProfileMain(
 @Composable
 private fun QuickProfileActions(
     favoriteCourseCount: Int,
+    memoCount: Int,
     onOpenFavorites: () -> Unit,
     onOpenGlossary: () -> Unit,
     onOpenNotes: () -> Unit,
+    onOpenMemos: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -488,6 +534,13 @@ private fun QuickProfileActions(
                 icon = Icons.Rounded.Description,
                 title = stringResource(Res.string.profile_notes),
                 onClick = onOpenNotes,
+                modifier = Modifier.weight(1f),
+            )
+            QuickProfileAction(
+                icon = Icons.Filled.Bookmark,
+                title = "Памятки",
+                badge = memoCount.toString(),
+                onClick = onOpenMemos,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -915,39 +968,47 @@ private fun QuickProfileAction(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(UiShapes.pill)
-                    .background(MaterialTheme.colorScheme.primaryFixed),
-                contentAlignment = Alignment.Center,
+            BadgedBox(
+                badge = {
+                    if (!badge.isNullOrBlank() && badge != "0") {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ) {
+                            Text(
+                                text = badge,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                },
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(UiShapes.pill)
+                        .background(MaterialTheme.colorScheme.primaryFixed),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = UiSpacing.xs),
             )
-            if (badge != null) {
-                Text(
-                    text = badge,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                )
-            }
         }
     }
 }
@@ -956,7 +1017,6 @@ private fun QuickProfileAction(
 fun AccessibilitySettingsContent(
     settings: com.digitaledu.core.model.preferences.AccessibilitySettings,
     onSetFontScale: (Float) -> Unit,
-    onSetControlScale: (Float) -> Unit,
     onSetBoldText: (Boolean) -> Unit,
     onResetAccessibility: () -> Unit,
     onSetHighContrast: (Boolean) -> Unit,
@@ -1080,20 +1140,6 @@ fun AccessibilitySettingsContent(
                 onValueChange = {
                     onSetFontScale(it)
                     feedbackMessage = "Размер шрифта: ${formatOneDecimal(it)}x"
-                },
-            )
-        }
-        item {
-            FontScaleRow(
-                icon = Icons.Rounded.Settings,
-                title = stringResource(Res.string.profile_accessibility_controls_size),
-                value = settings.controlScale,
-                rangeStart = 1.0f,
-                rangeEnd = 1.3f,
-                steps = 2,
-                onValueChange = {
-                    onSetControlScale(it)
-                    feedbackMessage = "Размер элементов управления: ${formatOneDecimal(it)}x"
                 },
             )
         }

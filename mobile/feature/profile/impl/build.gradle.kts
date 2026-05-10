@@ -34,6 +34,8 @@ kotlin {
             implementation(libs.coil3.compose)
             implementation(libs.jetbrains.lifecycle.viewmodel)
             implementation(libs.koin.core)
+            implementation(libs.kotlinx.datetime)
+            implementation(libs.multiplatform.markdown.renderer.m3)
         }
 
         androidMain.dependencies {

@@ -16,7 +16,6 @@
     <string name="profile_accessibility_preview">Предпросмотр</string>
     <string name="profile_accessibility_large_text">Крупный текст</string>
     <string name="profile_accessibility_font_size">Размер шрифта</string>
-    <string name="profile_accessibility_controls_size">Размер элементов управления</string>
     <string name="profile_accessibility_bold_text">Жирный текст</string>
     <string name="profile_accessibility_reset">Сбросить настройки доступности</string>
     <string name="profile_accessibility_voice">Голосовая поддержка</string>

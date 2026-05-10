@@ -12,6 +12,8 @@ import com.digitaledu.core.data.diagnostics.DiagnosticsRepository
 import com.digitaledu.core.data.diagnostics.NetworkDiagnosticsRepository
 import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.data.groups.NetworkGroupQrRepository
+import com.digitaledu.core.data.memo.InMemoryMemoLocalStorage
+import com.digitaledu.core.data.memo.MemoLocalStorage
 import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
 import com.digitaledu.core.data.preferences.InMemoryAccessibilityPreferencesRepository
 import com.digitaledu.core.data.profile.NetworkProfileRepository
@@ -49,6 +51,7 @@ fun createMobileAppModule(
     debugQuickLoginPresets: List<DebugQuickLoginPreset> = emptyList(),
     authSessionStore: AuthSessionStore? = null,
     accessibilityPreferencesRepository: AccessibilityPreferencesRepository? = null,
+    memoLocalStorage: MemoLocalStorage? = null,
 ): Module = module {
     includes(
         authFeatureModule(),
@@ -78,6 +81,7 @@ fun createMobileAppModule(
     single<AccessibilityPreferencesRepository> {
         accessibilityPreferencesRepository ?: InMemoryAccessibilityPreferencesRepository()
     }
+    single<MemoLocalStorage> { memoLocalStorage ?: InMemoryMemoLocalStorage() }
     single {
         DebugQuickLoginConfig(
             enabled = enableDebugQuickLogin,

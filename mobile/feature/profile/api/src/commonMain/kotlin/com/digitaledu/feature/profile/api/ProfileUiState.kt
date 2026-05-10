@@ -1,6 +1,7 @@
 package com.digitaledu.feature.profile.api
 
 import com.digitaledu.core.model.preferences.AccessibilitySettings
+import com.digitaledu.core.model.memo.SavedMemo
 import com.digitaledu.core.model.progress.CourseProgressInfo
 import com.digitaledu.core.model.progress.GlossaryTermEntry
 import com.digitaledu.core.model.progress.LessonNoteEntry
@@ -23,6 +24,7 @@ data class ProfileUiState(
     val courseProgress: List<CourseProgressInfo> = emptyList(),
     val glossaryTerms: List<GlossaryTermEntry> = emptyList(),
     val notes: List<LessonNoteEntry> = emptyList(),
+    val memos: List<SavedMemo> = emptyList(),
     val isLoadingProgress: Boolean = false,
     val isUpdatingDisplayName: Boolean = false,
     val isUpdatingAvatar: Boolean = false,

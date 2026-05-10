@@ -18,6 +18,7 @@ fun profileFeatureModule(): Module = module {
             profileRepository = get(),
             progressRepository = get(),
             catalogRepository = get(),
+            memoLocalStorage = get(),
         )
     }
 

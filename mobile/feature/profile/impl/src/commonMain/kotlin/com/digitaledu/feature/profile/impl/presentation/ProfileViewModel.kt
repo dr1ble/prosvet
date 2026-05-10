@@ -2,18 +2,19 @@ package com.digitaledu.feature.profile.impl.presentation
 
 import com.digitaledu.core.common.BaseViewModel
 import com.digitaledu.core.common.toUserMessage
+import com.digitaledu.core.data.catalog.CatalogRepository
+import com.digitaledu.core.data.memo.MemoLocalStorage
+import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
+import com.digitaledu.core.data.profile.ProfileRepository
+import com.digitaledu.core.data.progress.ProgressRepository
+import com.digitaledu.core.model.preferences.AccessibilitySettings
 import com.digitaledu.feature.profile.api.ProfileEffect
 import com.digitaledu.feature.profile.api.ProfileFeatureHost
 import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiState
-import androidx.lifecycle.viewModelScope
-import com.digitaledu.core.data.catalog.CatalogRepository
-import com.digitaledu.core.data.preferences.AccessibilityPreferencesRepository
-import com.digitaledu.core.data.profile.ProfileRepository
-import com.digitaledu.core.data.progress.ProgressRepository
-import com.digitaledu.core.model.preferences.AccessibilitySettings
 import com.digitaledu.feature.profile.impl.domain.LogoutUseCase
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -23,6 +24,7 @@ internal class ProfileViewModel(
     private val profileRepository: ProfileRepository,
     private val progressRepository: ProgressRepository,
     private val catalogRepository: CatalogRepository,
+    private val memoLocalStorage: MemoLocalStorage,
 ) : BaseViewModel<ProfileUiState, ProfileIntent, ProfileEffect>(ProfileUiState()), ProfileFeatureHost {
 
     init {
@@ -46,6 +48,9 @@ internal class ProfileViewModel(
         viewModelScope.launch {
             loadNotes()
         }
+        viewModelScope.launch {
+            loadMemos()
+        }
     }
 
     override suspend fun handleIntent(intent: ProfileIntent) {
@@ -56,8 +61,10 @@ internal class ProfileViewModel(
             ProfileIntent.RefreshFavoriteCount -> loadFavoriteCount()
             ProfileIntent.RefreshGlossary -> loadGlossary()
             ProfileIntent.RefreshNotes -> loadNotes()
+            ProfileIntent.RefreshMemos -> loadMemos()
             is ProfileIntent.ToggleGlossaryBookmark -> toggleGlossaryBookmark(intent.termId)
             is ProfileIntent.DeleteNote -> deleteNote(intent.noteId)
+            is ProfileIntent.DeleteMemo -> deleteMemo(intent.memoId)
             is ProfileIntent.UpdateDisplayName -> updateDisplayName(intent.displayName)
             is ProfileIntent.CompleteProfile -> completeProfile(
                 displayName = intent.displayName,
@@ -76,7 +83,6 @@ internal class ProfileViewModel(
             is ProfileIntent.SetProfileVisible -> updateAccountSettings(profileVisible = intent.enabled)
             ProfileIntent.ResetAccessibility -> resetAccessibility()
             is ProfileIntent.SetFontScale -> updateAccessibility { copy(fontScale = intent.value.coerceIn(1.0f, 1.6f)) }
-            is ProfileIntent.SetControlScale -> updateAccessibility { copy(controlScale = intent.value.coerceIn(1.0f, 1.3f)) }
             is ProfileIntent.SetBoldText -> updateAccessibility { copy(boldText = intent.enabled) }
             is ProfileIntent.SetHighContrast -> updateAccessibility { copy(highContrast = intent.enabled) }
             is ProfileIntent.SetVoiceSupport -> updateAccessibility { copy(voiceSupport = intent.enabled) }
@@ -108,6 +114,7 @@ internal class ProfileViewModel(
                 courseProgress = emptyList(),
                 glossaryTerms = emptyList(),
                 notes = emptyList(),
+                memos = emptyList(),
             )
         }
         emitEffect(ProfileEffect.LoggedOut)
@@ -204,6 +211,24 @@ internal class ProfileViewModel(
             progressRepository.deleteNote(noteId)
         }.onSuccess {
             updateState { copy(notes = notes.filterNot { note -> note.id == noteId }) }
+        }.onFailure { throwable ->
+            setError(throwable)
+        }
+    }
+
+    private suspend fun loadMemos() {
+        runCatching {
+            memoLocalStorage.list()
+        }.onSuccess { memos ->
+            updateState { copy(memos = memos) }
+        }
+    }
+
+    private suspend fun deleteMemo(memoId: String) {
+        runCatching {
+            memoLocalStorage.delete(memoId)
+        }.onSuccess {
+            updateState { copy(memos = memos.filterNot { it.id == memoId }) }
         }.onFailure { throwable ->
             setError(throwable)
         }

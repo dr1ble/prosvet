@@ -7,8 +7,10 @@ sealed interface ProfileIntent {
     data object RefreshFavoriteCount : ProfileIntent
     data object RefreshGlossary : ProfileIntent
     data object RefreshNotes : ProfileIntent
+    data object RefreshMemos : ProfileIntent
     data class ToggleGlossaryBookmark(val termId: String) : ProfileIntent
     data class DeleteNote(val noteId: String) : ProfileIntent
+    data class DeleteMemo(val memoId: String) : ProfileIntent
     data class UpdateDisplayName(val displayName: String) : ProfileIntent
     data class CompleteProfile(val displayName: String, val email: String?) : ProfileIntent
     data class UpdateAvatar(val avatarKey: String) : ProfileIntent
@@ -20,7 +22,6 @@ sealed interface ProfileIntent {
     data class SetProfileVisible(val enabled: Boolean) : ProfileIntent
     data object ResetAccessibility : ProfileIntent
     data class SetFontScale(val value: Float) : ProfileIntent
-    data class SetControlScale(val value: Float) : ProfileIntent
     data class SetBoldText(val enabled: Boolean) : ProfileIntent
     data class SetHighContrast(val enabled: Boolean) : ProfileIntent
     data class SetVoiceSupport(val enabled: Boolean) : ProfileIntent

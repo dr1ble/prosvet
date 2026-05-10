@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.digitaledu.core.data.memo.createFileMemoLocalStorage
 import com.digitaledu.core.model.auth.DebugQuickLoginPreset
 import com.digitaledu.mobile.accessibility.provideAccessibilityPreferencesRepository
 import com.digitaledu.mobile.auth.SecureAuthSessionStore
@@ -197,6 +198,7 @@ class MainActivity : ComponentActivity() {
                     debugQuickLoginPresets = debugQuickLoginPresets(),
                     authSessionStore = SecureAuthSessionStore(this@MainActivity),
                     accessibilityPreferencesRepository = provideAccessibilityPreferencesRepository(this@MainActivity),
+                    memoLocalStorage = createFileMemoLocalStorage(this@MainActivity.filesDir.absolutePath),
                 ),
             )
         }
