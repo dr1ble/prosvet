@@ -1,5 +1,11 @@
 package com.digitaledu.feature.player.impl.ui.player
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,13 +20,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -60,7 +71,10 @@ import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_hint
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_load_error
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_screen_image
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+
+private const val AUTO_ADVANCE_DELAY_MILLIS = 3_000L
 
 /**
  * Renders an interactive simulation screen with clickable hotspots.
@@ -81,6 +95,8 @@ fun SimulationScreen(
     onResolveImageUrl: (String) -> String,
     onHotspotClick: (Hotspot) -> Unit,
     onDismissHint: () -> Unit,
+    onAutoAdvance: () -> Unit = {},
+    onRecordError: (hintLevel: Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val platformContext = LocalPlatformContext.current
@@ -95,6 +111,26 @@ fun SimulationScreen(
         payload = payload,
         discoveredLabels = discoveredLabels.toSet(),
     )
+
+    val isCompletionDeadEnd = payload.isCompletion && payload.hotspots.isEmpty()
+    var autoAdvanceSecondsLeft by remember(payload) {
+        mutableStateOf((AUTO_ADVANCE_DELAY_MILLIS / 1000).toInt())
+    }
+    LaunchedEffect(payload, isCompletionDeadEnd) {
+        println(
+            "SimulationScreen: enter payload title=$screenTitle isCompletion=${payload.isCompletion} " +
+                "hotspots=${payload.hotspots.size} dead=${isCompletionDeadEnd}",
+        )
+        if (!isCompletionDeadEnd) return@LaunchedEffect
+        val totalSeconds = (AUTO_ADVANCE_DELAY_MILLIS / 1000).toInt()
+        for (remaining in totalSeconds downTo 1) {
+            autoAdvanceSecondsLeft = remaining
+            delay(1000L)
+        }
+        autoAdvanceSecondsLeft = 0
+        println("SimulationScreen: autoAdvance fires for $screenTitle")
+        onAutoAdvance()
+    }
     
     val fullImageUrl = remember(payload.imageUrl, onResolveImageUrl) {
         onResolveImageUrl(payload.imageUrl)
@@ -131,6 +167,12 @@ fun SimulationScreen(
             ) {
                 if (payload.hotspots.isNotEmpty()) {
                     wrongTapCount += 1
+                    val hintLevel = when {
+                        wrongTapCount >= 3 -> 3
+                        wrongTapCount == 2 -> 2
+                        else -> 1
+                    }
+                    onRecordError(hintLevel)
                     if (wrongTapCount == 1) {
                         performErrorHapticFeedback()
                     }
@@ -209,10 +251,16 @@ fun SimulationScreen(
             )
         }
 
-        if (wrongTapCount >= 3 && targetHotspot != null) {
-            InlineSimulationHint(
+        if (wrongTapCount >= 3 && targetHotspot != null && imageWidth > 0 && imageHeight > 0) {
+            AnimatedArrowPointer(
                 hotspot = targetHotspot,
-                onDismiss = { wrongTapCount = 0 },
+                imageWidth = imageWidth,
+                imageHeight = imageHeight,
+            )
+        } else if (isCompletionDeadEnd) {
+            AutoAdvanceBanner(
+                secondsLeft = autoAdvanceSecondsLeft,
+                onContinueNow = onAutoAdvance,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(UiSpacing.md),
@@ -223,6 +271,60 @@ fun SimulationScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(UiSpacing.md),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AutoAdvanceBanner(
+    secondsLeft: Int,
+    onContinueNow: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = UiShapes.cardLg,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        tonalElevation = 6.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.md),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
+            ) {
+                Text(
+                    text = "Это последний экран",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = if (secondsLeft > 0) {
+                        "Переход на следующий модуль через $secondsLeft…"
+                    } else {
+                        "Переход на следующий модуль…"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = "Продолжить",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(UiShapes.pill)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(label = "Продолжить", role = Role.Button)
+                    .clickable(onClick = onContinueNow)
+                    .padding(horizontal = UiSpacing.md, vertical = UiSpacing.xs),
             )
         }
     }
@@ -307,7 +409,8 @@ private fun InlineSimulationHint(
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = hotspot.hint,
+                text = hotspot.hint.takeIf { it.isNotBlank() }
+                    ?: "Нажмите «Закрыть», чтобы перейти дальше.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -359,15 +462,81 @@ private fun AdaptiveTargetHighlight(
                 },
                 shape = UiShapes.cardSm,
             ),
+    )
+}
+
+@Composable
+private fun AnimatedArrowPointer(
+    hotspot: Hotspot,
+    imageWidth: Int,
+    imageHeight: Int,
+) {
+    val density = LocalDensity.current
+    val bounds = calculateHotspotBounds(
+        hotspot = hotspot,
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
+    )
+
+    val infiniteTransition = rememberInfiniteTransition(label = "arrow-pointer")
+    val bounce by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 18f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "arrow-bounce",
+    )
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "arrow-pulse",
+    )
+
+    // Arrow is drawn just above the target hotspot, pointing down at it.
+    val arrowWidthDp = 64.dp
+    val arrowHeightDp = 64.dp
+    val arrowWidthPx = with(density) { arrowWidthDp.toPx() }
+    val arrowHeightPx = with(density) { arrowHeightDp.toPx() }
+    val centerX = bounds.x + bounds.width / 2f
+    val targetTopY = bounds.y.toFloat()
+
+    // Position the arrow above the hotspot; if the hotspot is near the top of
+    // the image, fall back to placing it below so it stays visible on screen.
+    val preferAbove = targetTopY - arrowHeightPx - bounce - 12f > 0f
+    val baseX = (centerX - arrowWidthPx / 2f).toInt()
+    val baseY = if (preferAbove) {
+        (targetTopY - arrowHeightPx - 12f - bounce).toInt()
+    } else {
+        (bounds.y + bounds.height + 12f + bounce).toInt()
+    }
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(baseX, baseY) }
+            .size(width = arrowWidthDp, height = arrowHeightDp)
+            .graphicsLayer {
+                scaleX = pulse
+                scaleY = pulse
+                rotationZ = if (preferAbove) 0f else 180f
+            }
+            .background(
+                color = MaterialTheme.colorScheme.tertiary.copy(alpha = UiOpacity.strong),
+                shape = UiShapes.cardSm,
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        if (showPointer) {
-            Text(
-                text = "↑",
-                color = MaterialTheme.colorScheme.onTertiary,
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.align(Alignment.TopCenter),
-            )
-        }
+        Icon(
+            imageVector = Icons.Filled.ArrowDownward,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onTertiary,
+            modifier = Modifier.size(36.dp),
+        )
     }
 }
 

@@ -5,16 +5,12 @@ import com.digitaledu.core.model.catalog.CatalogCourse
 import com.digitaledu.core.model.catalog.CatalogRelease
 import com.digitaledu.core.model.catalog.CatalogScreen
 import com.digitaledu.core.model.content.ArticlePayload
-import com.digitaledu.core.model.content.CheatSheetPayload
-import com.digitaledu.core.model.content.ScreenPayload
-import com.digitaledu.core.model.content.SimulationPayload
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PlayerDomainUseCasesTest {
     private val progressTransition = ProgressTransitionUseCase()
     private val restoreCourseProgress = RestoreCourseProgressUseCase()
-    private val resolveReferenceId = ResolveReferenceIdUseCase()
     private val resolveCompletedLessonId = ResolveCompletedLessonIdUseCase()
 
     @Test
@@ -69,25 +65,6 @@ class PlayerDomainUseCasesTest {
 
         assertEquals(0, restored.currentScreenIndex)
         assertEquals(emptySet(), restored.completedScreens)
-    }
-
-    @Test
-    fun resolveReferenceId_supportsSimulationAndCheatSheet() {
-        val simulation = SimulationPayload(
-            imageUrl = "img.png",
-            contextRef = "sim-ref",
-        )
-        val cheatSheet = CheatSheetPayload(referenceId = "sheet-ref")
-
-        assertEquals("sim-ref", resolveReferenceId(simulation))
-        assertEquals("sheet-ref", resolveReferenceId(cheatSheet))
-    }
-
-    @Test
-    fun resolveReferenceId_returnsNull_forUnsupportedPayload() {
-        val article: ScreenPayload = ArticlePayload(markdownContent = "# lesson")
-
-        assertEquals(null, resolveReferenceId(article))
     }
 
     @Test

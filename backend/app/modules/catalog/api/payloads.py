@@ -47,7 +47,7 @@ class SimulationPayload(BasePayload):
     hotspots: list[Hotspot] = Field(default_factory=list)
     is_start: bool = False
     is_completion: bool = False
-    context_ref: str | None = None  # ID of a linked Article section or LessonReference
+    context_ref: str | None = None
 
 
 class QuizOption(BaseModel):
@@ -78,7 +78,7 @@ class QuizPayload(BasePayload):
 
 class CheatSheetPayload(BasePayload):
     type: Literal[ScreenType.CHEAT_SHEET] = ScreenType.CHEAT_SHEET
-    reference_id: str
+    content: str = ""
 
 
 class UnknownPayload(BasePayload):

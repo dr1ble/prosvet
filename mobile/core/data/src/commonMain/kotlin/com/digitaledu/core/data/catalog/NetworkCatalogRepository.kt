@@ -3,7 +3,6 @@ package com.digitaledu.core.data.catalog
 import com.digitaledu.core.data.auth.AuthRepository
 import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.catalog.CatalogCourse
-import com.digitaledu.core.model.reference.LessonReference
 import com.digitaledu.core.network.CatalogNetworkDataSource
 
 class NetworkCatalogRepository(
@@ -42,24 +41,6 @@ class NetworkCatalogRepository(
         return authRepository.withFreshAccessToken { accessToken ->
             networkDataSource.getLatestCourseBundle(
                 courseSlug = courseSlug,
-                accessToken = accessToken,
-            )
-        }
-    }
-
-    override suspend fun getLessonReferences(lessonId: String): List<LessonReference> {
-        return authRepository.withFreshAccessToken { accessToken ->
-            networkDataSource.getLessonReferencesByLesson(
-                lessonId = lessonId,
-                accessToken = accessToken,
-            )
-        }
-    }
-
-    override suspend fun getLessonReference(referenceId: String): LessonReference {
-        return authRepository.withFreshAccessToken { accessToken ->
-            networkDataSource.getLessonReference(
-                referenceId = referenceId,
                 accessToken = accessToken,
             )
         }

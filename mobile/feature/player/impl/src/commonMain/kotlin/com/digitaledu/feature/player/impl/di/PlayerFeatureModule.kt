@@ -23,6 +23,7 @@ fun playerFeatureModule(): Module = module {
             catalogRepository = get(),
             authRepository = get(),
             progressRepository = get(),
+            memoLocalStorage = get(),
         )
     }
 

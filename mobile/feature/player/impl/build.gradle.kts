@@ -33,8 +33,10 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(libs.coil3.compose)
             implementation(libs.coil3.network.ktor)
+            implementation(libs.kotlinx.datetime)
             implementation(libs.jetbrains.lifecycle.viewmodel)
             implementation(libs.koin.core)
+            implementation(libs.multiplatform.markdown.renderer.m3)
         }
 
         androidMain.dependencies {

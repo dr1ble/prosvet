@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 @SerialName("cheat_sheet")
 data class CheatSheetPayload(
-    @SerialName("reference_id") val referenceId: String,
+    val content: String = "",
 ) : ScreenPayload

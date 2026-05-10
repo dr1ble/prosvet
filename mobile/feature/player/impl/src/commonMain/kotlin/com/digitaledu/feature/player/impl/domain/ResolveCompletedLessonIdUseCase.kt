@@ -12,7 +12,19 @@ internal class ResolveCompletedLessonIdUseCase {
 
         val sourceLessonId = bundle.screens.getOrNull(sourceIndex)?.lessonId ?: return null
         val targetLessonId = bundle.screens.getOrNull(targetIndex)?.lessonId
-        return sourceLessonId.takeIf { it != targetLessonId }
+
+        // Crossing a lesson boundary — source lesson is done.
+        if (sourceLessonId != targetLessonId) {
+            return sourceLessonId
+        }
+
+        // Still inside the same lesson; treat it as completed when the learner
+        // reaches the final screen of the whole course.
+        if (targetIndex == bundle.screens.lastIndex) {
+            return sourceLessonId
+        }
+
+        return null
     }
 
     fun resolveOnClose(

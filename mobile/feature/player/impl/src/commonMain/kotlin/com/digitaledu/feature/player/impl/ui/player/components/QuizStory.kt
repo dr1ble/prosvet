@@ -301,7 +301,7 @@ fun QuizStory(
                         }
                     } else {
                         Button(
-                            onClick = { onIntent(PlayerIntent.Next) },
+                            onClick = { onIntent(PlayerIntent.FinishLesson) },
                             enabled = answersState.canContinue(currentQuestion),
                             modifier = Modifier
                                 .accessibilityTouchTarget

@@ -4,7 +4,6 @@ import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.catalog.CatalogCourse
 import com.digitaledu.core.model.catalog.CatalogRelease
 import com.digitaledu.core.model.catalog.CatalogScreen
-import com.digitaledu.core.model.reference.LessonReference
 import com.digitaledu.core.network.CatalogNetworkDataSource
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -86,31 +85,6 @@ class KtorCatalogNetworkDataSource(
                     .map(ScreenResponse::toCatalogScreen)
                     .sortedBy(CatalogScreen::orderIndex),
             )
-        }
-    }
-
-    override suspend fun getLessonReference(referenceId: String, accessToken: String): LessonReference {
-        return executeCall {
-            client.get {
-                url("api/v1/catalog/references/$referenceId")
-                headers {
-                    append(HttpHeaders.Authorization, "Bearer $accessToken")
-                }
-            }.body()
-        }
-    }
-
-    override suspend fun getLessonReferencesByLesson(
-        lessonId: String,
-        accessToken: String,
-    ): List<LessonReference> {
-        return executeCall {
-            client.get {
-                url("api/v1/catalog/courses/lessons/$lessonId/references")
-                headers {
-                    append(HttpHeaders.Authorization, "Bearer $accessToken")
-                }
-            }.body()
         }
     }
 

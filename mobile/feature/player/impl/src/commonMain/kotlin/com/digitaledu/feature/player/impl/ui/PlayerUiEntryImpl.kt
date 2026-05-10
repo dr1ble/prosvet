@@ -6,6 +6,7 @@ import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.player.api.PlayerUiEntry
 import com.digitaledu.feature.player.api.PlayerUiState
 import com.digitaledu.feature.player.impl.ui.player.LessonPlayerScreen
+import com.digitaledu.feature.player.impl.ui.player.components.LessonSummaryView
 
 internal class PlayerUiEntryImpl : PlayerUiEntry {
     override fun shouldShowFullscreen(uiState: PlayerUiState): Boolean {
@@ -21,12 +22,28 @@ internal class PlayerUiEntryImpl : PlayerUiEntry {
         modifier: Modifier,
     ) {
         val bundle = uiState.bundle ?: return
+
+        if (uiState.showLessonSummary) {
+            val summaryState = buildLessonSummaryState(
+                course = bundle.course,
+                screens = bundle.screens,
+                currentScreenIndex = uiState.currentScreenIndex,
+            )
+            LessonSummaryView(
+                state = summaryState,
+                onContinue = { onIntent(PlayerIntent.Close) },
+                onFinish = { onIntent(PlayerIntent.Close) },
+                modifier = modifier,
+            )
+            return
+        }
+
         LessonPlayerScreen(
             bundle = bundle,
             currentScreenIndex = uiState.currentScreenIndex,
             mediaAccessToken = uiState.mediaAccessToken,
             activeHotspotHint = uiState.activeHotspotHint,
-            activeLessonReference = uiState.activeLessonReference,
+            isCurrentMemoSaved = uiState.isCurrentMemoSaved,
             completedScreens = uiState.completedScreens,
             onIntent = onIntent,
             onHelpClick = onHelpClick,

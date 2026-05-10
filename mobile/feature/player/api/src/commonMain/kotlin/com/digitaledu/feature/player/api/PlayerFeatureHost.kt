@@ -9,6 +9,6 @@ interface PlayerFeatureHost {
     val effects: Flow<PlayerEffect>
 
     fun processIntent(intent: PlayerIntent)
-    fun openBundle(bundle: CatalogBundle)
+    fun openBundle(bundle: CatalogBundle, startFullscreen: Boolean = false)
     fun resolveImageUrl(rawUrl: String): String
 }

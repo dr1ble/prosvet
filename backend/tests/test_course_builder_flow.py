@@ -936,7 +936,7 @@ class TestFullCourseBuilderFlow:
                             {
                                 "id": None,
                                 "task_type": "cheat_sheet",
-                                "title": "Шпаргалка",
+                                "title": "Памятка",
                                 "order_index": 1,
                                 "required": False,
                                 "payload": {"content": "<p>Основные формулы и правила</p>"},

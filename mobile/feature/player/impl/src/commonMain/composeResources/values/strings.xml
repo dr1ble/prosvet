@@ -75,12 +75,7 @@
     <string name="payload_question_one">вопрос</string>
     <string name="payload_question_few">вопроса</string>
     <string name="payload_question_many">вопросов</string>
-    <string name="payload_cheat_sheet">Шпаргалка • Итоги урока</string>
-
-    <string name="cheat_sheet_key_points">Ключевые моменты</string>
-    <string name="cheat_sheet_commands_code">Команды и код</string>
-    <string name="cheat_sheet_copy_code">Скопировать код</string>
-    <string name="list_bullet">•</string>
+    <string name="payload_cheat_sheet">Памятка • Итоги урока</string>
 
     <string name="video_title">Видеоурок</string>
     <string name="video_duration">%1$s</string>

@@ -81,10 +81,16 @@ def test_quiz_payload_parse():
 
 def test_cheat_sheet_payload_parse():
     payload = screen_payload_adapter.validate_python(
-        {"type": "cheat_sheet", "reference_id": "ref-1"}
+        {"type": "cheat_sheet", "content": "<h3>Чек-лист</h3><ul><li>Пункт</li></ul>"}
     )
     assert isinstance(payload, CheatSheetPayload)
-    assert payload.reference_id == "ref-1"
+    assert payload.content == "<h3>Чек-лист</h3><ul><li>Пункт</li></ul>"
+
+
+def test_cheat_sheet_payload_default_empty_content():
+    payload = screen_payload_adapter.validate_python({"type": "cheat_sheet"})
+    assert isinstance(payload, CheatSheetPayload)
+    assert payload.content == ""
 
 
 def test_unknown_payload_parse():

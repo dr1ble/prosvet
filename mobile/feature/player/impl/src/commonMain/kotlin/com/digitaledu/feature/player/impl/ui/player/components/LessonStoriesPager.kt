@@ -6,17 +6,14 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,24 +24,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
-import com.digitaledu.core.ui.components.UiSize
 import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.content.ArticlePayload
+import com.digitaledu.core.model.content.CheatSheetPayload
 import com.digitaledu.core.model.content.Hotspot
 import com.digitaledu.core.model.content.QuizPayload
 import com.digitaledu.core.model.content.SimulationPayload
-import com.digitaledu.core.model.reference.LessonReference
 import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.player.impl.ui.buildLessonSummaryState
 import com.digitaledu.feature.player.impl.ui.player.PlayerContent
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
 import digital_education_mobile.feature.player.`impl`.generated.resources.close
 import digital_education_mobile.feature.player.`impl`.generated.resources.help
-import digital_education_mobile.feature.player.`impl`.generated.resources.theory
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -62,10 +57,9 @@ fun LessonStoriesPager(
     currentScreenIndex: Int,
     mediaAccessToken: String?,
     activeHotspotHint: Hotspot?,
-    activeLessonReference: LessonReference?,
+    isCurrentMemoSaved: Boolean,
     onIntent: (PlayerIntent) -> Unit,
     onHelpClick: () -> Unit,
-    onShowTheory: () -> Unit,
     resolveUrl: (String) -> String,
     modifier: Modifier = Modifier
 ) {
@@ -73,13 +67,23 @@ fun LessonStoriesPager(
         initialPage = currentScreenIndex,
         pageCount = { bundle.screens.size }
     )
+    val currentScreen = bundle.screens.getOrNull(currentScreenIndex)
+    val isSummaryScreen = currentScreenIndex == bundle.screens.lastIndex &&
+        (currentScreen?.payload is ArticlePayload || currentScreen?.payload is CheatSheetPayload)
+    val isSimulation = currentScreen?.payload is SimulationPayload && !isSummaryScreen
+
     LaunchedEffect(currentScreenIndex) {
         if (pagerState.currentPage != currentScreenIndex) {
             pagerState.animateScrollToPage(currentScreenIndex)
         }
     }
 
-    LaunchedEffect(pagerState.currentPage) {
+    LaunchedEffect(pagerState.currentPage, isSimulation) {
+        // Feed pager swipes back into the VM only for screens where user-driven
+        // navigation is allowed. Simulation screens disable swipe entirely, so
+        // any currentPage drift there would be an unintended side-effect we
+        // don't want to forward (it used to cause ghost auto-advance).
+        if (isSimulation) return@LaunchedEffect
         if (pagerState.currentPage != currentScreenIndex) {
             if (pagerState.currentPage > currentScreenIndex) {
                 onIntent(PlayerIntent.Next)
@@ -88,11 +92,6 @@ fun LessonStoriesPager(
             }
         }
     }
-
-    val currentScreen = bundle.screens.getOrNull(currentScreenIndex)
-    val isSummaryScreen = currentScreenIndex == bundle.screens.lastIndex ||
-        (currentScreen?.payload as? SimulationPayload)?.isCompletion == true
-    val isSimulation = currentScreen?.payload is SimulationPayload && !isSummaryScreen
 
     Box(
         modifier = modifier
@@ -106,8 +105,8 @@ fun LessonStoriesPager(
         ) { pageIndex ->
             val screen = bundle.screens.getOrNull(pageIndex)
             if (screen != null) {
-                val isPageSummary = pageIndex == bundle.screens.lastIndex ||
-                    (screen.payload as? SimulationPayload)?.isCompletion == true
+                val isPageSummary = pageIndex == bundle.screens.lastIndex &&
+                    (screen.payload is ArticlePayload || screen.payload is CheatSheetPayload)
                 // Apply system bars padding only if NOT simulation
                 val contentModifier = if (screen.payload is SimulationPayload) {
                     Modifier.fillMaxSize()
@@ -134,7 +133,7 @@ fun LessonStoriesPager(
                         screen = screen,
                         mediaAccessToken = mediaAccessToken,
                         activeHotspotHint = activeHotspotHint,
-                        activeLessonReference = activeLessonReference,
+                        isCurrentMemoSaved = isCurrentMemoSaved,
                         onIntent = onIntent,
                         resolveUrl = resolveUrl,
                         modifier = contentModifier,
@@ -188,31 +187,9 @@ fun LessonStoriesPager(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = UiSpacing.md),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (activeLessonReference != null) {
-                        IconButton(
-                            onClick = onShowTheory,
-                            modifier = Modifier
-                                .accessibilityTouchTarget
-                                .accessibilitySemantics(
-                                    label = stringResource(Res.string.theory),
-                                    role = Role.Button,
-                                ),
-                        ) {
-                            AccessibilityScaledControlContainer {
-                                Icon(
-                                    imageVector = Icons.Outlined.Info,
-                                    contentDescription = stringResource(Res.string.theory),
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.size(UiSize.touchTarget))
-                    }
-
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
                             onClick = onHelpClick,
