@@ -97,8 +97,30 @@ def test_register_accepts_six_digit_password(auth_service, mock_repo):
     assert mock_repo.create_user.called
 
 
-@pytest.mark.parametrize("password", ["12345", "1234567", "abcdef"])
-def test_register_rejects_non_six_digit_password(auth_service, password):
+@pytest.mark.parametrize("password", ["1234567", "abcdef", "P@ssw0rd123"])
+def test_register_accepts_passwords_of_six_or_more_chars(auth_service, mock_repo, password):
+    created_user = MagicMock()
+    created_user.id = uuid.uuid4()
+    created_user.role = UserRole.USER
+    mock_repo.get_user_by_login.return_value = None
+    mock_repo.create_user.return_value = created_user
+
+    with patch.object(
+        auth_service,
+        "_issue_session_tokens",
+        return_value=AuthResponse(access_token="token", refresh_token="refresh"),
+    ):
+        auth_service.register(
+            full_name="Иван Иванов",
+            login=f"user_{password[:3]}",
+            password=password,
+        )
+
+    assert mock_repo.create_user.called
+
+
+@pytest.mark.parametrize("password", ["", "1", "12345"])
+def test_register_rejects_short_password(auth_service, password):
     with pytest.raises(AuthError, match="Invalid registration data"):
         auth_service.register(
             full_name="Иван Иванов",

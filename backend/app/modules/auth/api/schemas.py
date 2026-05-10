@@ -12,7 +12,7 @@ class LoginIn(BaseModel):
 class RegisterIn(BaseModel):
     full_name: str = Field(min_length=2, max_length=255)
     login: str = Field(min_length=3, max_length=120)
-    password: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    password: str = Field(min_length=6, max_length=256)
 
 
 class QrActivateIn(BaseModel):

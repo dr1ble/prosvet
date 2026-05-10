@@ -16,7 +16,6 @@ from app.shared.security.passwords import hash_password, verify_password
 from app.shared.security.tokens import generate_token, issue_access_token
 
 LOGIN_PASSWORD_MIN_LENGTH = 6
-REGISTRATION_PIN_LENGTH = 6
 QR_LOGIN_NUMBER_BOUND = 1_000_000
 
 
@@ -89,7 +88,7 @@ class AuthService:
             raise AuthError("Invalid registration data.", status_code=400)
         if len(normalized_login) < 3:
             raise AuthError("Invalid registration data.", status_code=400)
-        if len(password) != REGISTRATION_PIN_LENGTH or not password.isdigit():
+        if len(password) < LOGIN_PASSWORD_MIN_LENGTH:
             raise AuthError("Invalid registration data.", status_code=400)
 
         existing_user = self.repo.get_user_by_login(normalized_login)
