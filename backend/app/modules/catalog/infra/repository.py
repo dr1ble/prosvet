@@ -6,7 +6,9 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.infra.models import (
+    Competency,
     Course,
+    CourseCompetency,
     CourseFavorite,
     CourseLesson,
     CourseRelease,
@@ -37,6 +39,84 @@ class CatalogRepository:
             stmt = stmt.where(Course.status != CourseStatus.ARCHIVED.value)
         stmt = stmt.order_by(desc(Course.updated_at), desc(Course.created_at))
         return list(self.db.scalars(stmt).all())
+
+    def list_competencies(self, include_inactive: bool = False) -> list[Competency]:
+        stmt = select(Competency)
+        if not include_inactive:
+            stmt = stmt.where(Competency.is_active.is_(True))
+        stmt = stmt.order_by(Competency.category.asc().nulls_last(), Competency.title.asc())
+        return list(self.db.scalars(stmt).all())
+
+    def get_competency(self, key: str) -> Competency | None:
+        stmt = select(Competency).where(Competency.key == key)
+        return self.db.scalar(stmt)
+
+    def get_competency_by_title(self, title: str) -> Competency | None:
+        stmt = select(Competency).where(func.lower(Competency.title) == title.lower())
+        return self.db.scalar(stmt)
+
+    def create_competency(
+        self,
+        *,
+        key: str,
+        title: str,
+        description: str | None,
+        category: str | None,
+    ) -> Competency:
+        competency = Competency(
+            key=key,
+            title=title,
+            description=description,
+            category=category,
+            is_active=True,
+        )
+        self.db.add(competency)
+        self.db.flush()
+        return competency
+
+    def update_competency_active(self, competency: Competency, is_active: bool) -> Competency:
+        competency.is_active = is_active
+        self.db.flush()
+        return competency
+
+    def list_course_competencies(self, course_id: UUID) -> list[CourseCompetency]:
+        stmt = (
+            select(CourseCompetency)
+            .where(CourseCompetency.course_id == course_id)
+            .order_by(CourseCompetency.created_at.asc())
+        )
+        return list(self.db.scalars(stmt).all())
+
+    def list_course_competencies_for_courses(
+        self,
+        course_ids: list[UUID],
+    ) -> list[CourseCompetency]:
+        if not course_ids:
+            return []
+        stmt = select(CourseCompetency).where(CourseCompetency.course_id.in_(course_ids))
+        return list(self.db.scalars(stmt).all())
+
+    def replace_course_competencies(
+        self,
+        *,
+        course_id: UUID,
+        items: list[dict[str, str]],
+    ) -> list[CourseCompetency]:
+        for existing in self.list_course_competencies(course_id):
+            self.db.delete(existing)
+        self.db.flush()
+
+        rows: list[CourseCompetency] = []
+        for item in items:
+            row = CourseCompetency(
+                course_id=course_id,
+                competency_key=item["competency_key"],
+                course_type=item["course_type"],
+            )
+            self.db.add(row)
+            rows.append(row)
+        self.db.flush()
+        return rows
 
     def get_course_by_id(self, course_id: UUID) -> Course | None:
         stmt = select(Course).where(Course.id == course_id)

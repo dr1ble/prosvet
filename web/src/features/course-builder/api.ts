@@ -1,4 +1,11 @@
-import type { BuilderCourse, BuilderTask, ValidationError } from "./types";
+import type {
+  BuilderCourse,
+  BuilderTask,
+  Competency,
+  CourseCompetencyLink,
+  CourseType,
+  ValidationError,
+} from "./types";
 import { extractApiErrorMessage } from "@/shared/lib/api-error";
 
 const ADMIN_PROXY = "/api/admin";
@@ -226,6 +233,122 @@ export async function removeCourseCover(
   return fetchJson(`/catalog/courses/${courseId}/cover`, {
     method: "DELETE",
   });
+}
+
+function mapCompetency(data: {
+  key: string;
+  title: string;
+  description?: string | null;
+  category?: string | null;
+  is_active: boolean;
+}): Competency {
+  return {
+    key: data.key,
+    title: data.title,
+    description: data.description ?? null,
+    category: data.category ?? null,
+    isActive: data.is_active,
+  };
+}
+
+function mapCourseCompetency(data: {
+  competency_key: string;
+  competency_title: string;
+  competency_description?: string | null;
+  competency_category?: string | null;
+  course_type: string;
+}): CourseCompetencyLink {
+  return {
+    competencyKey: data.competency_key,
+    competencyTitle: data.competency_title,
+    competencyDescription: data.competency_description ?? null,
+    competencyCategory: data.competency_category ?? null,
+    courseType: data.course_type as CourseType,
+  };
+}
+
+export async function listCompetencies(): Promise<Competency[]> {
+  const data = await fetchJson<
+    Array<{
+      key: string;
+      title: string;
+      description?: string | null;
+      category?: string | null;
+      is_active: boolean;
+    }>
+  >("/catalog/competencies");
+  return data.map(mapCompetency);
+}
+
+export async function createCompetency(data: {
+  title: string;
+  description?: string | null;
+  category?: string | null;
+}): Promise<Competency> {
+  const competency = await fetchJson<{
+    key: string;
+    title: string;
+    description?: string | null;
+    category?: string | null;
+    is_active: boolean;
+  }>("/catalog/competencies", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return mapCompetency(competency);
+}
+
+export async function deactivateCompetency(key: string): Promise<Competency> {
+  const competency = await fetchJson<{
+    key: string;
+    title: string;
+    description?: string | null;
+    category?: string | null;
+    is_active: boolean;
+  }>(`/catalog/competencies/${encodeURIComponent(key)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_active: false }),
+  });
+  return mapCompetency(competency);
+}
+
+export async function listCourseCompetencies(
+  courseId: string,
+): Promise<CourseCompetencyLink[]> {
+  const data = await fetchJson<
+    Array<{
+      competency_key: string;
+      competency_title: string;
+      competency_description?: string | null;
+      competency_category?: string | null;
+      course_type: string;
+    }>
+  >(`/catalog/courses/${courseId}/competencies`);
+  return data.map(mapCourseCompetency);
+}
+
+export async function saveCourseCompetencies(
+  courseId: string,
+  items: Array<{ competencyKey: string; courseType: CourseType }>,
+): Promise<CourseCompetencyLink[]> {
+  const data = await fetchJson<
+    Array<{
+      competency_key: string;
+      competency_title: string;
+      competency_description?: string | null;
+      competency_category?: string | null;
+      course_type: string;
+    }>
+  >(`/catalog/courses/${courseId}/competencies`, {
+    method: "PUT",
+    body: JSON.stringify({
+      items: items.map((item) => ({
+        competency_key: item.competencyKey,
+        course_type: item.courseType,
+      })),
+    }),
+  });
+  return data.map(mapCourseCompetency);
 }
 
 export async function duplicateTask(taskId: string): Promise<{

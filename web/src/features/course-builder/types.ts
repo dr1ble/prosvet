@@ -30,6 +30,30 @@ export interface BuilderCourse {
   lessons: BuilderLesson[];
 }
 
+export type CourseType = "foundation" | "practice" | "additional";
+
+export interface Competency {
+  key: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  isActive: boolean;
+}
+
+export interface CourseCompetencyLink {
+  competencyKey: string;
+  competencyTitle: string;
+  competencyDescription: string | null;
+  competencyCategory: string | null;
+  courseType: CourseType;
+}
+
+export const COURSE_TYPE_LABELS: Record<CourseType, string> = {
+  foundation: "Базовый",
+  practice: "Практический",
+  additional: "Дополнительный",
+};
+
 export interface ValidationError {
   type: string;
   message: string;
@@ -44,7 +68,7 @@ export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   theory_video: "Видео",
   quiz: "Квиз",
   simulation: "Симуляция",
-  cheat_sheet: "Шпаргалка",
+  cheat_sheet: "Памятка",
 };
 
 export function defaultPayload(taskType: TaskType): Record<string, unknown> {

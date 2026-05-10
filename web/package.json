@@ -10,6 +10,7 @@
     "lint": "npm run verify:styles && eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc --noEmit",
     "test:course-builder-selection": "node scripts/test-course-builder-selection.cjs",
+    "test:course-builder-competencies": "node scripts/test-course-builder-competencies.cjs",
     "test:simulation-editor": "node scripts/test-simulation-editor-contract.cjs",
     "test:simulation-runtime": "node scripts/test-simulation-runtime.cjs",
     "test:auth-hardening": "node scripts/test-auth-hardening.cjs",

@@ -31,6 +31,43 @@ class CourseUpdateIn(_BaseSchema):
     status: Literal["draft", "active", "archived"] | None = None
 
 
+class CompetencyCreateIn(_BaseSchema):
+    title: str = Field(min_length=2, max_length=160)
+    description: str | None = Field(default=None, max_length=2_000)
+    category: str | None = Field(default=None, max_length=120)
+
+
+class CompetencyUpdateIn(_BaseSchema):
+    is_active: bool
+
+
+class CompetencyOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    key: str
+    title: str
+    description: str | None
+    category: str | None
+    is_active: bool
+
+
+class CourseCompetencyIn(_BaseSchema):
+    competency_key: str = Field(min_length=2, max_length=80)
+    course_type: Literal["foundation", "practice", "additional"] = "foundation"
+
+
+class CourseCompetenciesUpdateIn(_BaseSchema):
+    items: list[CourseCompetencyIn] = Field(default_factory=list, max_length=50)
+
+
+class CourseCompetencyOut(_BaseSchema):
+    competency_key: str
+    competency_title: str
+    competency_description: str | None = None
+    competency_category: str | None = None
+    course_type: str
+
+
 class CourseListQuery(_BaseSchema):
     include_drafts: bool = False
     include_archived: bool = False

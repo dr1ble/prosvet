@@ -12,7 +12,12 @@ from app.core.config import settings
 from app.modules.catalog.api.schemas import (
     BulkCourseStructureIn,
     BulkCourseStructureOut,
+    CompetencyCreateIn,
+    CompetencyOut,
+    CompetencyUpdateIn,
     CourseBundleOut,
+    CourseCompetenciesUpdateIn,
+    CourseCompetencyOut,
     CourseCoverUploadIn,
     CourseCreateIn,
     CourseLessonCreateIn,
@@ -35,7 +40,9 @@ from app.modules.catalog.api.schemas import (
 )
 from app.modules.catalog.domain.errors import CatalogError
 from app.modules.catalog.infra.models import (
+    Competency,
     Course,
+    CourseCompetency,
     CourseLesson,
     CourseRelease,
     CourseReleaseScreen,
@@ -75,6 +82,10 @@ _CATALOG_ERROR_RU: dict[str, str] = {
     "Release version already exists.": "Релиз с такой версией уже существует.",
     "Release not found for this course.": "Релиз для этого курса не найден.",
     "Selected release has no screens.": "В выбранном релизе нет экранов.",
+    "Competency title already exists.": "Компетенция с таким названием уже существует.",
+    "Competency links must be unique per course.": "Компетенции курса не должны повторяться.",
+    "Competency not found.": "Компетенция не найдена.",
+    "Invalid course competency type.": "Некорректный тип курса для компетенции.",
 }
 
 
@@ -216,6 +227,30 @@ def _to_task_out(task: LessonTask) -> LessonTaskOut:
     )
 
 
+def _to_competency_out(competency: Competency) -> CompetencyOut:
+    return CompetencyOut(
+        key=competency.key,
+        title=competency.title,
+        description=competency.description,
+        category=competency.category,
+        is_active=competency.is_active,
+    )
+
+
+def _to_course_competency_out(
+    link: CourseCompetency,
+    competencies_by_key: dict[str, Competency],
+) -> CourseCompetencyOut:
+    competency = competencies_by_key.get(link.competency_key)
+    return CourseCompetencyOut(
+        competency_key=link.competency_key,
+        competency_title=competency.title if competency else link.competency_key,
+        competency_description=competency.description if competency else None,
+        competency_category=competency.category if competency else None,
+        course_type=link.course_type,
+    )
+
+
 def _ensure_methodologist_course_access(
     service: CatalogServiceDep,
     actor: CurrentActor,
@@ -345,6 +380,75 @@ def remove_favorite_course(
         raise HTTPException(status_code=404, detail="Курс не найден.")
     service.repo.remove_favorite_course(actor.user_id, course_id)
     return _to_course_out(course, request, favorite_course_ids=set())
+
+
+@router.get("/competencies", response_model=list[CompetencyOut])
+def list_competencies(
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
+) -> list[CompetencyOut]:
+    del actor
+    return [_to_competency_out(competency) for competency in service.list_competencies()]
+
+
+@router.post("/competencies", response_model=CompetencyOut, status_code=status.HTTP_201_CREATED)
+def create_competency(
+    payload: CompetencyCreateIn,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CompetencyOut:
+    del actor
+    try:
+        competency = service.create_competency(payload)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
+    return _to_competency_out(competency)
+
+
+@router.patch("/competencies/{competency_key}", response_model=CompetencyOut)
+def update_competency(
+    competency_key: str,
+    payload: CompetencyUpdateIn,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> CompetencyOut:
+    del actor
+    try:
+        competency = service.set_competency_active(competency_key, is_active=payload.is_active)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
+    return _to_competency_out(competency)
+
+
+@router.get("/courses/{course_id}/competencies", response_model=list[CourseCompetencyOut])
+def list_course_competencies(
+    course_id: UUID,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.read")),
+) -> list[CourseCompetencyOut]:
+    _ensure_methodologist_course_access(service, actor, course_id)
+    try:
+        links = service.list_course_competencies(course_id)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
+    competencies = {competency.key: competency for competency in service.list_competencies()}
+    return [_to_course_competency_out(link, competencies) for link in links]
+
+
+@router.put("/courses/{course_id}/competencies", response_model=list[CourseCompetencyOut])
+def replace_course_competencies(
+    course_id: UUID,
+    payload: CourseCompetenciesUpdateIn,
+    service: CatalogServiceDep,
+    actor: CurrentActor = Depends(require_policy("catalog.write")),
+) -> list[CourseCompetencyOut]:
+    _ensure_methodologist_course_access(service, actor, course_id)
+    try:
+        links = service.replace_course_competencies(course_id, payload)
+    except CatalogError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=_localize_catalog_error(exc.detail)) from exc
+    competencies = {competency.key: competency for competency in service.list_competencies()}
+    return [_to_course_competency_out(link, competencies) for link in links]
 
 
 @router.get("/courses/{course_slug}/cover", include_in_schema=False, name="catalog_course_cover")

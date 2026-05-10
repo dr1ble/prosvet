@@ -2,7 +2,9 @@
 
 from app.modules.auth.infra.models import QrLoginToken, UserSession
 from app.modules.catalog.infra.models import (
+    Competency,
     Course,
+    CourseCompetency,
     CourseLesson,
     CourseRelease,
     CourseReleaseScreen,
@@ -34,6 +36,8 @@ __all__ = [
     "QrLoginToken",
     "UserSession",
     "Course",
+    "Competency",
+    "CourseCompetency",
     "CourseLesson",
     "LessonTask",
     "CourseRelease",

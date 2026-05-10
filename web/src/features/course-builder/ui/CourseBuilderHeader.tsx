@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { toUserErrorMessage } from "@/shared/lib/api-error";
 
 import { useCourseBuilderStore } from "../store";
+import { CourseCompetenciesDialog } from "./competencies/CourseCompetenciesDialog";
 
 import styles from "./CourseBuilderHeader.module.css";
 
@@ -29,6 +30,7 @@ export function CourseBuilderHeader() {
     course?.description || "",
   );
   const [coverBusy, setCoverBusy] = useState(false);
+  const [competenciesOpen, setCompetenciesOpen] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const showSaved = Boolean(lastSavedAt && !isDirty);
@@ -288,6 +290,14 @@ export function CourseBuilderHeader() {
 
               <button
                 className={styles.btn}
+                onClick={() => setCompetenciesOpen(true)}
+                disabled={!course}
+              >
+                Компетенции
+              </button>
+
+              <button
+                className={styles.btn}
                 onClick={() => void handleCoverRemove()}
                 disabled={coverBusy || !course}
               >
@@ -394,6 +404,13 @@ export function CourseBuilderHeader() {
           </div>
         </div>
       )}
+
+      {competenciesOpen && course ? (
+        <CourseCompetenciesDialog
+          courseId={course.id}
+          onClose={() => setCompetenciesOpen(false)}
+        />
+      ) : null}
     </header>
   );
 }

@@ -1,14 +1,19 @@
 import hashlib
 import json
+import re
 from collections import deque
 from datetime import datetime, timezone
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from markdownify import markdownify as _html_to_markdown
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.api.schemas import (
     BulkCourseStructureIn,
+    CompetencyCreateIn,
+    CourseCompetenciesUpdateIn,
     CourseCreateIn,
     CourseListQuery,
     CourseReleaseCreateIn,
@@ -18,7 +23,10 @@ from app.modules.catalog.api.schemas import (
 )
 from app.modules.catalog.domain.errors import CatalogError
 from app.modules.catalog.infra.models import (
+    Competency,
     Course,
+    CourseCompetency,
+    CourseCompetencyType,
     CourseLesson,
     CourseRelease,
     CourseReleaseScreen,
@@ -28,6 +36,7 @@ from app.modules.catalog.infra.models import (
     ReleaseStatus,
 )
 from app.modules.catalog.infra.repository import CatalogRepository
+from app.modules.simulation.infra.models import SimulationLibraryItem
 
 
 def _utcnow() -> datetime:
@@ -41,6 +50,20 @@ def _normalize_slug(value: str) -> str:
     return normalized
 
 
+INITIAL_COMPETENCIES = (
+    ("gosuslugi", "Госуслуги", "Работа с порталом и приложением Госуслуги", "Госуслуги"),
+    ("banking", "Онлайн-банкинг", "Безопасная работа с банковскими сервисами", "Финансы"),
+    ("messengers", "Мессенджеры", "Общение и обмен файлами в мессенджерах", "Коммуникация"),
+    ("security", "Кибербезопасность", "Пароли, мошенничество и защита данных", "Безопасность"),
+)
+
+
+def _normalize_competency_key(title: str) -> str:
+    normalized = re.sub(r"[^a-z0-9-]+", "-", title.strip().lower())
+    normalized = re.sub(r"-+", "-", normalized).strip("-")
+    return normalized or f"competency-{uuid4().hex[:8]}"
+
+
 def _checksum_payload(payload: dict[str, Any]) -> str:
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
@@ -48,6 +71,331 @@ def _checksum_payload(payload: dict[str, Any]) -> str:
 
 def _is_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _html_to_markdown_safe(html: str) -> str:
+    if not html.strip():
+        return ""
+    return _html_to_markdown(html, heading_style="ATX", strip=["script", "style"]).strip()
+
+
+def _normalize_quiz_questions(questions: list[Any]) -> list[dict[str, Any]]:
+    """Normalize builder-produced quiz payload to the mobile client contract.
+
+    The course-builder stores questions as
+    ``{"question", "options": [{"text", "correct"}]}`` but mobile's
+    ``QuizQuestion`` model expects ``{"id", "text", "options": [{"id", "text"}]}``
+    plus a ``correct_option_id`` / ``correct_option_ids`` pointer. Inline
+    conversion here keeps the published release shape backwards-compatible
+    and prevents kotlinx-serialization errors on the device.
+    """
+    normalized: list[dict[str, Any]] = []
+    for q_index, raw in enumerate(questions):
+        if not isinstance(raw, dict):
+            continue
+
+        q_id = str(raw.get("id") or f"q_{q_index + 1}")
+        q_text = str(raw.get("text") or raw.get("question") or "").strip()
+        explanation = raw.get("explanation") if raw.get("explanation") else None
+
+        options_raw = raw.get("options")
+        if not isinstance(options_raw, list):
+            options_raw = []
+
+        normalized_options: list[dict[str, str]] = []
+        detected_correct_ids: list[str] = []
+        for o_index, option in enumerate(options_raw):
+            if isinstance(option, str):
+                opt_id = f"{q_id}_opt_{o_index + 1}"
+                normalized_options.append({"id": opt_id, "text": option})
+                continue
+            if not isinstance(option, dict):
+                continue
+            opt_id = str(option.get("id") or f"{q_id}_opt_{o_index + 1}")
+            opt_text = str(option.get("text") or "")
+            normalized_options.append({"id": opt_id, "text": opt_text})
+            if bool(option.get("correct")) or bool(option.get("is_correct")):
+                detected_correct_ids.append(opt_id)
+
+        q_type = str(raw.get("type") or "").lower()
+        if q_type not in {"single_choice", "multiple_choice"}:
+            q_type = "multiple_choice" if len(detected_correct_ids) > 1 else "single_choice"
+
+        if q_type == "multiple_choice":
+            explicit_ids = raw.get("correct_option_ids") or raw.get("correctOptionIds")
+            if isinstance(explicit_ids, list) and explicit_ids:
+                correct_ids = [str(x) for x in explicit_ids]
+            else:
+                correct_ids = detected_correct_ids
+            normalized.append(
+                {
+                    "type": "multiple_choice",
+                    "id": q_id,
+                    "text": q_text,
+                    "explanation": explanation,
+                    "options": normalized_options,
+                    "correct_option_ids": correct_ids,
+                }
+            )
+            continue
+
+        # single_choice
+        explicit_id = raw.get("correct_option_id") or raw.get("correctOptionId")
+        if explicit_id:
+            correct_id = str(explicit_id)
+        elif detected_correct_ids:
+            correct_id = detected_correct_ids[0]
+        elif normalized_options:
+            correct_id = normalized_options[0]["id"]
+        else:
+            correct_id = ""
+        normalized.append(
+            {
+                "type": "single_choice",
+                "id": q_id,
+                "text": q_text,
+                "explanation": explanation,
+                "options": normalized_options,
+                "correct_option_id": correct_id,
+            }
+        )
+    return normalized
+
+
+def _task_to_screen_payload(task: LessonTask, lesson: CourseLesson) -> dict[str, Any]:
+    body = dict(task.payload_json or {})
+
+    if task.task_type == "theory_text":
+        payload: dict[str, Any] = {
+            "type": "article",
+            "markdown_content": _html_to_markdown_safe(str(body.get("content", ""))),
+            "assets": list(body.get("assets", [])) if isinstance(body.get("assets"), list) else [],
+        }
+    elif task.task_type == "cheat_sheet":
+        payload = {
+            "type": "cheat_sheet",
+            "content": _html_to_markdown_safe(str(body.get("content", ""))),
+        }
+    elif task.task_type == "theory_video":
+        duration = body.get("duration_sec") or body.get("duration") or 0
+        try:
+            duration_sec = int(duration)
+        except (TypeError, ValueError):
+            duration_sec = 0
+        payload = {
+            "type": "video",
+            "video_url": str(body.get("video_url", "")),
+            "duration_sec": duration_sec,
+            "transcript": body.get("transcript"),
+        }
+    elif task.task_type == "quiz":
+        questions = body.get("questions", [])
+        if not isinstance(questions, list):
+            questions = []
+        payload = {
+            "type": "quiz",
+            "questions": _normalize_quiz_questions(questions),
+        }
+    elif task.task_type == "simulation":
+        config = body.get("config") if isinstance(body.get("config"), dict) else {}
+        hotspots = config.get("hotspots", []) if isinstance(config.get("hotspots"), list) else []
+        payload = {
+            "type": "simulation",
+            "image_url": str(config.get("image_url", body.get("image_url", ""))),
+            "hotspots": hotspots,
+            "is_start": bool(config.get("is_start", False)),
+            "is_completion": bool(config.get("is_completion", False)),
+            "context_ref": config.get("context_ref"),
+        }
+    else:
+        payload = {
+            "type": "unknown",
+            "raw": json.dumps(body, ensure_ascii=False),
+        }
+
+    payload["lesson_id"] = str(lesson.id)
+    payload["lesson_title"] = lesson.title
+    payload["task_id"] = str(task.id)
+    payload["task_type"] = task.task_type
+    return payload
+
+
+def _coerce_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _expand_library_simulation(
+    task: LessonTask,
+    lesson: CourseLesson,
+    library_item: SimulationLibraryItem,
+    base_screen_key: str,
+    base_order: int,
+) -> list[dict[str, Any]]:
+    """Flatten a multi-screen simulation library item into release screens.
+
+    Returns a list of ``{"screen_key", "title", "order_index", "payload", "checksum"}``
+    dicts with cross-screen ``target_screen_key`` hotspots preserved.
+    """
+    raw_payload = library_item.payload_json or {}
+    library_screens = raw_payload.get("screens") or []
+    if not isinstance(library_screens, list) or not library_screens:
+        return []
+
+    start_screen_id = raw_payload.get("startScreenId")
+
+    # Reorder so the declared startScreenId comes first; mobile's player uses
+    # the first simulation screen with is_start=true as the entry point.
+    if start_screen_id:
+        library_screens = sorted(
+            library_screens,
+            key=lambda s: 0 if s.get("id") == start_screen_id else 1,
+        )
+
+    library_id_to_key: dict[str, str] = {}
+    for index, screen in enumerate(library_screens):
+        library_id = str(screen.get("id") or f"idx_{index}")
+        library_id_to_key[library_id] = f"{base_screen_key}_sim_{index}"
+
+    results: list[dict[str, Any]] = []
+    for index, screen in enumerate(library_screens):
+        library_id = str(screen.get("id") or f"idx_{index}")
+        screen_key = library_id_to_key[library_id]
+
+        hotspots_raw = screen.get("hotspots") or []
+        hotspots: list[dict[str, Any]] = []
+        if isinstance(hotspots_raw, list):
+            for hotspot in hotspots_raw:
+                if not isinstance(hotspot, dict):
+                    continue
+                target_library_id = hotspot.get("targetScreenId")
+                target_screen_key = (
+                    library_id_to_key.get(str(target_library_id))
+                    if target_library_id
+                    else None
+                )
+                hotspots.append(
+                    {
+                        "x": _coerce_float(hotspot.get("x")),
+                        "y": _coerce_float(hotspot.get("y")),
+                        "width": _coerce_float(hotspot.get("width")),
+                        "height": _coerce_float(hotspot.get("height")),
+                        "label": str(hotspot.get("label") or ""),
+                        "hint": str(hotspot.get("hint") or ""),
+                        "target_screen_key": target_screen_key,
+                    }
+                )
+
+        payload: dict[str, Any] = {
+            "type": "simulation",
+            "image_url": str(screen.get("imageUrl") or ""),
+            "hotspots": hotspots,
+            "is_start": library_id == start_screen_id or (index == 0 and not start_screen_id),
+            "is_completion": bool(screen.get("isCompletion")),
+            "context_ref": str(library_item.id),
+            "lesson_id": str(lesson.id),
+            "lesson_title": lesson.title,
+            "task_id": str(task.id),
+            "task_type": task.task_type,
+        }
+        title = str(screen.get("title") or screen.get("key") or task.title)
+        results.append(
+            {
+                "screen_key": screen_key,
+                "title": title,
+                "order_index": base_order + index,
+                "payload": payload,
+            }
+        )
+    return results
+
+
+def _build_task_release_screens(
+    task: LessonTask,
+    lesson: CourseLesson,
+    db: Session,
+    base_order: int,
+) -> list[dict[str, Any]]:
+    """Produce the release-screen records for a single lesson task.
+
+    Normally a task maps to exactly one release screen. Simulation tasks that
+    reference a reusable ``SimulationLibraryItem`` are expanded into one
+    release screen per library screen so the mobile player can walk the
+    simulation graph using ``target_screen_key`` hotspots.
+    """
+    base_screen_key = f"lesson_{lesson.order_index}_task_{task.order_index}"
+
+    if task.task_type == "simulation":
+        config = (task.payload_json or {}).get("config")
+        library_item_id = None
+        if isinstance(config, dict):
+            library_item_id = config.get("library_item_id") or config.get("simulation_id")
+        if library_item_id:
+            try:
+                library_uuid = UUID(str(library_item_id))
+            except (TypeError, ValueError):
+                library_uuid = None
+            if library_uuid is not None:
+                library_item = db.scalar(
+                    select(SimulationLibraryItem).where(SimulationLibraryItem.id == library_uuid)
+                )
+                if library_item is not None:
+                    expanded = _expand_library_simulation(
+                        task=task,
+                        lesson=lesson,
+                        library_item=library_item,
+                        base_screen_key=base_screen_key,
+                        base_order=base_order,
+                    )
+                    if expanded:
+                        return expanded
+
+    # Fallback: single inline screen from task payload.
+    payload = _task_to_screen_payload(task, lesson)
+    return [
+        {
+            "screen_key": base_screen_key,
+            "title": task.title,
+            "order_index": base_order,
+            "payload": payload,
+        }
+    ]
+
+
+def _screen_payload_to_task_body(screen_payload: dict[str, Any]) -> dict[str, Any]:
+    body = dict(screen_payload or {})
+    for key in ("type", "lesson_id", "lesson_title", "task_id", "task_type"):
+        body.pop(key, None)
+
+    screen_type = screen_payload.get("type")
+    if screen_type == "article":
+        return {
+            "content": str(screen_payload.get("markdown_content", "")),
+            **({"assets": screen_payload["assets"]} if isinstance(screen_payload.get("assets"), list) else {}),
+        }
+    if screen_type == "cheat_sheet":
+        return {"content": str(screen_payload.get("content", ""))}
+    if screen_type == "video":
+        return {
+            "video_url": str(screen_payload.get("video_url", "")),
+            "duration_sec": int(screen_payload.get("duration_sec", 0) or 0),
+            "transcript": screen_payload.get("transcript"),
+        }
+    if screen_type == "simulation":
+        return {
+            "config": {
+                "image_url": screen_payload.get("image_url"),
+                "hotspots": screen_payload.get("hotspots", []),
+                "is_start": screen_payload.get("is_start", False),
+                "is_completion": screen_payload.get("is_completion", False),
+                "context_ref": screen_payload.get("context_ref"),
+            }
+        }
+    if screen_type == "quiz":
+        return {"questions": screen_payload.get("questions", [])}
+    return body
 
 
 class CatalogService:
@@ -61,6 +409,81 @@ class CatalogService:
             include_archived=query.include_archived,
             author_id=author_id,
         )
+
+    def list_competencies(self) -> list[Competency]:
+        self.ensure_initial_competencies()
+        return self.repo.list_competencies()
+
+    def create_competency(self, payload: CompetencyCreateIn) -> Competency:
+        self.ensure_initial_competencies()
+        title = payload.title.strip()
+        if self.repo.get_competency_by_title(title) is not None:
+            raise CatalogError("Competency title already exists.", status_code=409)
+
+        base_key = _normalize_competency_key(title)
+        key = base_key
+        while self.repo.get_competency(key) is not None:
+            key = f"{base_key}-{uuid4().hex[:6]}"
+
+        return self.repo.create_competency(
+            key=key,
+            title=title,
+            description=payload.description.strip() if payload.description else None,
+            category=payload.category.strip() if payload.category else None,
+        )
+
+    def ensure_initial_competencies(self) -> None:
+        for key, title, description, category in INITIAL_COMPETENCIES:
+            if self.repo.get_competency(key) is None:
+                self.repo.create_competency(
+                    key=key,
+                    title=title,
+                    description=description,
+                    category=category,
+                )
+
+    def set_competency_active(self, key: str, *, is_active: bool) -> Competency:
+        competency = self.repo.get_competency(key)
+        if competency is None:
+            raise CatalogError("Competency not found.", status_code=404)
+        return self.repo.update_competency_active(competency, is_active)
+
+    def list_course_competencies(self, course_id: UUID) -> list[CourseCompetency]:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        self.ensure_initial_competencies()
+        return self.repo.list_course_competencies(course_id)
+
+    def replace_course_competencies(
+        self,
+        course_id: UUID,
+        payload: CourseCompetenciesUpdateIn,
+    ) -> list[CourseCompetency]:
+        course = self.repo.get_course_by_id(course_id)
+        if course is None:
+            raise CatalogError("Course not found.", status_code=404)
+        self.ensure_initial_competencies()
+
+        seen_keys: set[str] = set()
+        rows: list[dict[str, str]] = []
+        for item in payload.items:
+            if item.competency_key in seen_keys:
+                raise CatalogError("Competency links must be unique per course.", status_code=422)
+            competency = self.repo.get_competency(item.competency_key)
+            if competency is None or not competency.is_active:
+                raise CatalogError("Competency not found.", status_code=404)
+            if item.course_type not in {value.value for value in CourseCompetencyType}:
+                raise CatalogError("Invalid course competency type.", status_code=422)
+            seen_keys.add(item.competency_key)
+            rows.append(
+                {
+                    "competency_key": item.competency_key,
+                    "course_type": item.course_type,
+                }
+            )
+
+        return self.repo.replace_course_competencies(course_id=course.id, items=rows)
 
     def create_course(self, payload: CourseCreateIn, author_id: UUID | None = None) -> Course:
         slug = _normalize_slug(payload.slug)
@@ -684,22 +1107,17 @@ class CatalogService:
         for lesson in lessons:
             tasks = self.repo.list_tasks_by_lesson(lesson.id)
             for task in tasks:
-                screen_key = f"lesson_{lesson.order_index}_task_{task.order_index}"
-                self.repo.add_release_screen(
-                    release_id=release.id,
-                    screen_key=screen_key,
-                    title=task.title,
-                    order_index=order,
-                    payload={
-                        "lesson_id": str(lesson.id),
-                        "lesson_title": lesson.title,
-                        "task_id": str(task.id),
-                        "task_type": task.task_type,
-                        "content": task.payload_json,
-                    },
-                    checksum=_checksum_payload(task.payload_json),
-                )
-                order += 1
+                screens = _build_task_release_screens(task, lesson, self.db, base_order=order)
+                for screen in screens:
+                    self.repo.add_release_screen(
+                        release_id=release.id,
+                        screen_key=screen["screen_key"],
+                        title=screen["title"],
+                        order_index=screen["order_index"],
+                        payload=screen["payload"],
+                        checksum=_checksum_payload(screen["payload"]),
+                    )
+                    order = screen["order_index"] + 1
 
         course.status = CourseStatus.ACTIVE.value
         return release
@@ -746,10 +1164,7 @@ class CatalogService:
                 )
                 restored_task_order[lesson_key] = 0
 
-            task_payload = payload.get("content")
-            if not isinstance(task_payload, dict):
-                task_payload = {}
-
+            task_payload = _screen_payload_to_task_body(payload)
             task_type = str(payload.get("task_type") or "theory_text")
             task_title = screen.title.strip() if screen.title else "Восстановленный блок"
 

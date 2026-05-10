@@ -42,6 +42,31 @@ class TaskType(str, enum.Enum):
     CHEAT_SHEET = "cheat_sheet"
 
 
+class CourseCompetencyType(str, enum.Enum):
+    FOUNDATION = "foundation"
+    PRACTICE = "practice"
+    ADDITIONAL = "additional"
+
+
+class Competency(Base):
+    __tablename__ = "competencies"
+
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    title: Mapped[str] = mapped_column(String(160), unique=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        onupdate=_utcnow,
+        nullable=False,
+    )
+
+
 class Course(Base):
     __tablename__ = "courses"
 
@@ -87,6 +112,33 @@ class CourseFavorite(Base):
         ForeignKey("courses.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+
+class CourseCompetency(Base):
+    __tablename__ = "course_competencies"
+    __table_args__ = (
+        UniqueConstraint("course_id", "competency_key", name="uq_course_competency"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    course_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    competency_key: Mapped[str] = mapped_column(
+        String(80),
+        ForeignKey("competencies.key", ondelete="RESTRICT"),
+        index=True,
+        nullable=False,
+    )
+    course_type: Mapped[str] = mapped_column(
+        String(24), default=CourseCompetencyType.FOUNDATION.value, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
