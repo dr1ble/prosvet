@@ -7,5 +7,6 @@ import androidx.compose.ui.Modifier
 internal expect fun QrScannerViewport(
     onScanSuccess: (String) -> Unit,
     onScanError: (String) -> Unit,
+    resetKey: Any = Unit,
     modifier: Modifier = Modifier,
 )

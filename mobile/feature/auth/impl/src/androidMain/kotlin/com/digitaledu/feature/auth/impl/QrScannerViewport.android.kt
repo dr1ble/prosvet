@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal actual fun QrScannerViewport(
     onScanSuccess: (String) -> Unit,
     onScanError: (String) -> Unit,
+    resetKey: Any,
     modifier: Modifier,
 ) {
     val context = LocalContext.current
@@ -57,7 +58,7 @@ internal actual fun QrScannerViewport(
             .build()
     }
     val barcodeScanner = remember { BarcodeScanning.getClient(scannerOptions) }
-    val handledScan = remember { AtomicBoolean(false) }
+    val handledScan = remember(resetKey) { AtomicBoolean(false) }
 
     var hasCameraPermission by remember {
         mutableStateOf(

@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 internal actual fun QrScannerViewport(
     onScanSuccess: (String) -> Unit,
     onScanError: (String) -> Unit,
+    resetKey: Any,
     modifier: Modifier,
 ) {
     Box(
