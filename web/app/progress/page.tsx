@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { fetchAdminAuthMeServer } from "@/features/auth/server";
 import { fetchCourses } from "@/features/catalog/api";
 import { fetchGroups, fetchGroupUsers } from "@/features/groups/api";
-import { fetchProgressOverview } from "@/features/progress/api";
+import {
+  fetchLessonAnalyticsOverview,
+  fetchProgressOverview,
+} from "@/features/progress/api";
 import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
 import { buildRefreshRedirectHref } from "@/shared/auth/refresh-redirect";
 import { resolveLanguage } from "@/shared/i18n/lang";
@@ -90,16 +93,21 @@ export default async function ProgressPage({
     redirect(`/dashboard?lang=${language}`);
   }
 
-  const [groups, users, courses, rows] = await Promise.all([
-    fetchGroups(accessToken),
-    fetchGroupUsers(accessToken),
-    fetchCourses(accessToken),
-    fetchProgressOverview(accessToken, {
-      groupId: params.groupId,
-      courseId: params.courseId,
-      userId: params.userId,
-    }),
-  ]);
+  const [groups, users, courses, rows, lessonAnalyticsRows] = await Promise.all(
+    [
+      fetchGroups(accessToken),
+      fetchGroupUsers(accessToken),
+      fetchCourses(accessToken),
+      fetchProgressOverview(accessToken, {
+        groupId: params.groupId,
+        courseId: params.courseId,
+        userId: params.userId,
+      }),
+      fetchLessonAnalyticsOverview(accessToken, {
+        courseId: params.courseId,
+      }),
+    ],
+  );
 
   const uniqueUsers = users.filter(
     (user, index, list) =>
@@ -263,6 +271,54 @@ export default async function ProgressPage({
           </p>
         </div>
       </header>
+
+      <section className={styles.panel}>
+        <div className={styles.filtersHead}>
+          <div>
+            <h2 className={styles.panelTitle}>Аналитика по урокам</h2>
+            <p className={styles.muted}>
+              Облегченная сессионная аналитика: время, ошибки и доля сложных
+              прохождений.
+            </p>
+          </div>
+        </div>
+        {lessonAnalyticsRows.length === 0 ? (
+          <DataState
+            compact
+            title="Нет данных"
+            description="Сессии уроков пока не зафиксированы. Данные появятся после прохождений в мобильном приложении."
+          />
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Курс</th>
+                  <th>Урок</th>
+                  <th>Сессий</th>
+                  <th>Завершено</th>
+                  <th>Ср. время, сек</th>
+                  <th>Ср. ошибок</th>
+                  <th>Подсказка L3</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lessonAnalyticsRows.slice(0, 15).map((row) => (
+                  <tr key={row.lesson_id}>
+                    <td>{row.course_title}</td>
+                    <td>{row.lesson_title}</td>
+                    <td>{row.sessions_count}</td>
+                    <td>{row.completed_sessions_count}</td>
+                    <td>{Math.round(row.avg_duration_seconds)}</td>
+                    <td>{row.avg_error_attempts.toFixed(2)}</td>
+                    <td>{Math.round(row.hint_level3_share * 100)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section className={styles.panel}>
         <div className={styles.kpiGrid}>

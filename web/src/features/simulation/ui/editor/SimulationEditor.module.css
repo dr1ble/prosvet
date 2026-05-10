@@ -119,6 +119,22 @@
   color: var(--text-tertiary, #999);
 }
 
+.titleInputError {
+  border-color: var(--color-error, #ef4444) !important;
+  background: var(--color-error-bg, #fef2f2) !important;
+}
+
+.titleInputError:focus {
+  border-color: var(--color-error, #ef4444) !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+}
+
+.titleErrorHint {
+  font-size: 11px;
+  color: var(--color-error, #ef4444);
+  margin-top: 2px;
+}
+
 .button {
   padding: 6px 14px;
   font-size: 13px;

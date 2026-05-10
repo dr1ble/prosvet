@@ -251,6 +251,8 @@
   border: 1px solid rgba(42, 70, 96, 0.22);
   background: #fff;
   padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
 }
 
 .btn {
@@ -259,7 +261,9 @@
   border: 1px solid rgba(42, 70, 96, 0.2);
   background: #fff;
   padding: 0 12px;
-  font-weight: 700;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 

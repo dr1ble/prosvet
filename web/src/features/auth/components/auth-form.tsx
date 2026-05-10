@@ -35,26 +35,6 @@ export function AuthForm({ language }: AuthFormProps) {
     }
   };
 
-  const quickLogin = async (roleLogin: string, rolePassword: string) => {
-    setPending(true);
-    setError(null);
-    try {
-      await loginAdmin(roleLogin, rolePassword);
-      window.location.assign(`/dashboard?lang=${language}`);
-    } catch (requestError) {
-      setError(toUserErrorMessage(requestError, messages.auth.signInError));
-    } finally {
-      setPending(false);
-    }
-  };
-
-  const quickRoles = [
-    { label: "Админ", login: "admin", password: "admin12345" },
-    { label: "Методолог", login: "methodologist", password: "method12345" },
-    { label: "Модератор", login: "moderator", password: "moder12345" },
-    { label: "Пользователь", login: "user", password: "user12345" },
-  ];
-
   return (
     <>
       <form className={styles.form} onSubmit={handleSignIn}>
@@ -84,22 +64,6 @@ export function AuthForm({ language }: AuthFormProps) {
         </button>
       </form>
       {error && <p className={styles.error}>{error}</p>}
-      <div className={styles.quickLogin}>
-        <span className={styles.quickLoginLabel}>Быстрый вход:</span>
-        <div className={styles.quickLoginButtons}>
-          {quickRoles.map((role) => (
-            <button
-              key={role.login}
-              type="button"
-              className={styles.quickLoginBtn}
-              disabled={pending}
-              onClick={() => quickLogin(role.login, role.password)}
-            >
-              {role.label}
-            </button>
-          ))}
-        </div>
-      </div>
     </>
   );
 }

@@ -168,7 +168,7 @@ export function PublishDialog({
         ) {
           foundWarnings.push({
             type: "empty_cheat_sheet",
-            message: `Шпаргалка "${task.title || "без названия"}" пуста`,
+            message: `Памятка "${task.title || "без названия"}" пуста`,
             lessonId: lesson.id || undefined,
             taskId: task.id || undefined,
             taskTitle: task.title,

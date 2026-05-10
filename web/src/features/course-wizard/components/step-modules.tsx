@@ -10,7 +10,7 @@ const TASK_TYPE_OPTIONS: { value: TaskType; label: string }[] = [
   { value: "theory_video", label: "Видео" },
   { value: "quiz", label: "Тест" },
   { value: "simulation", label: "Симуляция" },
-  { value: "cheat_sheet", label: "Шпаргалка" },
+  { value: "cheat_sheet", label: "Памятка" },
 ];
 
 type StepModulesProps = {

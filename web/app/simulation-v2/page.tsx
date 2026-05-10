@@ -120,7 +120,7 @@ export default async function SimulationV2Page({
   const selectedCourse = params.courseId
     ? courses.find((course) => course.id === params.courseId)
     : null;
-  const selectedCourseId = selectedCourse?.id ?? params.courseId ?? null;
+  const selectedCourseId = selectedCourse?.id ?? null;
   const scopeLabel = formatScopeLabel(language, scope, selectedCourse?.title);
 
   return (

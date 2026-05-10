@@ -164,7 +164,7 @@ function TaskEditor({
     case "cheat_sheet":
       return (
         <div className={styles.textField}>
-          <label>Содержание шпаргалки</label>
+          <label>Содержание памятки</label>
           <RichTextEditor
             value={(task.payload.content as string) || ""}
             onChange={(html) =>
@@ -172,7 +172,7 @@ function TaskEditor({
                 payload: { ...task.payload, content: html },
               })
             }
-            placeholder="Текст шпаргалки..."
+            placeholder="Текст памятки..."
           />
         </div>
       );

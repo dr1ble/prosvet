@@ -632,11 +632,10 @@ export function AppMediaTab({
                             Boolean(deletingScreenIds[screen.id])
                           }
                           onBlur={async (event) => {
-                            const nextName = event.currentTarget.value.trim();
+                            const input = event.currentTarget;
+                            const nextName = input.value.trim();
                             if (!nextName) {
-                              event.currentTarget.value = stripExtension(
-                                screen.filename,
-                              );
+                              input.value = stripExtension(screen.filename);
                               return;
                             }
                             if (nextName === stripExtension(screen.filename)) {

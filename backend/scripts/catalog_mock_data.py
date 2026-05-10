@@ -3,8 +3,11 @@ import hashlib
 import json
 import os
 import sys
+import urllib.error
+import urllib.request
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -12,6 +15,7 @@ from sqlalchemy import delete, select
 # Add the backend root to the python path.
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
+from app.core.config import settings  # noqa: E402
 from app.modules.catalog.infra.models import (  # noqa: E402
     Course,
     CourseLesson,
@@ -32,6 +36,77 @@ TARGET_SLUGS = [
     "zhkh-payments-and-meters",
     "cybersecurity-scam-protection",
 ]
+
+COVER_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
+
+
+def _catalog_covers_dir() -> Path:
+    """Mirror of ``app.modules.catalog.api.router._catalog_covers_dir``."""
+    return Path(settings.simulation_media_dir).resolve().parent / "catalog_covers"
+
+
+def _existing_cover_path(slug: str) -> Path | None:
+    covers_dir = _catalog_covers_dir()
+    for extension in COVER_EXTENSIONS:
+        candidate = covers_dir / f"{slug}{extension}"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _detect_image_extension(payload: bytes) -> str:
+    if payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if payload[:2] == b"\xff\xd8":
+        return ".jpg"
+    if payload[:4] == b"RIFF" and payload[8:12] == b"WEBP":
+        return ".webp"
+    return ".jpg"  # best-effort default
+
+
+def _download_course_cover(slug: str, url: str) -> Path | None:
+    covers_dir = _catalog_covers_dir()
+    covers_dir.mkdir(parents=True, exist_ok=True)
+
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) "
+                "Gecko/20100101 Firefox/127.0"
+            ),
+            "Accept": "image/webp,image/png,image/jpeg;q=0.9,*/*;q=0.5",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:  # noqa: S310
+            data = response.read()
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        print(f"[warn] failed to download cover for {slug}: {exc}")
+        return None
+
+    if not data:
+        print(f"[warn] empty cover payload for {slug}, skipping")
+        return None
+
+    # Remove any previous variant to keep the directory clean.
+    for extension in COVER_EXTENSIONS:
+        previous = covers_dir / f"{slug}{extension}"
+        if previous.exists():
+            previous.unlink()
+
+    extension = _detect_image_extension(data)
+    destination = covers_dir / f"{slug}{extension}"
+    destination.write_bytes(data)
+    return destination
+
+
+def _delete_course_cover(slug: str) -> bool:
+    cover_path = _existing_cover_path(slug)
+    if cover_path is None:
+        return False
+    cover_path.unlink(missing_ok=True)
+    return True
 
 
 def _utcnow() -> datetime:
@@ -126,6 +201,7 @@ def _course(
     video_transcript: str,
     simulation_title: str,
     image_url: str,
+    cover_image_url: str,
     hotspots: list[dict[str, Any]],
     quiz_question: str,
     quiz_answer: str,
@@ -135,6 +211,7 @@ def _course(
         "slug": slug,
         "title": title,
         "description": description,
+        "cover_image_url": cover_image_url,
         "status": CourseStatus.ACTIVE.value,
         "version": "1.0.0",
         "changelog": "Первая публикация: полный мобильный демо-флоу курса.",
@@ -247,6 +324,7 @@ def _course_blueprints() -> list[dict[str, Any]]:
             video_transcript="Показываем, где искать медицинские услуги и как не перепутать дату приема.",
             simulation_title="Симуляция: подтверждение записи",
             image_url="https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=1280&q=80",
+            cover_image_url="https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Gosuslugi.svg/1280px-Gosuslugi.svg.png",
             hotspots=[
                 _hotspot(18, 24, 30, 10, "Проверить регион", "Сначала убедитесь, что выбран ваш регион."),
                 _hotspot(62, 78, 24, 9, "Подтвердить запись", "Проверьте врача, дату и время перед подтверждением."),
@@ -264,6 +342,7 @@ def _course_blueprints() -> list[dict[str, Any]]:
             video_transcript="Объясняем три проверки перед переводом и почему нельзя сообщать коды из SMS.",
             simulation_title="Симуляция: перевод по номеру",
             image_url="https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=1280&q=80",
+            cover_image_url="https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&w=1200&q=80",
             hotspots=[
                 _hotspot(14, 29, 34, 11, "Проверить получателя", "Сверьте имя получателя до отправки."),
                 _hotspot(59, 74, 27, 10, "Подтвердить перевод", "Подтверждайте только если сумма и имя верны."),
@@ -281,6 +360,7 @@ def _course_blueprints() -> list[dict[str, Any]]:
             video_transcript="Показываем, чем отличаются личные сообщения, группы и видеозвонки.",
             simulation_title="Симуляция: отправка сообщения",
             image_url="https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1280&q=80",
+            cover_image_url="https://images.unsplash.com/photo-1611746872915-64382b5c76da?auto=format&fit=crop&w=1200&q=80",
             hotspots=[
                 _hotspot(19, 30, 36, 10, "Выбрать чат", "Откройте нужный чат по имени человека."),
                 _hotspot(58, 78, 28, 9, "Отправить сообщение", "Проверьте текст перед отправкой."),
@@ -298,6 +378,7 @@ def _course_blueprints() -> list[dict[str, Any]]:
             video_transcript="Показываем, как сверять лицевой счет и период начисления.",
             simulation_title="Симуляция: оплата квитанции",
             image_url="https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1280&q=80",
+            cover_image_url="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=80",
             hotspots=[
                 _hotspot(13, 31, 36, 12, "Проверить лицевой счет", "Сверьте номер счета с бумажной квитанцией."),
                 _hotspot(61, 77, 26, 10, "Оплатить", "Перед оплатой проверьте период и сумму."),
@@ -315,6 +396,7 @@ def _course_blueprints() -> list[dict[str, Any]]:
             video_transcript="Разбираем типичные фразы мошенников и безопасный порядок действий.",
             simulation_title="Симуляция: подозрительное сообщение",
             image_url="https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1280&q=80",
+            cover_image_url="https://images.unsplash.com/photo-1614064641938-3bbee52942c7?auto=format&fit=crop&w=1200&q=80",
             hotspots=[
                 _hotspot(20, 28, 38, 11, "Проверить отправителя", "Не доверяйте просьбам о деньгах без проверки."),
                 _hotspot(61, 76, 23, 9, "Сообщить близким", "Перезвоните человеку по знакомому номеру."),
@@ -356,6 +438,12 @@ def seed_mock_catalog_courses() -> None:
                 course.status = CourseStatus.ACTIVE.value
                 course.updated_at = now
                 print(f"[update] course: {slug}")
+
+            cover_image_url = blueprint.get("cover_image_url")
+            if cover_image_url:
+                destination = _download_course_cover(slug, cover_image_url)
+                if destination is not None:
+                    print(f"[cover]  saved {destination.name} for {slug}")
 
             release = db.scalar(
                 select(CourseRelease).where(
@@ -461,6 +549,10 @@ def cleanup_mock_catalog_courses(dry_run: bool = False) -> None:
         db.execute(delete(Course).where(Course.slug.in_(TARGET_SLUGS)))
         db.commit()
         print(f"Deleted {len(found_slugs)} course(s). Related releases/screens removed by cascade.")
+
+        for slug in found_slugs:
+            if _delete_course_cover(slug):
+                print(f"[cover]  removed local cover for {slug}")
     except Exception as exc:
         db.rollback()
         raise RuntimeError(f"Failed to cleanup mock courses: {exc}") from exc

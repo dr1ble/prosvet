@@ -58,6 +58,7 @@ import {
   renameSimulationMediaAssetRemote,
   resolveSimulationStoreAppRemote,
   type SimulationLibraryFilter,
+  updateSimulationLibraryItemRemote,
   uploadSimulationMediaAssetRemote,
 } from "@/features/simulation/api/client";
 import {
@@ -755,9 +756,13 @@ function SimulationEditorInner({
   const [modalMediaError, setModalMediaError] = useState<string | null>(null);
   const [modalResolvingStoreApp, setModalResolvingStoreApp] = useState(false);
   const [title, setTitle] = useState("");
+  const [titleError, setTitleError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [courseLibraryItemId, setCourseLibraryItemId] = useState<string | null>(
+    null,
+  );
   const [draftError, setDraftError] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
   const [isSidebarResizing, setIsSidebarResizing] = useState(false);
@@ -1301,6 +1306,11 @@ function SimulationEditorInner({
 
   const handleSave = useCallback(async () => {
     if (isSaving) return;
+    if (!title.trim()) {
+      setTitleError(true);
+      return;
+    }
+    setTitleError(false);
     setIsSaving(true);
     try {
       const draft = nodesEdgesToDraft(nodes, title, targetApp);
@@ -1309,13 +1319,51 @@ function SimulationEditorInner({
         setTargetApp(saved.targetApp ?? defaultTargetApp);
         setLastSavedAt(new Date().toLocaleTimeString());
       }
+
+      // When opened from a course, also persist to the simulation library
+      // so the course builder can select this simulation, then go back.
+      if (selectedCourseId) {
+        const libraryPayload = {
+          title: draft.title.trim() || "Симуляция",
+          draft,
+        };
+        try {
+          if (courseLibraryItemId) {
+            await updateSimulationLibraryItemRemote(
+              courseLibraryItemId,
+              libraryPayload,
+            );
+          } else {
+            const created = await saveSimulationLibraryItemRemote(
+              scopeKey,
+              libraryPayload,
+            );
+            setCourseLibraryItemId(created.id);
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          setDraftError(`Failed to publish to library: ${msg}`);
+          return;
+        }
+
+        window.location.assign(`/course-builder/${selectedCourseId}`);
+        return;
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       setDraftError(`Failed to save draft: ${msg}`);
     } finally {
       setIsSaving(false);
     }
-  }, [nodes, title, targetApp, scopeKey, isSaving]);
+  }, [
+    nodes,
+    title,
+    targetApp,
+    scopeKey,
+    isSaving,
+    selectedCourseId,
+    courseLibraryItemId,
+  ]);
 
   const handleExport = useCallback(() => {
     const draft = nodesEdgesToDraft(nodes, title, targetApp);
@@ -3098,12 +3146,23 @@ function SimulationEditorInner({
         <div className={styles.toolbarCenter}>
           <input
             type="text"
-            className={styles.titleInput}
+            className={`${styles.titleInput}${titleError ? ` ${styles.titleInputError}` : ""}`}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (e.target.value.trim()) setTitleError(false);
+            }}
             placeholder={labels.scenarioPlaceholder}
+            aria-invalid={titleError || undefined}
             disabled={isLoading}
           />
+          {titleError && (
+            <span className={styles.titleErrorHint}>
+              {language === "ru"
+                ? "Введите название сценария"
+                : "Scenario title is required"}
+            </span>
+          )}
         </div>
         <div className={styles.toolbarRight}>
           <button

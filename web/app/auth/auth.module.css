@@ -29,7 +29,7 @@
   left: -9%;
   width: min(46vw, 540px);
   height: min(46vw, 540px);
-  background: radial-gradient(circle at 30% 35%, #22d3ee, #2563eb 62%);
+  background: radial-gradient(circle at 30% 35%, #2170e4, #0058be 62%);
 }
 
 .blobAccent {
@@ -37,7 +37,7 @@
   bottom: -16%;
   width: min(48vw, 580px);
   height: min(48vw, 580px);
-  background: radial-gradient(circle at 60% 42%, #f59e0b, #f97316 70%);
+  background: radial-gradient(circle at 60% 42%, #6df5e1, #006b5f 70%);
   animation-delay: -6s;
 }
 
@@ -208,12 +208,23 @@
 
 .input:focus {
   outline: none;
-  border-color: #1d8cff;
-  box-shadow: 0 0 0 4px rgb(29 140 255 / 16%);
+  border-color: #0058be;
+  box-shadow: 0 0 0 4px rgb(0 88 190 / 16%);
 }
 
 .input::placeholder {
   color: #90a1b4;
+}
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a;
+  -webkit-box-shadow: 0 0 0 1000px rgb(232 240 252 / 96%) inset;
+  box-shadow: 0 0 0 1000px rgb(232 240 252 / 96%) inset;
+  caret-color: #0f172a;
+  border-color: #c5d6ea;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .button {
@@ -221,7 +232,7 @@
   height: 50px;
   border: 0;
   border-radius: 12px;
-  background: linear-gradient(135deg, #1578db, #1b4db3);
+  background: linear-gradient(135deg, #0058be, #00337a);
   color: #fff;
   font-size: 16px;
   font-weight: 700;
@@ -230,12 +241,12 @@
     transform 0.2s ease,
     box-shadow 0.2s ease,
     opacity 0.2s ease;
-  box-shadow: 0 12px 24px rgb(16 78 156 / 26%);
+  box-shadow: 0 12px 24px rgb(0 51 122 / 26%);
 }
 
 .button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 16px 30px rgb(16 78 156 / 30%);
+  box-shadow: 0 16px 30px rgb(0 51 122 / 32%);
 }
 
 .button:disabled {
@@ -288,9 +299,9 @@
 }
 
 .quickLoginBtn:hover:not(:disabled) {
-  border-color: #1d8cff;
-  background: #f0f7ff;
-  color: #1565c0;
+  border-color: #0058be;
+  background: #e8f0fc;
+  color: #00337a;
 }
 
 .quickLoginBtn:disabled {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, Library, Trash2 } from "lucide-react";
 
+import { useCourseBuilderStore } from "../../store";
 import styles from "./SimulationTaskEditor.module.css";
 
 interface SimulationLibraryItem {
@@ -26,11 +27,16 @@ export function SimulationTaskEditor({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const courseId = useCourseBuilderStore((s) => s.courseId);
+
   useEffect(() => {
     let mounted = true;
     async function loadLibrary() {
       try {
-        const response = await fetch("/api/admin/simulation/library");
+        const scopeKey = courseId ? `course:${courseId}` : "global";
+        const response = await fetch(
+          `/api/admin/simulation/library?scope_key=${encodeURIComponent(scopeKey)}`,
+        );
         if (!response.ok) {
           throw new Error("Не удалось загрузить библиотеку");
         }
@@ -52,7 +58,7 @@ export function SimulationTaskEditor({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [courseId]);
 
   const selectedId =
     value.config?.library_item_id || value.config?.simulation_id;
@@ -66,8 +72,21 @@ export function SimulationTaskEditor({
     onChange({ config: {} });
   }
 
-  function handleOpenInEditor() {
-    window.open(`/simulation-v2`, "_blank");
+  const save = useCourseBuilderStore((s) => s.save);
+  const isDirty = useCourseBuilderStore((s) => s.isDirty);
+
+  async function handleOpenInEditor() {
+    if (isDirty) {
+      try {
+        await save();
+      } catch {
+        // proceed even if save failed; user can retry
+      }
+    }
+    const url = courseId
+      ? `/simulation-v2?courseId=${encodeURIComponent(courseId)}`
+      : `/simulation-v2`;
+    window.location.assign(url);
   }
 
   if (loading) {

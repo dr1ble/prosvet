@@ -31,7 +31,7 @@ export function StepLessons({ onNext, onPrev }: StepLessonsProps) {
         <h2 className={styles.cardTitle}>Уроки</h2>
         <p className={styles.cardSubtitle}>
           Добавьте уроки курса. Каждый урок может содержать несколько модулей
-          разных типов: теория, видео, тест, симуляция, шпаргалка.
+          разных типов: теория, видео, тест, симуляция, памятка.
         </p>
       </header>
 
@@ -40,7 +40,7 @@ export function StepLessons({ onNext, onPrev }: StepLessonsProps) {
           <p className={styles.emptyTitle}>Уроков пока нет</p>
           <p className={styles.emptyDesc}>
             Добавьте первый урок — это разделы вашего курса. Каждый урок может
-            содержать текст, видео, тесты, симуляции и шпаргалки.
+            содержать текст, видео, тесты, симуляции и памятки.
           </p>
           <button
             type="button"

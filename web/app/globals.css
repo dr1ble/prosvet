@@ -4,9 +4,13 @@
   --font-display: var(--font-outfit), sans-serif;
   --font-body: var(--font-work), sans-serif;
 
-  --color-brand-500: #3b82f6;
-  --color-brand-300: #60a5fa;
-  --color-cta-500: #f97316;
+  /* Aligned with mobile Prosvet color scheme (ProsvetColorScheme.kt). */
+  --color-brand-300: #6ba4f0;
+  --color-brand-500: #0058be;
+  --color-brand-600: #004a9e;
+  --color-brand-700: #00337a;
+  --color-cta-500: #006b5f;
+  --color-cta-600: #004c44;
 
   --animate-blob: blob 8s ease-in-out infinite;
 
@@ -40,10 +44,10 @@
   --paper-200: #eef3fa;
   --paper-300: #e1e9f4;
 
-  --signal-blue: #1688ff;
-  --signal-orange: #ff7d2f;
-  --signal-green: #1fb989;
-  --signal-red: #d84343;
+  --signal-blue: #0058be;
+  --signal-orange: #924700;
+  --signal-green: #006b5f;
+  --signal-red: #ba1a1a;
 
   --surface-card: rgba(255, 255, 255, 0.92);
   --surface-muted: rgba(231, 239, 248, 0.7);
@@ -79,6 +83,10 @@
 @layer base {
   * {
     min-width: 0;
+  }
+
+  html {
+    scroll-padding-top: 88px;
   }
 
   html,

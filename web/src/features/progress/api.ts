@@ -2,6 +2,7 @@ import { apiBaseUrl } from "@/shared/config";
 import { extractApiErrorMessage } from "@/shared/lib/api-error";
 
 import type {
+  LessonAnalyticsOverviewRowDto,
   ProgressOverviewRowDto,
   ProgressTimeseriesPointDto,
 } from "./types";
@@ -74,5 +75,20 @@ export async function fetchProgressTimeseries(
     accessToken,
     path,
     "Не удалось загрузить динамику прогресса.",
+  );
+}
+
+export async function fetchLessonAnalyticsOverview(
+  accessToken: string,
+  filters: ProgressFilters,
+): Promise<LessonAnalyticsOverviewRowDto[]> {
+  const params = buildProgressParams(filters);
+  const path = params.toString()
+    ? `/progress/analytics/lessons?${params.toString()}`
+    : "/progress/analytics/lessons";
+  return fetchProgressJson<LessonAnalyticsOverviewRowDto[]>(
+    accessToken,
+    path,
+    "Не удалось загрузить аналитику по урокам.",
   );
 }
