@@ -20,6 +20,16 @@ data class LessonProgressEntry(
     val status: String,
 )
 
+data class LessonSessionAnalyticsCreate(
+    val lessonId: String,
+    val courseId: String,
+    val startedAt: String? = null,
+    val finishedAt: String? = null,
+    val errorAttempts: Int = 0,
+    val hintLevelMax: Int = 0,
+    val result: String,
+)
+
 data class MyGlossary(
     val userId: String,
     val terms: List<GlossaryTermEntry>,
@@ -52,4 +62,20 @@ data class CourseHelpRequestCreate(
     val lessonId: String? = null,
     val screenKey: String? = null,
     val screenTitle: String? = null,
+)
+
+data class CourseHelpRequestEntry(
+    val id: String,
+    val requestType: String,
+    val status: String,
+    val message: String,
+    val staffComment: String? = null,
+    val isStaffReplyUnread: Boolean = false,
+    val createdAt: String,
+    val updatedAt: String,
+)
+
+data class MyHelpRequests(
+    val requests: List<CourseHelpRequestEntry>,
+    val hasUnreadStaffReplies: Boolean,
 )

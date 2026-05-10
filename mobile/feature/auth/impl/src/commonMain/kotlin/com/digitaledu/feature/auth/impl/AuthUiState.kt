@@ -1,8 +1,7 @@
 package com.digitaledu.feature.auth.impl
 
 internal const val MIN_PASSWORD_LENGTH = 6
-internal const val PASSWORD_MIN_LENGTH_MESSAGE = "Введите 6 цифр"
-internal const val REGISTRATION_PIN_LENGTH = 6
+internal const val PASSWORD_MIN_LENGTH_MESSAGE = "Введите минимум 6 символов"
 
 data class AuthUiState(
     val login: String = "",
@@ -20,8 +19,4 @@ data class AuthUiState(
 
     val isLoginEnabled: Boolean
         get() = login.isNotBlank() && password.length >= MIN_PASSWORD_LENGTH && !isSubmitting
-}
-
-internal fun isSixDigitPin(value: String): Boolean {
-    return value.length == REGISTRATION_PIN_LENGTH && value.all { it.isDigit() }
 }

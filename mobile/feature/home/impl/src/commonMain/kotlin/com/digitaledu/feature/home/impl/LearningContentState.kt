@@ -8,7 +8,7 @@ internal fun CatalogUiState.resolveContinueCourseForLearning(): CatalogCourse? {
     val startedCourseIds = progressByCourseId
         .filterValues { progress -> progress.completedLessons > 0 && progress.completedLessons < progress.totalLessons }
         .keys
-    return courses.firstOrNull { it.id in startedCourseIds } ?: courses.firstOrNull()
+    return courses.firstOrNull { it.id in startedCourseIds }
 }
 
 internal fun filterLearningCourses(

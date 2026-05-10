@@ -136,11 +136,11 @@ internal fun RegistrationScreen(
                 ProsvetTextField(
                     value = uiState.password,
                     onValueChange = { viewModel.processIntent(RegistrationIntent.PasswordChanged(it)) },
-                    placeholder = "6 цифр",
+                    placeholder = "Минимум 6 символов",
                     isPassword = !passwordVisible,
                     isError = uiState.passwordValidationMessage != null,
                     enabled = !uiState.isSubmitting,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
                         PasswordToggle(
                             visible = passwordVisible,
@@ -168,11 +168,11 @@ internal fun RegistrationScreen(
                 ProsvetTextField(
                     value = uiState.confirmPassword,
                     onValueChange = { viewModel.processIntent(RegistrationIntent.ConfirmPasswordChanged(it)) },
-                    placeholder = "Повторите 6 цифр",
+                    placeholder = "Повторите пароль",
                     isPassword = !confirmVisible,
                     isError = uiState.confirmPassword.isNotEmpty() && !uiState.passwordsMatch,
                     enabled = !uiState.isSubmitting,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
                         PasswordToggle(
                             visible = confirmVisible,

@@ -13,6 +13,7 @@ import com.digitaledu.core.common.toUserMessage
 import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.data.progress.ProgressRepository
 import com.digitaledu.core.model.progress.CourseHelpRequestCreate
+import com.digitaledu.core.model.progress.CourseHelpRequestEntry
 import com.digitaledu.core.ui.ObserveEffects
 import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.util.BackHandler
@@ -20,8 +21,13 @@ import com.digitaledu.feature.catalog.api.CatalogEffect
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
 import com.digitaledu.feature.catalog.api.CatalogIntent
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
+import com.digitaledu.feature.diagnostics.api.DiagnosticsEffect
+import com.digitaledu.feature.diagnostics.api.DiagnosticsFeatureHost
+import com.digitaledu.feature.diagnostics.api.DiagnosticsIntent
+import com.digitaledu.feature.diagnostics.api.DiagnosticsUiEntry
 import com.digitaledu.feature.player.api.PlayerEffect
 import com.digitaledu.feature.player.api.PlayerFeatureHost
+import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.player.api.PlayerUiEntry
 import com.digitaledu.feature.profile.api.ProfileEffect
 import com.digitaledu.feature.profile.api.ProfileFeatureHost
@@ -36,9 +42,11 @@ fun HomeRoute(
     initialGroupQrToken: String?,
     onGroupQrTokenConsumed: () -> Unit,
     catalogFeatureHost: CatalogFeatureHost,
+    diagnosticsFeatureHost: DiagnosticsFeatureHost,
     playerFeatureHost: PlayerFeatureHost,
     profileFeatureHost: ProfileFeatureHost,
     catalogUiEntry: CatalogUiEntry,
+    diagnosticsUiEntry: DiagnosticsUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
     groupQrRepository: GroupQrRepository,
@@ -46,6 +54,7 @@ fun HomeRoute(
     modifier: Modifier = Modifier,
 ) {
     val catalogUiState by catalogFeatureHost.uiState.collectAsState()
+    val diagnosticsUiState by diagnosticsFeatureHost.uiState.collectAsState()
     val playerUiState by playerFeatureHost.uiState.collectAsState()
     val profileUiState by profileFeatureHost.uiState.collectAsState()
 
@@ -53,6 +62,8 @@ fun HomeRoute(
     var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
     var qrHandledToken by remember { mutableStateOf<String?>(null) }
     var groupQrErrorMessage by remember { mutableStateOf<String?>(null) }
+    var myHelpRequests by remember { mutableStateOf<List<CourseHelpRequestEntry>>(emptyList()) }
+    var hasUnreadHelpReplies by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val profileErrorMessage = (profileUiState.status as? ProfileStatus.Error)?.message
     val routeErrorMessage = catalogUiState.errorMessage ?: profileErrorMessage ?: groupQrErrorMessage
@@ -87,19 +98,30 @@ fun HomeRoute(
 
     ObserveEffects(catalogFeatureHost.effects) { effect ->
         if (effect is CatalogEffect.CourseOpened) {
-            playerFeatureHost.openBundle(effect.bundle)
+            playerFeatureHost.openBundle(effect.bundle, startFullscreen = true)
             selectedTab = HomeTab.Learning
+        }
+    }
+
+    ObserveEffects(diagnosticsFeatureHost.effects) { effect ->
+        if (effect is DiagnosticsEffect.CourseRequested) {
+            catalogFeatureHost.processIntent(CatalogIntent.OpenCourse(effect.courseSlug))
         }
     }
 
     ObserveEffects(playerFeatureHost.effects) { effect ->
         when (effect) {
-            PlayerEffect.Closed -> selectedTab = HomeTab.Home
+            PlayerEffect.Closed -> {
+                diagnosticsFeatureHost.processIntent(DiagnosticsIntent.Refresh)
+                selectedTab = HomeTab.Home
+            }
             PlayerEffect.FavoriteChanged -> {
                 catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
                 profileFeatureHost.processIntent(ProfileIntent.RefreshFavoriteCount)
             }
             PlayerEffect.NoteCreated -> profileFeatureHost.processIntent(ProfileIntent.RefreshNotes)
+            PlayerEffect.MemoSaved -> profileFeatureHost.processIntent(ProfileIntent.RefreshMemos)
+            PlayerEffect.MemoRemoved -> profileFeatureHost.processIntent(ProfileIntent.RefreshMemos)
         }
     }
 
@@ -135,14 +157,17 @@ fun HomeRoute(
         selectedTab = selectedTab,
         onTabSelected = { tab -> selectedTab = tab },
         catalogUiState = catalogUiState,
+        diagnosticsUiState = diagnosticsUiState,
         playerUiState = playerUiState,
         profileUiState = profileUiState,
         catalogUiEntry = catalogUiEntry,
+        diagnosticsUiEntry = diagnosticsUiEntry,
         playerUiEntry = playerUiEntry,
         profileUiEntry = profileUiEntry,
         resolveUrl = playerFeatureHost::resolveImageUrl,
         snackbarHostState = snackbarHostState,
         onCatalogIntent = catalogFeatureHost::processIntent,
+        onDiagnosticsIntent = diagnosticsFeatureHost::processIntent,
         onPlayerIntent = playerFeatureHost::processIntent,
         onProfileIntent = profileFeatureHost::processIntent,
         onCreateHelpRequest = { requestType, message ->
@@ -158,6 +183,22 @@ fun HomeRoute(
                     screenTitle = currentScreen?.title,
                 )
             )
+            val payload = progressRepository.getMyHelpRequests()
+            myHelpRequests = payload.requests
+            hasUnreadHelpReplies = payload.hasUnreadStaffReplies
+        },
+        myHelpRequests = myHelpRequests,
+        hasUnreadHelpReplies = hasUnreadHelpReplies,
+        onLoadMyHelpRequests = {
+            val payload = progressRepository.getMyHelpRequests()
+            myHelpRequests = payload.requests
+            hasUnreadHelpReplies = payload.hasUnreadStaffReplies
+        },
+        onMarkHelpRepliesRead = {
+            progressRepository.markHelpRepliesRead()
+            val payload = progressRepository.getMyHelpRequests()
+            myHelpRequests = payload.requests
+            hasUnreadHelpReplies = payload.hasUnreadStaffReplies
         },
         modifier = modifier,
     )

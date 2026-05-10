@@ -8,14 +8,14 @@ class AuthPasswordValidationTest {
     fun loginShowsPasswordValidationMessageWhenPasswordIsTooShort() {
         val state = AuthUiState(password = "12345")
 
-        assertEquals("Введите 6 цифр", state.passwordValidationMessage)
+        assertEquals("Введите минимум 6 символов", state.passwordValidationMessage)
     }
 
     @Test
-    fun registrationShowsPasswordValidationMessageWhenPasswordIsNotSixDigits() {
+    fun registrationShowsPasswordValidationMessageWhenPasswordIsTooShort() {
         val state = RegistrationUiState(password = "12345")
 
-        assertEquals("Введите 6 цифр", state.passwordValidationMessage)
+        assertEquals("Введите минимум 6 символов", state.passwordValidationMessage)
     }
 
     @Test

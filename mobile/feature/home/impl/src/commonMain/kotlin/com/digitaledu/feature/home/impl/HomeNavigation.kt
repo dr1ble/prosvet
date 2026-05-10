@@ -7,6 +7,8 @@ import com.digitaledu.core.data.groups.GroupQrRepository
 import com.digitaledu.core.data.progress.ProgressRepository
 import com.digitaledu.feature.catalog.api.CatalogFeatureHost
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
+import com.digitaledu.feature.diagnostics.api.DiagnosticsFeatureHost
+import com.digitaledu.feature.diagnostics.api.DiagnosticsUiEntry
 import com.digitaledu.feature.home.api.HOME_ROUTE
 import com.digitaledu.feature.player.api.PlayerFeatureHost
 import com.digitaledu.feature.player.api.PlayerUiEntry
@@ -18,9 +20,11 @@ internal fun NavGraphBuilder.homeScreen(
     initialGroupQrToken: String?,
     onGroupQrTokenConsumed: () -> Unit,
     catalogFeatureHostProvider: () -> CatalogFeatureHost,
+    diagnosticsFeatureHostProvider: () -> DiagnosticsFeatureHost,
     playerFeatureHostProvider: () -> PlayerFeatureHost,
     profileFeatureHostProvider: () -> ProfileFeatureHost,
     catalogUiEntry: CatalogUiEntry,
+    diagnosticsUiEntry: DiagnosticsUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
     groupQrRepository: GroupQrRepository,
@@ -28,6 +32,7 @@ internal fun NavGraphBuilder.homeScreen(
 ) {
     composable(route = HOME_ROUTE) {
         val catalogFeatureHost = remember { catalogFeatureHostProvider() }
+        val diagnosticsFeatureHost = remember { diagnosticsFeatureHostProvider() }
         val playerFeatureHost = remember { playerFeatureHostProvider() }
         val profileFeatureHost = remember { profileFeatureHostProvider() }
 
@@ -36,9 +41,11 @@ internal fun NavGraphBuilder.homeScreen(
             initialGroupQrToken = initialGroupQrToken,
             onGroupQrTokenConsumed = onGroupQrTokenConsumed,
             catalogFeatureHost = catalogFeatureHost,
+            diagnosticsFeatureHost = diagnosticsFeatureHost,
             playerFeatureHost = playerFeatureHost,
             profileFeatureHost = profileFeatureHost,
             catalogUiEntry = catalogUiEntry,
+            diagnosticsUiEntry = diagnosticsUiEntry,
             playerUiEntry = playerUiEntry,
             profileUiEntry = profileUiEntry,
             groupQrRepository = groupQrRepository,

@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -57,6 +58,7 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun QrLoginScreen(
+    uiState: AuthUiState,
     onBack: () -> Unit,
     onManualLogin: () -> Unit,
     onIntent: (AuthIntent) -> Unit,
@@ -64,10 +66,32 @@ internal fun QrLoginScreen(
 ) {
     var scanStatus by rememberSaveable { mutableStateOf<String?>(null) }
     var scanError by rememberSaveable { mutableStateOf<String?>(null) }
+    var scannerResetKey by rememberSaveable { mutableStateOf(0) }
+
+    val viewModelError = uiState.errorMessage
+    val displayError = scanError ?: viewModelError
+
+    // When the view-model stopped processing and no error is shown, clear the
+    // "Выполняем вход…" status so it doesn't stick on the screen after
+    // success (nav transition) or an already-dismissed error.
+    LaunchedEffect(uiState.isSubmitting, displayError) {
+        if (!uiState.isSubmitting && displayError == null) {
+            scanStatus = null
+        }
+    }
 
     ErrorDialog(
-        message = scanError,
-        onDismiss = { scanError = null },
+        message = displayError,
+        onDismiss = {
+            if (scanError != null) {
+                scanError = null
+            }
+            if (viewModelError != null) {
+                onIntent(AuthIntent.DismissError)
+            }
+            scanStatus = null
+            scannerResetKey += 1
+        },
     )
 
     Scaffold(
@@ -108,6 +132,7 @@ internal fun QrLoginScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(AuthUiShapes.cardLg),
+                        resetKey = scannerResetKey,
                         onScanSuccess = {
                             scanError = null
                             scanStatus = "QR-код распознан. Выполняем вход…"

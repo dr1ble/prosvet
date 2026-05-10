@@ -22,6 +22,7 @@ kotlin {
         val commonMain by getting
         commonMain.dependencies {
             implementation(projects.feature.catalog.api)
+            implementation(projects.feature.diagnostics.api)
             implementation(projects.feature.player.api)
             implementation(projects.feature.profile.api)
             implementation(projects.feature.home.api)

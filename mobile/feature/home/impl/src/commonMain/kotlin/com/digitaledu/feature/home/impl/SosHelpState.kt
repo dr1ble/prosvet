@@ -1,5 +1,7 @@
 package com.digitaledu.feature.home.impl
 
+import com.digitaledu.core.model.progress.CourseHelpRequestEntry
+
 enum class SosHelpRequestType(val backendValue: String) {
     LessonHelp("lesson_help"),
     MentorQuestion("mentor_question"),
@@ -57,3 +59,22 @@ internal fun buildSosHelpFormState(
     selectedType = selectedType,
     message = message,
 )
+
+internal enum class SosHelpTab {
+    NewRequest,
+    MyRequests,
+}
+
+internal fun CourseHelpRequestEntry.requestTypeTitle(): String = when (requestType) {
+    SosHelpRequestType.LessonHelp.backendValue -> "Пояснить шаг"
+    SosHelpRequestType.MentorQuestion.backendValue -> "Вопрос куратору"
+    SosHelpRequestType.TechnicalIssue.backendValue -> "Техническая проблема"
+    else -> requestType
+}
+
+internal fun CourseHelpRequestEntry.statusTitle(): String = when (status) {
+    "new" -> "Новая"
+    "in_progress" -> "В работе"
+    "resolved" -> "Решена"
+    else -> status
+}

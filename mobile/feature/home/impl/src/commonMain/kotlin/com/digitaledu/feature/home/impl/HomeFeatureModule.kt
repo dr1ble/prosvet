@@ -8,9 +8,11 @@ fun homeFeatureModule(): Module = module {
     single<HomeFeatureEntry> {
         HomeFeatureEntryImpl(
             catalogFeatureHostProvider = { get() },
+            diagnosticsFeatureHostProvider = { get() },
             playerFeatureHostProvider = { get() },
             profileFeatureHostProvider = { get() },
             catalogUiEntry = get(),
+            diagnosticsUiEntry = get(),
             playerUiEntry = get(),
             profileUiEntry = get(),
             groupQrRepository = get(),

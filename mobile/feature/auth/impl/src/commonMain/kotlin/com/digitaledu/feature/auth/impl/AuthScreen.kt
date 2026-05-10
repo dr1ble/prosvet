@@ -61,7 +61,6 @@ import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_start_accessibility
-import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_accessibility_controls_size
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_accessibility_bold_text
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_accessibility_reset
 import org.jetbrains.compose.resources.stringResource
@@ -143,6 +142,7 @@ internal fun AuthRoute(
         }
         composable(ROUTE_QR) {
             QrLoginScreen(
+                uiState = uiState,
                 onBack = { navController.popBackStack() },
                 onManualLogin = { navController.navigate(ROUTE_LOGIN) { popUpTo(ROUTE_LOGIN) { inclusive = true } } },
                 onIntent = viewModel::processIntent,
@@ -161,9 +161,6 @@ internal fun AuthRoute(
                 settings = accessibilitySettings,
                 onSetFontScale = { value: Float ->
                     viewModel.updateAccessibility { copy(fontScale = value.coerceIn(1.0f, 1.6f)) }
-                },
-                onSetControlScale = { value: Float ->
-                    viewModel.updateAccessibility { copy(controlScale = value.coerceIn(1.0f, 1.3f)) }
                 },
                 onSetBoldText = { enabled: Boolean ->
                     viewModel.updateAccessibility { copy(boldText = enabled) }
@@ -267,7 +264,6 @@ private fun CredentialCard(
 private fun AuthAccessibilityScreen(
     settings: AccessibilitySettings,
     onSetFontScale: (Float) -> Unit,
-    onSetControlScale: (Float) -> Unit,
     onSetBoldText: (Boolean) -> Unit,
     onResetAccessibility: () -> Unit,
     onSetHighContrast: (Boolean) -> Unit,
@@ -394,20 +390,6 @@ private fun AuthAccessibilityScreen(
                 onValueChange = {
                     onSetFontScale(it)
                     feedbackMessage = "Размер шрифта: ${formatOneDecimal(it)}x"
-                },
-            )
-        }
-        item {
-            AccessibilityFontScaleRow(
-                icon = Icons.Rounded.Settings,
-                title = stringResource(Res.string.auth_accessibility_controls_size),
-                value = settings.controlScale,
-                rangeStart = 1.0f,
-                rangeEnd = 1.3f,
-                steps = 2,
-                onValueChange = {
-                    onSetControlScale(it)
-                    feedbackMessage = "Размер элементов управления: ${formatOneDecimal(it)}x"
                 },
             )
         }

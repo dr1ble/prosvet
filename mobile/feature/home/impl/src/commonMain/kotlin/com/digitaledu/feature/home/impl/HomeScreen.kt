@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,6 +52,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +75,7 @@ import com.digitaledu.core.common.toUserMessage
 import com.digitaledu.core.model.catalog.CatalogCourse
 import com.digitaledu.core.model.progress.GlossaryTermEntry
 import com.digitaledu.core.model.progress.LessonNoteEntry
+import com.digitaledu.core.model.progress.CourseHelpRequestEntry
 import com.digitaledu.core.ui.CenteredLoadingIndicator
 import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.ErrorDialog
@@ -90,6 +93,9 @@ import com.digitaledu.feature.catalog.api.CatalogIntent
 import com.digitaledu.feature.catalog.api.CourseProgress
 import com.digitaledu.feature.catalog.api.CatalogUiEntry
 import com.digitaledu.feature.catalog.api.CatalogUiState
+import com.digitaledu.feature.diagnostics.api.DiagnosticsIntent
+import com.digitaledu.feature.diagnostics.api.DiagnosticsUiEntry
+import com.digitaledu.feature.diagnostics.api.DiagnosticsUiState
 import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.player.api.PlayerUiEntry
 import com.digitaledu.feature.player.api.PlayerUiState
@@ -148,6 +154,7 @@ private enum class HomeOverlayScreen {
     Notes,
     Sos,
     LearningPreview,
+    Diagnostics,
 }
 
 private enum class FavoritesTab {
@@ -160,17 +167,24 @@ fun HomeScreen(
     selectedTab: HomeTab,
     onTabSelected: (HomeTab) -> Unit,
     catalogUiState: CatalogUiState,
+    diagnosticsUiState: DiagnosticsUiState,
     playerUiState: PlayerUiState,
     profileUiState: ProfileUiState,
     catalogUiEntry: CatalogUiEntry,
+    diagnosticsUiEntry: DiagnosticsUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
     resolveUrl: (String) -> String,
     snackbarHostState: SnackbarHostState,
     onCatalogIntent: (CatalogIntent) -> Unit,
+    onDiagnosticsIntent: (DiagnosticsIntent) -> Unit,
     onPlayerIntent: (PlayerIntent) -> Unit,
     onProfileIntent: (ProfileIntent) -> Unit,
     onCreateHelpRequest: suspend (SosHelpRequestType, String) -> Unit,
+    myHelpRequests: List<CourseHelpRequestEntry>,
+    hasUnreadHelpReplies: Boolean,
+    onLoadMyHelpRequests: suspend () -> Unit,
+    onMarkHelpRepliesRead: suspend () -> Unit,
     modifier: Modifier = Modifier,
  ) {
     var overlayScreen by rememberSaveable { mutableStateOf(HomeOverlayScreen.None) }
@@ -184,6 +198,9 @@ fun HomeScreen(
                 state = buildSosHelpState(),
                 onBack = { overlayScreen = HomeOverlayScreen.None },
                 onCreateHelpRequest = onCreateHelpRequest,
+                myHelpRequests = myHelpRequests,
+                onLoadMyHelpRequests = onLoadMyHelpRequests,
+                onMarkHelpRepliesRead = onMarkHelpRepliesRead,
                 modifier = modifier.fillMaxSize(),
             )
             return
@@ -229,22 +246,33 @@ fun HomeScreen(
         },
         floatingActionButton = {
             if (selectedTab == HomeTab.Home || selectedTab == HomeTab.Learning) {
-                FloatingActionButton(
-                    onClick = { overlayScreen = HomeOverlayScreen.Sos },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    shape = UiShapes.pill,
-                    modifier = Modifier
-                        .accessibilityTouchTarget
-                        .accessibilitySemantics(
-                            label = stringResource(Res.string.home_sos),
-                            role = Role.Button,
-                        ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.SupportAgent,
-                        contentDescription = null,
-                    )
+                Box {
+                    FloatingActionButton(
+                        onClick = { overlayScreen = HomeOverlayScreen.Sos },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        shape = UiShapes.pill,
+                        modifier = Modifier
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(
+                                label = stringResource(Res.string.home_sos),
+                                role = Role.Button,
+                            ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.SupportAgent,
+                            contentDescription = null,
+                        )
+                    }
+                    if (hasUnreadHelpReplies) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(10.dp)
+                                .clip(UiShapes.pill)
+                                .background(MaterialTheme.colorScheme.error),
+                        )
+                    }
                 }
             }
         },
@@ -359,6 +387,20 @@ fun HomeScreen(
                 state = buildSosHelpState(),
                 onBack = { overlayScreen = HomeOverlayScreen.None },
                 onCreateHelpRequest = onCreateHelpRequest,
+                myHelpRequests = myHelpRequests,
+                onLoadMyHelpRequests = onLoadMyHelpRequests,
+                onMarkHelpRepliesRead = onMarkHelpRepliesRead,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+            return@Scaffold
+        }
+
+        if (overlayScreen == HomeOverlayScreen.Diagnostics) {
+            diagnosticsUiEntry.Content(
+                uiState = diagnosticsUiState,
+                onIntent = onDiagnosticsIntent,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
@@ -394,9 +436,14 @@ fun HomeScreen(
             HomeTab.Home -> {
                 HomeCoursesContent(
                     uiState = catalogUiState,
+                    diagnosticsUiState = diagnosticsUiState,
                     currentUserDisplayName = profileUiState.displayName?.trim()?.takeIf { it.isNotEmpty() },
-                    onOpenCourse = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
-                    onRefresh = { onCatalogIntent(CatalogIntent.RefreshCourses) },
+                    onContinueCourse = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
+                    onOpenCourse = { course ->
+                        previewCourse = course
+                        overlayScreen = HomeOverlayScreen.LearningPreview
+                    },
+                    onOpenDiagnostics = { overlayScreen = HomeOverlayScreen.Diagnostics },
                     onOpenLearningTab = { onTabSelected(HomeTab.Learning) },
                     modifier = Modifier
                         .fillMaxSize()
@@ -412,7 +459,6 @@ fun HomeScreen(
                         previewCourse = course
                         overlayScreen = HomeOverlayScreen.LearningPreview
                     },
-                    onRefresh = { onCatalogIntent(CatalogIntent.RefreshCourses) },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -577,11 +623,16 @@ private fun SosHelpContent(
     state: SosHelpState,
     onBack: () -> Unit,
     onCreateHelpRequest: suspend (SosHelpRequestType, String) -> Unit,
+    myHelpRequests: List<CourseHelpRequestEntry>,
+    onLoadMyHelpRequests: suspend () -> Unit,
+    onMarkHelpRepliesRead: suspend () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var selectedTab by rememberSaveable { mutableStateOf(SosHelpTab.NewRequest) }
     var selectedType by rememberSaveable { mutableStateOf<SosHelpRequestType?>(null) }
     var message by rememberSaveable { mutableStateOf("") }
     var isSubmitting by rememberSaveable { mutableStateOf(false) }
+    var isLoadingRequests by rememberSaveable { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var successMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val formState = buildSosHelpFormState(selectedType = selectedType, message = message)
@@ -589,6 +640,19 @@ private fun SosHelpContent(
 
     ErrorDialog(message = errorMessage, onDismiss = { errorMessage = null })
     SuccessDialog(message = successMessage, onDismiss = { successMessage = null })
+
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == SosHelpTab.MyRequests) {
+            isLoadingRequests = true
+            runCatching {
+                onLoadMyHelpRequests()
+                onMarkHelpRepliesRead()
+            }.onFailure { throwable ->
+                errorMessage = throwable.toUserMessage()
+            }
+            isLoadingRequests = false
+        }
+    }
 
     LazyColumn(
         modifier = modifier,
@@ -638,6 +702,31 @@ private fun SosHelpContent(
         }
 
         item {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                listOf(
+                    SosHelpTab.NewRequest to "Новая заявка",
+                    SosHelpTab.MyRequests to "Мои заявки",
+                ).forEach { (tab, title) ->
+                    val selected = selectedTab == tab
+                    Button(
+                        onClick = { selectedTab = tab },
+                        shape = UiShapes.pill,
+                        colors = if (selected) {
+                            ButtonDefaults.buttonColors()
+                        } else {
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            )
+                        },
+                    ) {
+                        Text(title)
+                    }
+                }
+            }
+        }
+
+        if (selectedTab == SosHelpTab.NewRequest) item {
             OutlinedTextField(
                 value = message,
                 onValueChange = { message = it },
@@ -649,7 +738,7 @@ private fun SosHelpContent(
             )
         }
 
-        item {
+        if (selectedTab == SosHelpTab.NewRequest) item {
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.xs)) {
                 Text(
                     text = "Тип обращения",
@@ -745,7 +834,7 @@ private fun SosHelpContent(
             }
         }
 
-        item {
+        if (selectedTab == SosHelpTab.NewRequest) item {
             Button(
                 enabled = formState.canSubmit && !isSubmitting,
                 onClick = {
@@ -776,6 +865,68 @@ private fun SosHelpContent(
                 }
                 Text(text = "Отправить заявку")
             }
+        }
+
+        if (selectedTab == SosHelpTab.MyRequests) {
+            if (isLoadingRequests) {
+                item { CenteredLoadingIndicator(modifier = Modifier.fillMaxWidth()) }
+            } else if (myHelpRequests.isEmpty()) {
+                item {
+                    Text(
+                        text = "Пока нет заявок. Отправьте первую заявку во вкладке \"Новая заявка\".",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                items(myHelpRequests, key = { it.id }) { request ->
+                    MyHelpRequestCard(request = request)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MyHelpRequestCard(request: CourseHelpRequestEntry) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(UiSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = request.requestTypeTitle(),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = request.statusTitle(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                if (request.isStaffReplyUnread) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(UiShapes.pill)
+                            .background(MaterialTheme.colorScheme.error),
+                    )
+                }
+            }
+            Text(
+                text = request.message,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = request.staffComment ?: "Ответа пока нет",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -1002,9 +1153,11 @@ private fun NotesEmptyState() {
 @Composable
 private fun HomeCoursesContent(
     uiState: CatalogUiState,
+    diagnosticsUiState: DiagnosticsUiState,
     currentUserDisplayName: String?,
-    onOpenCourse: (String) -> Unit,
-    onRefresh: () -> Unit,
+    onContinueCourse: (String) -> Unit,
+    onOpenCourse: (CatalogCourse) -> Unit,
+    onOpenDiagnostics: () -> Unit,
     onOpenLearningTab: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1080,19 +1233,21 @@ private fun HomeCoursesContent(
             }
         }
 
+        val continueCourse = uiState.resolveContinueCourse()
+        if (continueCourse != null) {
+            item {
+                ContinueLearningCard(
+                    course = continueCourse,
+                    progress = uiState.progressByCourseId[continueCourse.id],
+                    onStart = { onContinueCourse(continueCourse.slug) },
+                )
+            }
+        }
+
         item {
-            val continueCourse = uiState.resolveContinueCourse()
-            ContinueLearningCard(
-                course = continueCourse,
-                progress = continueCourse?.let { uiState.progressByCourseId[it.id] },
-                onStart = {
-                    val continueSlug = continueCourse?.slug
-                    if (continueSlug != null) {
-                        onOpenCourse(continueSlug)
-                    } else {
-                        onRefresh()
-                    }
-                },
+            DiagnosticSummaryCard(
+                diagnosticsUiState = diagnosticsUiState,
+                onOpenDiagnostics = onOpenDiagnostics,
             )
         }
 
@@ -1139,8 +1294,46 @@ private fun HomeCoursesContent(
                 RecommendedCourseCard(
                     course = course,
                     progress = uiState.progressByCourseId[course.id],
-                    onClick = { onOpenCourse(course.slug) },
+                    onClick = { onOpenCourse(course) },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticSummaryCard(
+    diagnosticsUiState: DiagnosticsUiState,
+    onOpenDiagnostics: () -> Unit,
+) {
+    Card(
+        shape = UiShapes.cardLg,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(UiSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            Text(
+                text = "Персональная траектория",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                text = if (diagnosticsUiState.hasCompletedDiagnostic) {
+                    "Профиль компетенций готов. Откройте рекомендации и продолжите обучение."
+                } else {
+                    "Пройдите входную диагностику, чтобы получить индивидуальный маршрут."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Button(onClick = onOpenDiagnostics) {
+                Text(if (diagnosticsUiState.hasCompletedDiagnostic) "Открыть маршрут" else "Начать диагностику")
             }
         }
     }
@@ -1151,7 +1344,6 @@ private fun LearningCoursesContent(
     uiState: CatalogUiState,
     onOpenContinue: (String) -> Unit,
     onOpenCourse: (CatalogCourse) -> Unit,
-    onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -1216,19 +1408,14 @@ private fun LearningCoursesContent(
             }
         }
 
-        item {
-            ContinueLearningCard(
-                course = continueCourse,
-                progress = continueCourse?.let { uiState.progressByCourseId[it.id] },
-                onStart = {
-                    val slug = continueCourse?.slug
-                    if (slug != null) {
-                        onOpenContinue(slug)
-                    } else {
-                        onRefresh()
-                    }
-                },
-            )
+        if (continueCourse != null) {
+            item {
+                ContinueLearningCard(
+                    course = continueCourse,
+                    progress = uiState.progressByCourseId[continueCourse.id],
+                    onStart = { onOpenContinue(continueCourse.slug) },
+                )
+            }
         }
 
         item {
@@ -2158,5 +2345,5 @@ private fun CatalogUiState.resolveContinueCourse(): CatalogCourse? {
     val startedCourseIds = progressByCourseId
         .filterValues { progress -> progress.completedLessons > 0 && progress.completedLessons < progress.totalLessons }
         .keys
-    return courses.firstOrNull { it.id in startedCourseIds } ?: courses.firstOrNull()
+    return courses.firstOrNull { it.id in startedCourseIds }
 }

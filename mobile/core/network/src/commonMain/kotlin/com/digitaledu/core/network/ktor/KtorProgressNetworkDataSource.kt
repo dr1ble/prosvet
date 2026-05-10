@@ -5,7 +5,9 @@ import com.digitaledu.core.model.progress.CourseHelpRequestCreate
 import com.digitaledu.core.model.progress.GlossaryTermEntry
 import com.digitaledu.core.model.progress.LessonNoteEntry
 import com.digitaledu.core.model.progress.LessonProgressEntry
+import com.digitaledu.core.model.progress.LessonSessionAnalyticsCreate
 import com.digitaledu.core.model.progress.MyGlossary
+import com.digitaledu.core.model.progress.MyHelpRequests
 import com.digitaledu.core.model.progress.MyProgress
 import com.digitaledu.core.network.ProgressNetworkDataSource
 import io.ktor.client.HttpClient
@@ -92,6 +94,24 @@ class KtorProgressNetworkDataSource(
         }
     }
 
+    override suspend fun getMyHelpRequests(accessToken: String): MyHelpRequests {
+        return executeCall {
+            client.get {
+                url("api/v1/support/help-requests/me")
+                headers { append(HttpHeaders.Authorization, "Bearer $accessToken") }
+            }.body<MyHelpRequestsResponse>().toDomain()
+        }
+    }
+
+    override suspend fun markHelpRepliesRead(accessToken: String) {
+        executeCall {
+            client.post {
+                url("api/v1/support/help-requests/me/mark-replies-read")
+                headers { append(HttpHeaders.Authorization, "Bearer $accessToken") }
+            }
+        }
+    }
+
     override suspend fun upsertLessonProgress(
         accessToken: String,
         lessonId: String,
@@ -118,6 +138,17 @@ class KtorProgressNetworkDataSource(
                 url("api/v1/progress/glossary/self/$termId/bookmark")
                 headers { append(HttpHeaders.Authorization, "Bearer $accessToken") }
                 parameter("is_bookmarked", isBookmarked)
+            }
+        }
+    }
+
+    override suspend fun trackLessonSession(accessToken: String, payload: LessonSessionAnalyticsCreate) {
+        executeCall {
+            client.post {
+                url("api/v1/progress/session/self")
+                headers { append(HttpHeaders.Authorization, "Bearer $accessToken") }
+                contentType(ContentType.Application.Json)
+                setBody(payload.toPayload())
             }
         }
     }
@@ -222,6 +253,40 @@ internal data class HelpRequestCreateRequest(
     @SerialName("screen_title") val screenTitle: String? = null,
 )
 
+@Serializable
+internal data class MyHelpRequestsResponse(
+    @SerialName("requests") val requests: List<HelpRequestResponse>,
+    @SerialName("has_unread_staff_replies") val hasUnreadStaffReplies: Boolean,
+) {
+    fun toDomain() = MyHelpRequests(
+        requests = requests.map { it.toDomain() },
+        hasUnreadStaffReplies = hasUnreadStaffReplies,
+    )
+}
+
+@Serializable
+internal data class HelpRequestResponse(
+    @SerialName("id") val id: String,
+    @SerialName("request_type") val requestType: String,
+    @SerialName("status") val status: String,
+    @SerialName("message") val message: String,
+    @SerialName("staff_comment") val staffComment: String? = null,
+    @SerialName("is_staff_reply_unread") val isStaffReplyUnread: Boolean = false,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("updated_at") val updatedAt: String,
+) {
+    fun toDomain() = com.digitaledu.core.model.progress.CourseHelpRequestEntry(
+        id = id,
+        requestType = requestType,
+        status = status,
+        message = message,
+        staffComment = staffComment,
+        isStaffReplyUnread = isStaffReplyUnread,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+}
+
 internal fun CourseHelpRequestCreate.toPayload() = HelpRequestCreateRequest(
     requestType = requestType,
     message = message,
@@ -229,6 +294,27 @@ internal fun CourseHelpRequestCreate.toPayload() = HelpRequestCreateRequest(
     lessonId = lessonId,
     screenKey = screenKey,
     screenTitle = screenTitle,
+)
+
+@Serializable
+internal data class LessonSessionAnalyticsCreateRequest(
+    @SerialName("lesson_id") val lessonId: String,
+    @SerialName("course_id") val courseId: String,
+    @SerialName("started_at") val startedAt: String? = null,
+    @SerialName("finished_at") val finishedAt: String? = null,
+    @SerialName("error_attempts") val errorAttempts: Int = 0,
+    @SerialName("hint_level_max") val hintLevelMax: Int = 0,
+    @SerialName("result") val result: String,
+)
+
+internal fun LessonSessionAnalyticsCreate.toPayload() = LessonSessionAnalyticsCreateRequest(
+    lessonId = lessonId,
+    courseId = courseId,
+    startedAt = startedAt,
+    finishedAt = finishedAt,
+    errorAttempts = errorAttempts,
+    hintLevelMax = hintLevelMax,
+    result = result,
 )
 
 @Serializable

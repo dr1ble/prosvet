@@ -6,6 +6,8 @@ import com.digitaledu.core.model.progress.CourseProgressInfo
 import com.digitaledu.core.model.progress.GlossaryTermEntry
 import com.digitaledu.core.model.progress.LessonNoteEntry
 import com.digitaledu.core.model.progress.LessonProgressEntry
+import com.digitaledu.core.model.progress.LessonSessionAnalyticsCreate
+import com.digitaledu.core.model.progress.MyHelpRequests
 import com.digitaledu.core.network.ProgressNetworkDataSource
 
 class NetworkProgressRepository(
@@ -43,6 +45,18 @@ class NetworkProgressRepository(
         }
     }
 
+    override suspend fun getMyHelpRequests(): MyHelpRequests {
+        return authRepository.withFreshAccessToken { accessToken ->
+            networkDataSource.getMyHelpRequests(accessToken)
+        }
+    }
+
+    override suspend fun markHelpRepliesRead() {
+        authRepository.withFreshAccessToken { accessToken ->
+            networkDataSource.markHelpRepliesRead(accessToken)
+        }
+    }
+
     override suspend fun deleteNote(noteId: String) {
         authRepository.withFreshAccessToken { accessToken ->
             networkDataSource.deleteNote(accessToken, noteId)
@@ -58,6 +72,12 @@ class NetworkProgressRepository(
     override suspend fun setGlossaryTermBookmark(termId: String, isBookmarked: Boolean) {
         authRepository.withFreshAccessToken { accessToken ->
             networkDataSource.setGlossaryTermBookmark(accessToken, termId, isBookmarked)
+        }
+    }
+
+    override suspend fun trackLessonSession(payload: LessonSessionAnalyticsCreate) {
+        authRepository.withFreshAccessToken { accessToken ->
+            networkDataSource.trackLessonSession(accessToken, payload)
         }
     }
 }
