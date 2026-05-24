@@ -30,7 +30,6 @@ import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PersonSearch
-import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Shield
@@ -50,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
@@ -78,7 +78,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.digitaledu.core.common.formatOneDecimal
-import com.digitaledu.core.ui.components.SuccessDialog
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
@@ -101,7 +100,6 @@ import digital_education_mobile.feature.profile.`impl`.generated.resources.profi
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_large_text
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_preview
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_tremor
-import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_accessibility_voice
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_bind
 import digital_education_mobile.feature.profile.`impl`.generated.resources.profile_account_bound_label
@@ -151,127 +149,140 @@ fun ProfileContent(
     val isLoggingOut = uiState.status is ProfileStatus.LoggingOut
     var section by rememberSaveable { mutableStateOf(ProfileSection.Main) }
     var selectedMemoId by rememberSaveable { mutableStateOf<String?>(null) }
+    val successSnackbarHostState = remember { SnackbarHostState() }
 
-    SuccessDialog(
-        message = uiState.successMessage,
-        onDismiss = { onIntent(ProfileIntent.DismissSuccess) },
-    )
+    LaunchedEffect(uiState.successMessage) {
+        val message = uiState.successMessage ?: return@LaunchedEffect
+        successSnackbarHostState.showSnackbar(
+            message = message,
+            duration = SnackbarDuration.Short,
+        )
+        onIntent(ProfileIntent.DismissSuccess)
+    }
 
-    when (section) {
-        ProfileSection.Main -> {
-            ProfileMain(
-                displayName = uiState.displayName,
-                avatarKey = uiState.avatarKey,
-                avatarUrl = uiState.avatarUrl,
-                role = null,
-                accountStatus = uiState.accountStatus,
-                isLoggingOut = isLoggingOut,
-                accessibilitySettings = uiState.accessibilitySettings,
-                courseProgress = uiState.courseProgress,
-                favoriteCourseCount = uiState.favoriteCourseCount,
-                glossaryTermCount = uiState.glossaryTerms.size,
-                noteCount = uiState.notes.size,
-                memoCount = uiState.memos.size,
-                isLoadingProgress = uiState.isLoadingProgress,
-                onOpenFavorites = onOpenFavorites,
-                onOpenGlossary = onOpenGlossary,
-                onOpenNotes = onOpenNotes,
-                onOpenMemos = {
-                    onIntent(ProfileIntent.RefreshMemos)
-                    section = ProfileSection.Memos
-                },
-                onOpenProgress = { section = ProfileSection.Progress },
-                onOpenAccessibility = { section = ProfileSection.Accessibility },
-                onOpenAccount = { section = ProfileSection.Account },
-                onLogout = { onIntent(ProfileIntent.Logout) },
-                modifier = modifier,
-            )
-        }
-
-        ProfileSection.Memos -> {
-            MemosListContent(
-                memos = uiState.memos,
-                onOpenMemo = { memoId ->
-                    selectedMemoId = memoId
-                    section = ProfileSection.MemoDetail
-                },
-                onBack = { section = ProfileSection.Main },
-                modifier = modifier,
-            )
-        }
-
-        ProfileSection.MemoDetail -> {
-            val memo = uiState.memos.firstOrNull { it.id == selectedMemoId }
-            if (memo == null) {
-                section = ProfileSection.Memos
-                selectedMemoId = null
-            } else {
-                MemoDetailContent(
-                    memo = memo,
-                    onBack = { section = ProfileSection.Memos },
-                    onDelete = {
-                        onIntent(ProfileIntent.DeleteMemo(memo.id))
-                        selectedMemoId = null
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (section) {
+            ProfileSection.Main -> {
+                ProfileMain(
+                    displayName = uiState.displayName,
+                    avatarKey = uiState.avatarKey,
+                    avatarUrl = uiState.avatarUrl,
+                    role = null,
+                    accountStatus = uiState.accountStatus,
+                    isLoggingOut = isLoggingOut,
+                    accessibilitySettings = uiState.accessibilitySettings,
+                    courseProgress = uiState.courseProgress,
+                    favoriteCourseCount = uiState.favoriteCourseCount,
+                    glossaryTermCount = uiState.glossaryTerms.size,
+                    noteCount = uiState.notes.size,
+                    memoCount = uiState.memos.size,
+                    isLoadingProgress = uiState.isLoadingProgress,
+                    onOpenFavorites = onOpenFavorites,
+                    onOpenGlossary = onOpenGlossary,
+                    onOpenNotes = onOpenNotes,
+                    onOpenMemos = {
+                        onIntent(ProfileIntent.RefreshMemos)
                         section = ProfileSection.Memos
                     },
+                    onOpenProgress = { section = ProfileSection.Progress },
+                    onOpenAccessibility = { section = ProfileSection.Accessibility },
+                    onOpenAccount = { section = ProfileSection.Account },
+                    onLogout = { onIntent(ProfileIntent.Logout) },
+                    modifier = modifier,
+                )
+            }
+
+            ProfileSection.Memos -> {
+                MemosListContent(
+                    memos = uiState.memos,
+                    onOpenMemo = { memoId ->
+                        selectedMemoId = memoId
+                        section = ProfileSection.MemoDetail
+                    },
+                    onBack = { section = ProfileSection.Main },
+                    modifier = modifier,
+                )
+            }
+
+            ProfileSection.MemoDetail -> {
+                val memo = uiState.memos.firstOrNull { it.id == selectedMemoId }
+                if (memo == null) {
+                    section = ProfileSection.Memos
+                    selectedMemoId = null
+                } else {
+                    MemoDetailContent(
+                        memo = memo,
+                        onBack = { section = ProfileSection.Memos },
+                        onDelete = {
+                            onIntent(ProfileIntent.DeleteMemo(memo.id))
+                            selectedMemoId = null
+                            section = ProfileSection.Memos
+                        },
+                        modifier = modifier,
+                    )
+                }
+            }
+
+            ProfileSection.Progress -> {
+                ProgressDetailsContent(
+                    courseProgress = uiState.courseProgress,
+                    favoriteCourseCount = uiState.favoriteCourseCount,
+                    glossaryTermCount = uiState.glossaryTerms.size,
+                    noteCount = uiState.notes.size,
+                    isLoadingProgress = uiState.isLoadingProgress,
+                    onBack = { section = ProfileSection.Main },
+                    modifier = modifier,
+                )
+            }
+
+            ProfileSection.Accessibility -> {
+                AccessibilitySettingsContent(
+                    settings = uiState.accessibilitySettings,
+                    onSetFontScale = { onIntent(ProfileIntent.SetFontScale(it)) },
+                    onSetBoldText = { onIntent(ProfileIntent.SetBoldText(it)) },
+                    onResetAccessibility = { onIntent(ProfileIntent.ResetAccessibility) },
+                    onSetHighContrast = { onIntent(ProfileIntent.SetHighContrast(it)) },
+                    onSetTremorFilter = { onIntent(ProfileIntent.SetTremorFilter(it)) },
+                    onBack = { section = ProfileSection.Main },
+                    modifier = modifier,
+                )
+            }
+
+            ProfileSection.Account -> {
+                AccountSettings(
+                    displayName = uiState.displayName,
+                    avatarKey = uiState.avatarKey,
+                    avatarUrl = uiState.avatarUrl,
+                    boundEmail = uiState.email,
+                    isUpdatingDisplayName = uiState.isUpdatingDisplayName,
+                    isUpdatingAvatar = uiState.isUpdatingAvatar,
+                    isBindingEmail = uiState.isBindingEmail,
+                    isChangingPassword = uiState.isChangingPassword,
+                    isUpdatingSettings = uiState.isUpdatingAccountSettings,
+                    learningRemindersEnabled = uiState.learningRemindersEnabled,
+                    securityAlertsEnabled = uiState.securityAlertsEnabled,
+                    profileVisible = uiState.profileVisible,
+                    onUpdateDisplayName = { name -> onIntent(ProfileIntent.UpdateDisplayName(name)) },
+                    onUploadAvatar = { filename, contentType, content ->
+                        onIntent(ProfileIntent.UploadAvatar(filename, contentType, content))
+                    },
+                    onBindEmail = { email -> onIntent(ProfileIntent.BindEmail(email)) },
+                    onChangePassword = { current, new -> onIntent(ProfileIntent.ChangePassword(current, new)) },
+                    onSetLearningReminders = { onIntent(ProfileIntent.SetLearningReminders(it)) },
+                    onSetSecurityAlerts = { onIntent(ProfileIntent.SetSecurityAlerts(it)) },
+                    onSetProfileVisible = { onIntent(ProfileIntent.SetProfileVisible(it)) },
+                    onBack = { section = ProfileSection.Main },
                     modifier = modifier,
                 )
             }
         }
 
-        ProfileSection.Progress -> {
-            ProgressDetailsContent(
-                courseProgress = uiState.courseProgress,
-                favoriteCourseCount = uiState.favoriteCourseCount,
-                glossaryTermCount = uiState.glossaryTerms.size,
-                noteCount = uiState.notes.size,
-                isLoadingProgress = uiState.isLoadingProgress,
-                onBack = { section = ProfileSection.Main },
-                modifier = modifier,
-            )
-        }
-
-        ProfileSection.Accessibility -> {
-            AccessibilitySettingsContent(
-                settings = uiState.accessibilitySettings,
-                onSetFontScale = { onIntent(ProfileIntent.SetFontScale(it)) },
-                onSetBoldText = { onIntent(ProfileIntent.SetBoldText(it)) },
-                onResetAccessibility = { onIntent(ProfileIntent.ResetAccessibility) },
-                onSetHighContrast = { onIntent(ProfileIntent.SetHighContrast(it)) },
-                onSetVoiceSupport = { onIntent(ProfileIntent.SetVoiceSupport(it)) },
-                onSetTremorFilter = { onIntent(ProfileIntent.SetTremorFilter(it)) },
-                onBack = { section = ProfileSection.Main },
-                modifier = modifier,
-            )
-        }
-
-        ProfileSection.Account -> {
-            AccountSettings(
-                displayName = uiState.displayName,
-                avatarKey = uiState.avatarKey,
-                avatarUrl = uiState.avatarUrl,
-                boundEmail = uiState.email,
-                isUpdatingDisplayName = uiState.isUpdatingDisplayName,
-                isUpdatingAvatar = uiState.isUpdatingAvatar,
-                isBindingEmail = uiState.isBindingEmail,
-                isChangingPassword = uiState.isChangingPassword,
-                isUpdatingSettings = uiState.isUpdatingAccountSettings,
-                learningRemindersEnabled = uiState.learningRemindersEnabled,
-                securityAlertsEnabled = uiState.securityAlertsEnabled,
-                profileVisible = uiState.profileVisible,
-                onUpdateDisplayName = { name -> onIntent(ProfileIntent.UpdateDisplayName(name)) },
-                onUploadAvatar = { filename, contentType, content ->
-                    onIntent(ProfileIntent.UploadAvatar(filename, contentType, content))
-                },
-                onBindEmail = { email -> onIntent(ProfileIntent.BindEmail(email)) },
-                onChangePassword = { current, new -> onIntent(ProfileIntent.ChangePassword(current, new)) },
-                onSetLearningReminders = { onIntent(ProfileIntent.SetLearningReminders(it)) },
-                onSetSecurityAlerts = { onIntent(ProfileIntent.SetSecurityAlerts(it)) },
-                onSetProfileVisible = { onIntent(ProfileIntent.SetProfileVisible(it)) },
-                onBack = { section = ProfileSection.Main },
-                modifier = modifier,
-            )
-        }
+        SnackbarHost(
+            hostState = successSnackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(UiSpacing.md),
+        )
     }
 }
 
@@ -434,7 +445,6 @@ private fun ProfileMain(
                 title = stringResource(Res.string.profile_accessibility),
                 subtitle = "",
                 onClick = onOpenAccessibility,
-                voiceSupport = accessibilitySettings.voiceSupport,
                 tremorFilter = accessibilitySettings.tremorFilter,
             )
         }
@@ -445,7 +455,6 @@ private fun ProfileMain(
                 title = stringResource(Res.string.profile_account),
                 subtitle = "",
                 onClick = onOpenAccount,
-                voiceSupport = accessibilitySettings.voiceSupport,
                 tremorFilter = accessibilitySettings.tremorFilter,
             )
         }
@@ -1020,7 +1029,6 @@ fun AccessibilitySettingsContent(
     onSetBoldText: (Boolean) -> Unit,
     onResetAccessibility: () -> Unit,
     onSetHighContrast: (Boolean) -> Unit,
-    onSetVoiceSupport: (Boolean) -> Unit,
     onSetTremorFilter: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1159,15 +1167,6 @@ fun AccessibilitySettingsContent(
                 subtitle = "Более четкие границы и цвета",
                 checked = settings.highContrast,
                 onCheckedChange = onSetHighContrast,
-            )
-        }
-        item {
-            ToggleRow(
-                icon = Icons.Rounded.RecordVoiceOver,
-                title = stringResource(Res.string.profile_accessibility_voice),
-                subtitle = "Озвучивание элементов экрана",
-                checked = settings.voiceSupport,
-                onCheckedChange = onSetVoiceSupport,
             )
         }
         item {
@@ -1552,7 +1551,7 @@ private fun AccountAvatarCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = "Аватар", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(
-                        text = "Загрузите фотографию профиля в формате JPG, PNG или WebP",
+                        text = "Загрузите фотографию профиля",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1809,7 +1808,6 @@ private fun accessibilitySubtitle(settings: com.digitaledu.core.model.preference
     val active = buildList {
         if (settings.fontScale > 1.0f) add("шрифт ${formatOneDecimal(settings.fontScale)}x")
         if (settings.highContrast) add("высокий контраст")
-        if (settings.voiceSupport) add("озвучивание")
         if (settings.tremorFilter) add("фильтр касаний")
     }
     return if (active.isEmpty()) {
@@ -1867,7 +1865,6 @@ private fun SettingsRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    voiceSupport: Boolean,
     tremorFilter: Boolean,
 ) {
     val rowVerticalPadding = if (tremorFilter) UiSpacing.lg else UiSpacing.md
@@ -1879,7 +1876,7 @@ private fun SettingsRow(
             .fillMaxWidth()
             .accessibilityTouchTarget
             .accessibilitySemantics(
-                label = if (voiceSupport) "$title. $subtitle" else title,
+                label = title,
                 state = "кнопка настройки",
                 role = Role.Button,
             )

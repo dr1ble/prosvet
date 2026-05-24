@@ -102,7 +102,7 @@ internal actual fun AvatarUploadPicker(
         if (isUploading) {
             CircularProgressIndicator()
         } else {
-            Text("Загрузить и обрезать фото")
+            Text("Загрузить фото")
         }
     }
 }

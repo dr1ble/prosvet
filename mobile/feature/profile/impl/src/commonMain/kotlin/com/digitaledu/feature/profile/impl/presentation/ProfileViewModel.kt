@@ -440,7 +440,6 @@ internal class ProfileViewModel(
                     profileVisible = profile.profileVisible,
                     isUpdatingAccountSettings = false,
                     status = ProfileStatus.Idle,
-                    successMessage = "Настройки аккаунта сохранены.",
                 )
             }
         }.onFailure { throwable ->
