@@ -11,7 +11,7 @@ fun Throwable.toUserMessage(): String = when (this) {
             409 -> "Конфликт данных"
             422 -> "Проверьте заполнение полей"
             in 500..599 -> "Ошибка сервера"
-            else -> "Неизвестная ошибка"
+            else -> "Ошибка сети. Проверьте подключение к интернету."
         }
     else -> message ?: "Что-то пошло не так"
 }
@@ -22,3 +22,8 @@ private val NetworkException.explicitMessage: String?
         ?.takeUnless { it.startsWith("Ошибка клиента:") }
         ?.takeUnless { it.startsWith("Ошибка сервера:") }
         ?.takeUnless { it.startsWith("Ошибка перенаправления:") }
+        ?.takeUnless { it.contains("Failed to connect", ignoreCase = true) }
+        ?.takeUnless { it.contains("127.0.0.1") }
+        ?.takeUnless { it.contains("localhost", ignoreCase = true) }
+        ?.takeUnless { it.contains("http://", ignoreCase = true) }
+        ?.takeUnless { it.contains("https://", ignoreCase = true) }

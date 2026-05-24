@@ -34,9 +34,8 @@ internal suspend fun <T> executeCall(block: suspend () -> T): T {
             cause = e,
         )
     } catch (e: Exception) {
-        val cause = e.message?.takeIf { it.isNotBlank() }?.let { " (${it.take(160)})" }.orEmpty()
         throw NetworkException(
-            message = "Ошибка сети. Проверьте подключение к интернету.$cause",
+            message = "Ошибка сети. Проверьте подключение к интернету.",
             cause = e,
         )
     }
