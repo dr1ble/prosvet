@@ -66,6 +66,7 @@ kotlin {
             dependencies {
                 implementation(compose.preview)
                 implementation(libs.androidx.activity.compose)
+                implementation(libs.androidx.core.ktx)
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.coil3.network.okhttp)
                 // Lifecycle dependencies (Android/JVM only)

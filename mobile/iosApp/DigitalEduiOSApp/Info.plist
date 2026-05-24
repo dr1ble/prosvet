@@ -18,6 +18,10 @@
   <string>1.0</string>
   <key>CFBundleVersion</key>
   <string>1</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>Голосовой ввод нужен, чтобы искать курсы голосом.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Микрофон нужен для голосового поиска курсов.</string>
   <key>CADisableMinimumFrameDurationOnPhone</key>
   <true/>
   <key>LSRequiresIPhoneOS</key>

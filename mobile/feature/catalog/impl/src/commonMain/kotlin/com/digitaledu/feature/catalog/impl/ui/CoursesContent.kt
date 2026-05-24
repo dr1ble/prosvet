@@ -51,6 +51,8 @@ import digital_education_mobile.feature.catalog.impl.generated.resources.catalog
 import digital_education_mobile.feature.catalog.impl.generated.resources.catalog_empty_subtitle
 import digital_education_mobile.feature.catalog.impl.generated.resources.catalog_empty_title
 import digital_education_mobile.feature.catalog.impl.generated.resources.catalog_refresh
+import digital_education_mobile.feature.catalog.impl.generated.resources.catalog_search_empty_subtitle
+import digital_education_mobile.feature.catalog.impl.generated.resources.catalog_search_empty_title
 import kotlin.math.abs
 import org.jetbrains.compose.resources.stringResource
 
@@ -102,6 +104,25 @@ fun CoursesContent(
         return
     }
 
+    if (uiState.filteredCourses.isEmpty()) {
+        Column(
+            modifier = modifier
+                .padding(horizontal = UiSpacing.lg, vertical = UiSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+        ) {
+            Text(
+                text = stringResource(Res.string.catalog_search_empty_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(Res.string.catalog_search_empty_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),
         contentPadding = PaddingValues(UiSpacing.md),
@@ -110,7 +131,7 @@ fun CoursesContent(
         modifier = modifier,
     ) {
         items(
-            items = uiState.courses,
+            items = uiState.filteredCourses,
             key = { course -> course.id },
         ) { course ->
             CourseTile(

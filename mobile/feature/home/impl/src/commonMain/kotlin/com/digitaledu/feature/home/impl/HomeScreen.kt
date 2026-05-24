@@ -44,6 +44,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -103,6 +104,8 @@ import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiEntry
 import com.digitaledu.feature.profile.api.ProfileUiState
+import com.digitaledu.feature.home.impl.voice.VoiceSearchState
+import com.digitaledu.feature.home.impl.voice.rememberVoiceSearchController
 import digital_education_mobile.feature.home.`impl`.generated.resources.Res
 import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_courses_tab
 import digital_education_mobile.feature.home.`impl`.generated.resources.favorites_no_courses
@@ -129,6 +132,9 @@ import digital_education_mobile.feature.home.`impl`.generated.resources.home_con
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_recommended
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_recommended_all
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_search_placeholder
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_voice_search_error
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_voice_search_listening
+import digital_education_mobile.feature.home.`impl`.generated.resources.home_voice_search_unavailable
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_sos
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_sos_subtitle
 import digital_education_mobile.feature.home.`impl`.generated.resources.home_sos_title
@@ -1190,49 +1196,6 @@ private fun HomeCoursesContent(
             )
         }
 
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(UiShapes.cardLg)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .padding(UiSpacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = UiSpacing.xs),
-                )
-                Text(
-                    text = stringResource(Res.string.home_search_placeholder),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = UiSpacing.sm),
-                )
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(UiShapes.pill)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .accessibilityTouchTarget
-                        .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AccessibilityScaledControlContainer {
-                        Icon(
-                            imageVector = Icons.Filled.Mic,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                }
-            }
-        }
-
         val continueCourse = uiState.resolveContinueCourse()
         if (continueCourse != null) {
             item {
@@ -1346,12 +1309,19 @@ private fun LearningCoursesContent(
     onOpenCourse: (CatalogCourse) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
+    var voiceSearchState by remember { mutableStateOf(VoiceSearchState()) }
     var selectedCategoryId by rememberSaveable { mutableStateOf(CatalogCategories.ALL_ID) }
+    val unavailableMessage = stringResource(Res.string.home_voice_search_unavailable)
+    val recognitionErrorMessage = stringResource(Res.string.home_voice_search_error)
+    val voiceSearchController = rememberVoiceSearchController(
+        unavailableMessage = unavailableMessage,
+        recognitionErrorMessage = recognitionErrorMessage,
+        onResult = { result -> voiceSearchState = voiceSearchState.applyResult(result) },
+    )
     val continueCourse = uiState.resolveContinueCourseForLearning()
     val filteredCourses = filterLearningCourses(
         courses = uiState.courses,
-        query = query,
+        query = voiceSearchState.query,
         selectedCategoryId = selectedCategoryId,
     )
 
@@ -1380,9 +1350,16 @@ private fun LearningCoursesContent(
 
         item {
             LearningSearchField(
-                query = query,
-                onQueryChange = { query = it },
+                query = voiceSearchState.query,
+                onQueryChange = { voiceSearchState = voiceSearchState.withQuery(it) },
+                onVoiceSearchClick = {
+                    voiceSearchState = voiceSearchState.startListening()
+                    voiceSearchController.startListening()
+                },
+                isVoiceListening = voiceSearchState.isListening,
+                voiceMessage = voiceSearchState.message,
                 placeholder = stringResource(Res.string.home_search_placeholder),
+                listeningText = stringResource(Res.string.home_voice_search_listening),
             )
         }
 
@@ -1453,58 +1430,83 @@ private fun LearningCoursesContent(
 private fun LearningSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
+    onVoiceSearchClick: () -> Unit,
+    isVoiceListening: Boolean,
+    voiceMessage: String?,
     placeholder: String,
+    listeningText: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(UiShapes.cardLg)
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .padding(UiSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
     ) {
-        Icon(
-            imageVector = Icons.Filled.Search,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = UiSpacing.xs),
-        )
-        BasicTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            textStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-            singleLine = true,
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = UiSpacing.sm),
-            decorationBox = { innerTextField ->
-                if (query.isEmpty()) {
-                    Text(
-                        text = placeholder,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                .fillMaxWidth()
+                .clip(UiShapes.cardLg)
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                .padding(UiSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = UiSpacing.xs),
+            )
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                textStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                singleLine = true,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = UiSpacing.sm),
+                decorationBox = { innerTextField ->
+                    if (query.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    innerTextField()
+                },
+            )
+            IconButton(
+                onClick = onVoiceSearchClick,
+                enabled = !isVoiceListening,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(UiShapes.pill)
+                    .background(
+                        if (isVoiceListening) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
+                    )
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
+            ) {
+                AccessibilityScaledControlContainer {
+                    Icon(
+                        imageVector = Icons.Filled.Mic,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
-                innerTextField()
-            },
-        )
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(UiShapes.pill)
-                .background(MaterialTheme.colorScheme.primary)
-                .accessibilityTouchTarget
-                .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
-            contentAlignment = Alignment.Center,
-        ) {
-            AccessibilityScaledControlContainer {
-                Icon(
-                    imageVector = Icons.Filled.Mic,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
             }
+        }
+        val helperText = if (isVoiceListening) listeningText else voiceMessage
+        helperText?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = UiSpacing.sm),
+            )
         }
     }
 }
