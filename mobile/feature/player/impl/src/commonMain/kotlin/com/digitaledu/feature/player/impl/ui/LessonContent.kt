@@ -22,6 +22,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mic
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +41,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +78,7 @@ import com.digitaledu.core.model.content.SimulationPayload
 import com.digitaledu.core.model.content.UnknownPayload
 import com.digitaledu.core.model.content.VideoPayload
 import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
+import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
@@ -171,10 +176,21 @@ private data class LearningCoursePreview(
 fun LessonContent(
     uiState: PlayerUiState,
     onIntent: (PlayerIntent) -> Unit,
+    onHelpClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var activeScreen by rememberSaveable(uiState.bundle?.course?.id) {
-        mutableStateOf(if (uiState.bundle == null) LearningScreen.Courses else LearningScreen.LessonDetails)
+    var activeScreen by rememberSaveable(
+        uiState.bundle?.course?.id,
+        uiState.showCourseContents,
+        uiState.courseDetailsRevision,
+    ) {
+        mutableStateOf(
+            when {
+                uiState.bundle == null -> LearningScreen.Courses
+                uiState.showCourseContents -> LearningScreen.CourseLessons
+                else -> LearningScreen.LessonDetails
+            }
+        )
     }
     val learningCourses = remember(uiState.bundle, uiState.currentScreenIndex) {
         buildLearningCoursePreviews(
@@ -195,11 +211,24 @@ fun LessonContent(
 
     val selectedCourse = learningCourses.firstOrNull { it.id == selectedCourseId }
 
-    BackHandler(enabled = activeScreen != LearningScreen.Courses) {
+    BackHandler(enabled = activeScreen != LearningScreen.Courses || uiState.bundle != null) {
         activeScreen = when (activeScreen) {
-            LearningScreen.LessonDetails -> LearningScreen.CourseLessons
-            LearningScreen.CourseLessons -> LearningScreen.Courses
-            LearningScreen.Courses -> LearningScreen.Courses
+            LearningScreen.LessonDetails -> {
+                onIntent(PlayerIntent.Close)
+                LearningScreen.LessonDetails
+            }
+            LearningScreen.CourseLessons -> {
+                if (uiState.showCourseContents) {
+                    onIntent(PlayerIntent.Close)
+                    LearningScreen.CourseLessons
+                } else {
+                    LearningScreen.LessonDetails
+                }
+            }
+            LearningScreen.Courses -> {
+                onIntent(PlayerIntent.Close)
+                LearningScreen.Courses
+            }
         }
     }
 
@@ -225,13 +254,19 @@ fun LessonContent(
                     selectedLessonIndex = index
                 },
                 onBackToCourses = {
-                    activeScreen = LearningScreen.Courses
+                    activeScreen = if (uiState.showCourseContents) {
+                        onIntent(PlayerIntent.Close)
+                        LearningScreen.CourseLessons
+                    } else {
+                        LearningScreen.LessonDetails
+                    }
                 },
                 onOpenDetails = {
                     activeScreen = LearningScreen.LessonDetails
                 },
                 onOpenPlayableLesson = { screen ->
                     onIntent(PlayerIntent.NavigateToScreen(screen.screenKey))
+                    onIntent(PlayerIntent.EnterFullscreen)
                 },
                 modifier = modifier,
             )
@@ -249,8 +284,12 @@ fun LessonContent(
                 },
                 onToggleFavorite = { onIntent(PlayerIntent.ToggleFavorite) },
                 onCreateNote = { content -> onIntent(PlayerIntent.CreateNote(content)) },
-                onBack = {
+                onOpenContents = {
                     activeScreen = LearningScreen.CourseLessons
+                },
+                onHelpClick = onHelpClick,
+                onBack = {
+                    onIntent(PlayerIntent.Close)
                 },
                 modifier = modifier,
             )
@@ -608,11 +647,36 @@ private fun LearningCourseLessonsScreen(
         verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
     ) {
         item {
-            Text(
-                text = selectedCourse.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .clip(UiShapes.pill)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(
+                            label = stringResource(Res.string.lesson_back_to_courses),
+                            role = Role.Button,
+                        )
+                        .clickable(onClick = onBackToCourses)
+                        .padding(UiSpacing.xs),
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Text(
+                    text = selectedCourse.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
 
         item {
@@ -676,32 +740,12 @@ private fun LearningCourseLessonsScreen(
                         onSelectLesson(index)
                         if (selectedCourse.isPlayableBundle) {
                             onOpenPlayableLesson(screen)
+                        } else {
+                            onOpenDetails()
                         }
-                        onOpenDetails()
                     }
                 },
             )
-        }
-
-        item {
-            OutlinedButton(
-                onClick = onBackToCourses,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .accessibilityTouchTarget
-                    .accessibilitySemantics(
-                        label = stringResource(Res.string.lesson_choose_other_course),
-                        role = Role.Button,
-                    ),
-                shape = UiShapes.cardMd,
-            ) {
-                AccessibilityScaledControlContainer {
-                    Text(
-                        text = stringResource(Res.string.lesson_choose_other_course),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-            }
         }
     }
 }
@@ -890,6 +934,8 @@ private fun LearningLessonDetailsScreen(
     onStartLesson: () -> Unit,
     onToggleFavorite: () -> Unit,
     onCreateNote: (String) -> Unit,
+    onOpenContents: () -> Unit,
+    onHelpClick: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -938,92 +984,125 @@ private fun LearningLessonDetailsScreen(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = UiSpacing.md, vertical = UiSpacing.md),
-        verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+    Box(
+        modifier = modifier.fillMaxSize(),
     ) {
-        Card(
-            shape = UiShapes.cardLg,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = UiSpacing.md, vertical = UiSpacing.md)
+                .padding(bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
         ) {
-            Box {
-                CourseDetailsHeaderImage(
-                    coverImageUrl = selectedCourse.coverImageUrl,
-                    title = selectedCourse.title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp),
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    MaterialTheme.colorScheme.scrim,
+            Card(
+                shape = UiShapes.cardLg,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+            ) {
+                Box {
+                    CourseDetailsHeaderImage(
+                        coverImageUrl = selectedCourse.coverImageUrl,
+                        title = selectedCourse.title,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.scrim,
+                                    ),
                                 ),
                             ),
-                        ),
-                )
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(UiSpacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
-                ) {
-                    Surface(
-                        shape = UiShapes.pill,
-                        color = MaterialTheme.colorScheme.secondaryContainer,
+                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(UiSpacing.md)
+                            .clip(UiShapes.pill)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = UiOpacity.textSecondaryOnScrim),
+                            )
+                            .accessibilityTouchTarget
+                            .accessibilitySemantics(
+                                label = stringResource(Res.string.lesson_back_to_courses),
+                                role = Role.Button,
+                            )
+                            .clickable(onClick = onBack)
+                            .padding(UiSpacing.xs),
                     ) {
-                        Text(
-                            text = stringResource(Res.string.learning_course_track_label),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = UiSpacing.sm, vertical = UiSpacing.xxs),
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    Text(
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(UiSpacing.lg),
+                    ) {
+                        Text(
                             text = selectedCourse.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
+
+            Card(
+                shape = UiShapes.cardLg,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+            ) {
+                Column(
+                    modifier = Modifier.padding(UiSpacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                ) {
+                    Text(
+                        text = stringResource(Res.string.learning_course_overview_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = selectedCourse.description.ifBlank {
+                            currentScreen?.payload?.getPayloadPreview()
+                                ?: stringResource(Res.string.lesson_screen_unavailable_subtitle)
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-        }
 
-        LearningStatsRow(
-            totalSteps = selectedCourse.lessons.size,
-            progressPercent = progressPercent,
-            estimatedDurationMinutes = selectedCourse.estimatedDurationMinutes,
-        )
-
-        Card(
-            shape = UiShapes.cardLg,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        OutlinedButton(
+            onClick = onOpenContents,
+            modifier = Modifier
+                .fillMaxWidth()
+                .accessibilityTouchTarget
+                .accessibilitySemantics(
+                    label = "Содержание",
+                    role = Role.Button,
+                ),
+            shape = UiShapes.cardMd,
         ) {
-            Column(
-                modifier = Modifier.padding(UiSpacing.lg),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
-            ) {
-                Text(
-                    text = stringResource(Res.string.learning_course_overview_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = selectedCourse.description.ifBlank {
-                        currentScreen?.payload?.getPayloadPreview()
-                            ?: stringResource(Res.string.lesson_screen_unavailable_subtitle)
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.List,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(UiSpacing.xs))
+            Text(
+                text = "Содержание",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(vertical = UiSpacing.xxs),
+            )
         }
 
         OutlinedButton(
@@ -1137,53 +1216,67 @@ private fun LearningLessonDetailsScreen(
             }
         }
 
-        Button(
-            onClick = onStartLesson,
-            enabled = canStartLesson,
+        }
+
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .accessibilityTouchTarget
-                .accessibilitySemantics(
-                    label = if (canStartLesson) {
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = UiSpacing.md)
+                .padding(bottom = UiSpacing.md)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        ) {
+            FloatingActionButton(
+                onClick = onHelpClick,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                shape = UiShapes.pill,
+                modifier = Modifier
+                    .size(64.dp)
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = "Помощь",
+                        role = Role.Button,
+                    ),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.SupportAgent,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+            Button(
+                onClick = onStartLesson,
+                enabled = canStartLesson,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(
+                        label = if (canStartLesson) {
+                            stringResource(Res.string.learning_start_course)
+                        } else {
+                            stringResource(Res.string.learning_preview_only)
+                        },
+                        role = Role.Button,
+                        enabled = canStartLesson,
+                    ),
+                shape = UiShapes.cardMd,
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
+                Text(
+                    text = if (canStartLesson) {
                         stringResource(Res.string.learning_start_course)
                     } else {
                         stringResource(Res.string.learning_preview_only)
                     },
-                    role = Role.Button,
-                    enabled = canStartLesson,
-                ),
-            shape = UiShapes.cardMd,
-            colors = ButtonDefaults.buttonColors(
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-        ) {
-            Text(
-                text = if (canStartLesson) {
-                stringResource(Res.string.learning_start_course)
-                } else {
-                    stringResource(Res.string.learning_preview_only)
-                },
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(vertical = UiSpacing.xxs),
-            )
-        }
-
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier
-                .fillMaxWidth()
-                .accessibilityTouchTarget
-                .accessibilitySemantics(
-                    label = stringResource(Res.string.lesson_back_to_courses),
-                    role = Role.Button,
-                ),
-            shape = UiShapes.cardMd,
-        ) {
-            Text(
-                text = stringResource(Res.string.lesson_back_to_courses),
-                style = MaterialTheme.typography.titleMedium,
-            )
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = UiSpacing.xxs),
+                )
+            }
         }
     }
 }
@@ -1208,13 +1301,6 @@ private fun LearningStatsRow(
                 estimatedDurationMinutes,
                 estimatedDurationMinutes,
             ),
-            modifier = Modifier.weight(1f),
-        )
-        LearningStatCard(
-            icon = {
-                Text("#", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
-            },
-            value = stringResource(Res.string.learning_course_steps, totalSteps),
             modifier = Modifier.weight(1f),
         )
         LearningStatCard(

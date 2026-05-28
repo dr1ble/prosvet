@@ -120,7 +120,7 @@ internal fun LessonSummaryView(
                         state.completedSteps,
                         state.totalSteps,
                         state.progressPercent,
-                    ),
+                    ) + "%",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,

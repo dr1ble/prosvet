@@ -75,6 +75,7 @@ class PlayerNavigationUseCasesTest {
         val action = resolveHotspotAction(
             currentPayload = SimulationPayload(
                 imageUrl = "img.png",
+                hotspots = listOf(hotspot),
                 isStart = true,
             ),
             hotspot = hotspot,
@@ -121,6 +122,103 @@ class PlayerNavigationUseCasesTest {
         )
 
         assertEquals(HotspotAction.NavigateToScreen("screen-2"), action)
+    }
+
+    @Test
+    fun resolveHotspotAction_returnsNavigate_forNonFirstSimulationTarget() {
+        val distractor = Hotspot(
+            x = 0f,
+            y = 0f,
+            width = 10f,
+            height = 10f,
+            label = "wrong",
+            hint = "Try another button",
+            targetScreenKey = null,
+        )
+        val target = Hotspot(
+            x = 20f,
+            y = 20f,
+            width = 10f,
+            height = 10f,
+            label = "continue",
+            hint = "",
+            targetScreenKey = "screen-2",
+        )
+
+        val action = resolveHotspotAction(
+            currentPayload = SimulationPayload(
+                imageUrl = "img.png",
+                hotspots = listOf(distractor, target),
+            ),
+            hotspot = target,
+        )
+
+        assertEquals(HotspotAction.NavigateToScreen("screen-2"), action)
+    }
+
+    @Test
+    fun resolveHotspotAction_returnsShowHint_forNonFirstSimulationTargetWithHint() {
+        val distractor = Hotspot(
+            x = 0f,
+            y = 0f,
+            width = 10f,
+            height = 10f,
+            label = "wrong",
+            hint = "Try another button",
+            targetScreenKey = null,
+        )
+        val target = Hotspot(
+            x = 20f,
+            y = 20f,
+            width = 10f,
+            height = 10f,
+            label = "continue",
+            hint = "Now continue",
+            targetScreenKey = "screen-2",
+        )
+
+        val action = resolveHotspotAction(
+            currentPayload = SimulationPayload(
+                imageUrl = "img.png",
+                hotspots = listOf(distractor, target),
+            ),
+            hotspot = target,
+        )
+
+        assertEquals(HotspotAction.NavigateToScreen("screen-2"), action)
+    }
+
+    @Test
+    fun resolveHotspotAction_returnsShowHint_forNonTargetStartSimulationHotspot() {
+        val target = Hotspot(
+            x = 0f,
+            y = 0f,
+            width = 10f,
+            height = 10f,
+            label = "target",
+            hint = "Correct button",
+            targetScreenKey = "screen-2",
+        )
+        val distractor = Hotspot(
+            x = 20f,
+            y = 20f,
+            width = 10f,
+            height = 10f,
+            label = "wrong",
+            hint = "Try another button",
+            targetScreenKey = null,
+        )
+
+        val action = resolveHotspotAction(
+            currentPayload = SimulationPayload(
+                imageUrl = "img.png",
+                hotspots = listOf(target, distractor),
+                isStart = true,
+            ),
+            hotspot = distractor,
+        )
+
+        assertEquals(HotspotAction.ShowHint(distractor), action)
     }
 
     @Test

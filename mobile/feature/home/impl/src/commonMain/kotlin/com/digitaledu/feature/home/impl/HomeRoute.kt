@@ -59,6 +59,7 @@ fun HomeRoute(
     val profileUiState by profileFeatureHost.uiState.collectAsState()
 
     var selectedTab by remember { mutableStateOf(HomeTab.Home) }
+    var courseReturnTab by remember { mutableStateOf(HomeTab.Home) }
     var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
     var qrHandledToken by remember { mutableStateOf<String?>(null) }
     var groupQrErrorMessage by remember { mutableStateOf<String?>(null) }
@@ -97,9 +98,25 @@ fun HomeRoute(
     }
 
     ObserveEffects(catalogFeatureHost.effects) { effect ->
-        if (effect is CatalogEffect.CourseOpened) {
-            playerFeatureHost.openBundle(effect.bundle, startFullscreen = true)
-            selectedTab = HomeTab.Learning
+        when (effect) {
+            is CatalogEffect.CourseOpened -> {
+                courseReturnTab = selectedTab
+                playerFeatureHost.openBundle(effect.bundle, startFullscreen = true)
+                selectedTab = HomeTab.Learning
+            }
+            is CatalogEffect.CourseOpenedInLearning -> {
+                courseReturnTab = selectedTab
+                playerFeatureHost.openBundle(effect.bundle, startFullscreen = false, showContents = false)
+                selectedTab = HomeTab.Learning
+            }
+            is CatalogEffect.CourseContentsOpened -> {
+                courseReturnTab = selectedTab
+                playerFeatureHost.openBundle(effect.bundle, startFullscreen = false, showContents = true)
+                selectedTab = HomeTab.Learning
+            }
+            CatalogEffect.FavoriteChanged -> {
+                profileFeatureHost.processIntent(ProfileIntent.RefreshFavoriteCount)
+            }
         }
     }
 
@@ -113,7 +130,7 @@ fun HomeRoute(
         when (effect) {
             PlayerEffect.Closed -> {
                 diagnosticsFeatureHost.processIntent(DiagnosticsIntent.Refresh)
-                selectedTab = HomeTab.Home
+                selectedTab = courseReturnTab
             }
             PlayerEffect.FavoriteChanged -> {
                 catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)

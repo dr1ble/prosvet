@@ -146,7 +146,11 @@ def _simulation(
     title: str,
     image_url: str,
     hotspots: list[dict[str, Any]],
+    target_screen_key: str,
 ) -> dict[str, Any]:
+    if hotspots:
+        hotspots[0] = {**hotspots[0], "target_screen_key": target_screen_key}
+
     return {
         "screen_key": screen_key,
         "title": title,
@@ -156,7 +160,7 @@ def _simulation(
             "image_url": image_url,
             "hotspots": hotspots,
             "is_start": True,
-            "is_completion": True,
+            "is_completion": False,
         },
     }
 
@@ -218,7 +222,7 @@ def _course(
         "screens": [
             _article(f"{prefix}-intro", "Что вы научитесь делать", 1, intro),
             _video(f"{prefix}-video", "Короткая демонстрация", 2, video_transcript),
-            _simulation(f"{prefix}-simulation", simulation_title, image_url, hotspots),
+            _simulation(f"{prefix}-simulation", simulation_title, image_url, hotspots, f"{prefix}-quiz"),
             _quiz(f"{prefix}-quiz", "Мини-проверка", f"{prefix}-q1", quiz_question, quiz_answer),
             _article(f"{prefix}-summary", "Итоги и памятка", 5, summary),
         ],

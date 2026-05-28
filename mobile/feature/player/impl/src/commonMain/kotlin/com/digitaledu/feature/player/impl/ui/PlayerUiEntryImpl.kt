@@ -31,7 +31,7 @@ internal class PlayerUiEntryImpl : PlayerUiEntry {
             )
             LessonSummaryView(
                 state = summaryState,
-                onContinue = { onIntent(PlayerIntent.Close) },
+                onContinue = { onIntent(PlayerIntent.ReturnToCourseDetails) },
                 onFinish = { onIntent(PlayerIntent.Close) },
                 modifier = modifier,
             )
@@ -56,11 +56,13 @@ internal class PlayerUiEntryImpl : PlayerUiEntry {
     override fun TabContent(
         uiState: PlayerUiState,
         onIntent: (PlayerIntent) -> Unit,
+        onHelpClick: () -> Unit,
         modifier: Modifier,
     ) {
         LessonContent(
             uiState = uiState,
             onIntent = onIntent,
+            onHelpClick = onHelpClick,
             modifier = modifier,
         )
     }

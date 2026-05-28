@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,6 +51,7 @@ internal fun LearningCoursePreviewContent(
     progress: CourseProgress?,
     onBack: () -> Unit,
     onStart: () -> Unit,
+    onContents: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -95,19 +98,6 @@ internal fun LearningCoursePreviewContent(
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
             ) {
                 Text(
-                    text = "Обучение",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                progress?.let {
-                    Text(
-                        text = "${it.completedLessons} из ${it.totalLessons} уроков",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                Text(
                     text = course.title,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
@@ -118,6 +108,24 @@ internal fun LearningCoursePreviewContent(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                OutlinedButton(
+                    onClick = onContents,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    AccessibilityScaledControlContainer {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.List,
+                                contentDescription = null,
+                            )
+                            Spacer(modifier = Modifier.width(UiSpacing.xs))
+                            Text(text = "Содержание")
+                        }
+                    }
                 }
                 Button(
                     onClick = onStart,

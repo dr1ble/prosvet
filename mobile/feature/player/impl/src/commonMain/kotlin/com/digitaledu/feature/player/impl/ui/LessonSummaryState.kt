@@ -2,6 +2,12 @@ package com.digitaledu.feature.player.impl.ui
 
 import com.digitaledu.core.model.catalog.CatalogCourse
 import com.digitaledu.core.model.catalog.CatalogScreen
+import com.digitaledu.core.model.content.ArticlePayload
+import com.digitaledu.core.model.content.CheatSheetPayload
+import com.digitaledu.core.model.content.QuizPayload
+import com.digitaledu.core.model.content.SimulationPayload
+import com.digitaledu.core.model.content.UnknownPayload
+import com.digitaledu.core.model.content.VideoPayload
 import kotlin.math.roundToInt
 
 internal data class LessonSummaryState(
@@ -20,10 +26,16 @@ internal fun buildLessonSummaryState(
     screens: List<CatalogScreen>,
     currentScreenIndex: Int,
 ): LessonSummaryState {
-    val totalSteps = screens.size.coerceAtLeast(1)
-    val normalizedIndex = currentScreenIndex.coerceIn(0, totalSteps - 1)
-    val completedSteps = (normalizedIndex + 1).coerceAtMost(totalSteps)
-    val nextScreen = screens.getOrNull(normalizedIndex + 1)
+    val normalizedIndex = currentScreenIndex.coerceIn(0, screens.lastIndex.coerceAtLeast(0))
+    val playableScreens = screens.filter(CatalogScreen::isPlayableSummaryStep)
+    val totalSteps = playableScreens.size.coerceAtLeast(1)
+    val completedSteps = screens
+        .take(normalizedIndex + 1)
+        .count(CatalogScreen::isPlayableSummaryStep)
+        .coerceIn(1, totalSteps)
+    val nextScreen = screens
+        .drop(normalizedIndex + 1)
+        .firstOrNull(CatalogScreen::isPlayableSummaryStep)
 
     return LessonSummaryState(
         courseTitle = course.title,
@@ -35,4 +47,15 @@ internal fun buildLessonSummaryState(
         hasNextLesson = nextScreen != null,
         nextLessonTitle = nextScreen?.title,
     )
+}
+
+private fun CatalogScreen.isPlayableSummaryStep(): Boolean {
+    return when (val screenPayload = payload) {
+        is ArticlePayload -> screenPayload.markdownContent.isNotBlank()
+        is CheatSheetPayload -> screenPayload.content.isNotBlank()
+        is QuizPayload -> screenPayload.questions.isNotEmpty()
+        is SimulationPayload -> screenPayload.imageUrl.isNotBlank() || screenPayload.hotspots.isNotEmpty()
+        is UnknownPayload -> false
+        is VideoPayload -> screenPayload.videoUrl.isNotBlank()
+    }
 }

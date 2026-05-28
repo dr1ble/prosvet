@@ -16,7 +16,7 @@
     <string name="home_continue_select_course">Выберите курс для продолжения</string>
     <string name="home_continue_start">Начать урок</string>
     <string name="home_recommended">Рекомендуем вам</string>
-    <string name="home_recommended_all">Все уроки</string>
+    <string name="home_recommended_all">Все курсы</string>
     <string name="home_add_favorite">Добавить в избранное</string>
     <string name="home_remove_favorite">Убрать из избранного</string>
     <string name="home_sos">Помощь</string>

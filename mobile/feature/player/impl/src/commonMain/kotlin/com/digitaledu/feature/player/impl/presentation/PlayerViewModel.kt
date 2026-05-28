@@ -10,6 +10,7 @@ import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.catalog.CatalogScreen
 import com.digitaledu.core.model.content.CheatSheetPayload
 import com.digitaledu.core.model.content.Hotspot
+import com.digitaledu.core.model.content.SimulationPayload
 import com.digitaledu.core.model.memo.SavedMemo
 import com.digitaledu.core.model.progress.LessonSessionAnalyticsCreate
 import com.digitaledu.feature.player.api.PlayerEffect
@@ -72,12 +73,13 @@ internal class PlayerViewModel(
             PlayerIntent.ToggleMemoSaved -> toggleMemoSaved()
             is PlayerIntent.CreateNote -> createNote(intent.content)
             PlayerIntent.FinishLesson -> finishCurrentLesson()
+            PlayerIntent.ReturnToCourseDetails -> returnToCourseDetails()
             is PlayerIntent.RecordSimulationError -> recordSimulationError(intent.hintLevel)
             PlayerIntent.Close -> closeCourse()
         }
     }
 
-    override fun openBundle(bundle: CatalogBundle, startFullscreen: Boolean) {
+    override fun openBundle(bundle: CatalogBundle, startFullscreen: Boolean, showContents: Boolean) {
         val restoredProgress = restoreProgress(bundle)
         updateState {
             copy(
@@ -88,6 +90,7 @@ internal class PlayerViewModel(
                 completedScreens = restoredProgress.completedScreens,
                 activeHotspotHint = null,
                 showLessonSummary = false,
+                showCourseContents = showContents,
             )
         }
         resetSessionTelemetry()
@@ -168,6 +171,7 @@ internal class PlayerViewModel(
             copy(
                 currentScreenIndex = outcome.targetIndex,
                 completedScreens = outcome.completedScreens,
+                activeHotspotHint = null,
             )
         }
         val lessonIdToSync = completedLessonId
@@ -193,8 +197,14 @@ internal class PlayerViewModel(
 
     private fun dismissHotspotHint() {
         val hint = currentState.activeHotspotHint
+        val currentPayload = currentState.currentScreen?.payload as? SimulationPayload
+
         updateState { copy(activeHotspotHint = null) }
-        hint?.targetScreenKey?.let { navigateToScreenKey(it) }
+        hint?.targetScreenKey?.let { screenKey ->
+            if (currentPayload == null || hint in currentPayload.hotspots) {
+                navigateToScreenKey(screenKey)
+            }
+        }
     }
 
     private fun closeCourse() {
@@ -356,6 +366,17 @@ internal class PlayerViewModel(
             syncCompletedLesson(lessonId = lessonId, courseId = bundle.course.id)
         }
         updateState { copy(showLessonSummary = true) }
+    }
+
+    private fun returnToCourseDetails() {
+        updateState {
+            copy(
+                isFullscreenMode = false,
+                showLessonSummary = false,
+                showCourseContents = false,
+                courseDetailsRevision = courseDetailsRevision + 1,
+            )
+        }
     }
 
     private fun startSessionIfPossible() {

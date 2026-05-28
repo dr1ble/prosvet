@@ -4,6 +4,6 @@ internal fun resolveCoursePreviewCoverUrl(
     simulationImageUrl: String?,
     courseCoverImageUrl: String?,
 ): String? {
-    return simulationImageUrl?.trim()?.takeIf { it.isNotEmpty() }
-        ?: courseCoverImageUrl?.trim()?.takeIf { it.isNotEmpty() }
+    return courseCoverImageUrl?.trim()?.takeIf { it.isNotEmpty() }
+        ?: simulationImageUrl?.trim()?.takeIf { it.isNotEmpty() }
 }

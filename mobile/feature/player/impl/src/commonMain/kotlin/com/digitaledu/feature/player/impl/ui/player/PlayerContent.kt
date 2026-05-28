@@ -35,6 +35,7 @@ fun PlayerContent(
     mediaAccessToken: String?,
     activeHotspotHint: Hotspot?,
     isCurrentMemoSaved: Boolean,
+    isCurrentScreen: Boolean = true,
     onIntent: (PlayerIntent) -> Unit,
     resolveUrl: (String) -> String,
     modifier: Modifier = Modifier,
@@ -44,12 +45,20 @@ fun PlayerContent(
             SimulationScreen(
                 screenTitle = screen.title,
                 payload = payload,
+                isCurrentScreen = isCurrentScreen,
                 accessToken = mediaAccessToken,
                 activeHotspotHint = activeHotspotHint,
                 onResolveImageUrl = resolveUrl,
                 onHotspotClick = { onIntent(PlayerIntent.ClickHotspot(it)) },
                 onDismissHint = { onIntent(PlayerIntent.DismissHotspotHint) },
-                onAutoAdvance = { onIntent(PlayerIntent.Next) },
+                onAutoAdvance = {
+                    val simPayload = screen.payload as? SimulationPayload
+                    if (simPayload?.isCompletion == true && simPayload.hotspots.isEmpty()) {
+                        onIntent(PlayerIntent.FinishLesson)
+                    } else {
+                        onIntent(PlayerIntent.Next)
+                    }
+                },
                 onRecordError = { hintLevel ->
                     onIntent(PlayerIntent.RecordSimulationError(hintLevel))
                 },

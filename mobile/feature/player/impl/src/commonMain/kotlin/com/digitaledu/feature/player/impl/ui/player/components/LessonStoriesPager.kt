@@ -78,14 +78,10 @@ fun LessonStoriesPager(
         }
     }
 
-    LaunchedEffect(pagerState.currentPage, isSimulation) {
-        // Feed pager swipes back into the VM only for screens where user-driven
-        // navigation is allowed. Simulation screens disable swipe entirely, so
-        // any currentPage drift there would be an unintended side-effect we
-        // don't want to forward (it used to cause ghost auto-advance).
+    LaunchedEffect(pagerState.settledPage, isSimulation) {
         if (isSimulation) return@LaunchedEffect
-        if (pagerState.currentPage != currentScreenIndex) {
-            if (pagerState.currentPage > currentScreenIndex) {
+        if (pagerState.settledPage != currentScreenIndex) {
+            if (pagerState.settledPage > currentScreenIndex) {
                 onIntent(PlayerIntent.Next)
             } else {
                 onIntent(PlayerIntent.Previous)
@@ -134,6 +130,7 @@ fun LessonStoriesPager(
                         mediaAccessToken = mediaAccessToken,
                         activeHotspotHint = activeHotspotHint,
                         isCurrentMemoSaved = isCurrentMemoSaved,
+                        isCurrentScreen = pageIndex == currentScreenIndex,
                         onIntent = onIntent,
                         resolveUrl = resolveUrl,
                         modifier = contentModifier,

@@ -24,6 +24,8 @@ internal class CatalogViewModel(
         when (intent) {
             CatalogIntent.RefreshCourses -> loadCourses()
             is CatalogIntent.OpenCourse -> openCourse(intent.slug)
+            is CatalogIntent.OpenCourseInLearning -> openCourseInLearning(intent.slug)
+            is CatalogIntent.OpenCourseContents -> openCourseContents(intent.slug)
             is CatalogIntent.ToggleFavorite -> toggleFavorite(intent.courseId)
             CatalogIntent.DismissError -> dismissError()
             is CatalogIntent.SetSearchQuery -> setSearchQuery(intent.query)
@@ -64,6 +66,34 @@ internal class CatalogViewModel(
         emitEffect(CatalogEffect.CourseOpened(bundle))
     }
 
+    private suspend fun openCourseContents(courseSlug: String) {
+        val bundle = runLoadingAction {
+            openCourseBundleUseCase(courseSlug)
+        } ?: return
+
+        updateState {
+            copy(
+                isLoading = false,
+                errorMessage = null,
+            )
+        }
+        emitEffect(CatalogEffect.CourseContentsOpened(bundle))
+    }
+
+    private suspend fun openCourseInLearning(courseSlug: String) {
+        val bundle = runLoadingAction {
+            openCourseBundleUseCase(courseSlug)
+        } ?: return
+
+        updateState {
+            copy(
+                isLoading = false,
+                errorMessage = null,
+            )
+        }
+        emitEffect(CatalogEffect.CourseOpenedInLearning(bundle))
+    }
+
     private suspend fun toggleFavorite(courseId: String) {
         val course = currentState.courses.firstOrNull { it.id == courseId } ?: return
         val updatedCourse = try {
@@ -79,6 +109,7 @@ internal class CatalogViewModel(
         updateState {
             copy(courses = courses.map { if (it.id == courseId) updatedCourse else it })
         }
+        emitEffect(CatalogEffect.FavoriteChanged)
     }
 
     private suspend fun <T> runLoadingAction(block: suspend () -> T): T? {

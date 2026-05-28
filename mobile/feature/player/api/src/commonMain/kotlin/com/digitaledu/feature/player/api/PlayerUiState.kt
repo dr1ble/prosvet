@@ -13,6 +13,8 @@ data class PlayerUiState(
     val currentMemoId: String? = null,
     val isCurrentMemoSaved: Boolean = false,
     val showLessonSummary: Boolean = false,
+    val showCourseContents: Boolean = false,
+    val courseDetailsRevision: Int = 0,
 ) {
     val currentScreen
         get() = bundle?.screens?.getOrNull(currentScreenIndex)

@@ -83,7 +83,7 @@ MOBILE_HEAVY_EXTRA_COURSES: tuple[dict[str, Any], ...] = (
                             "height": 10,
                             "label": "Проверить состав заказа",
                             "hint": "Сверьте дозировку и количество препаратов.",
-                            "target_screen_key": None,
+                            "target_screen_key": "pharma-quiz",
                         },
                         {
                             "x": 60,
@@ -96,7 +96,7 @@ MOBILE_HEAVY_EXTRA_COURSES: tuple[dict[str, Any], ...] = (
                         },
                     ],
                     "is_start": True,
-                    "is_completion": True,
+                    "is_completion": False,
                 },
             },
             {
@@ -170,7 +170,7 @@ MOBILE_HEAVY_EXTRA_COURSES: tuple[dict[str, Any], ...] = (
                             "height": 11,
                             "label": "Проверить домен",
                             "hint": "Официальные домены обычно короткие и узнаваемые.",
-                            "target_screen_key": None,
+                            "target_screen_key": "chat-quiz",
                         },
                         {
                             "x": 61,
@@ -183,7 +183,7 @@ MOBILE_HEAVY_EXTRA_COURSES: tuple[dict[str, Any], ...] = (
                         },
                     ],
                     "is_start": True,
-                    "is_completion": True,
+                    "is_completion": False,
                 },
             },
             {

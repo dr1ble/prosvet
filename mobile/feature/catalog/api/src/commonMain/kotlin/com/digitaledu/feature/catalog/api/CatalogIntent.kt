@@ -3,6 +3,8 @@ package com.digitaledu.feature.catalog.api
 sealed interface CatalogIntent {
     data object RefreshCourses : CatalogIntent
     data class OpenCourse(val slug: String) : CatalogIntent
+    data class OpenCourseInLearning(val slug: String) : CatalogIntent
+    data class OpenCourseContents(val slug: String) : CatalogIntent
     data object DismissError : CatalogIntent
     data class ToggleFavorite(val courseId: String) : CatalogIntent
     data class SetSearchQuery(val query: String) : CatalogIntent

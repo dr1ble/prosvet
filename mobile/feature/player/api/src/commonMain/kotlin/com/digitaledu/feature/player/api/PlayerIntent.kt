@@ -14,6 +14,7 @@ sealed interface PlayerIntent {
     data object ToggleMemoSaved : PlayerIntent
     data class CreateNote(val content: String) : PlayerIntent
     data object FinishLesson : PlayerIntent
+    data object ReturnToCourseDetails : PlayerIntent
     data class RecordSimulationError(val hintLevel: Int) : PlayerIntent
     data object Close : PlayerIntent
 }

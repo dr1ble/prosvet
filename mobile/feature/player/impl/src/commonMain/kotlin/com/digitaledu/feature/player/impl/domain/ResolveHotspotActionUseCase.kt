@@ -10,8 +10,15 @@ internal class ResolveHotspotActionUseCase {
         hotspot: Hotspot,
     ): HotspotAction {
         val targetScreenKey = hotspot.targetScreenKey
-        val isStartSimulation = (currentPayload as? SimulationPayload)?.isStart == true
-        if (isStartSimulation && targetScreenKey == null) {
+        val simulationPayload = currentPayload as? SimulationPayload
+        val isStartSimulation = simulationPayload?.isStart == true
+        val fallbackTargetHotspot = simulationPayload?.hotspots?.firstOrNull()
+
+        if (simulationPayload != null && targetScreenKey != null) {
+            return HotspotAction.NavigateToScreen(targetScreenKey)
+        }
+
+        if (isStartSimulation && targetScreenKey == null && hotspot == fallbackTargetHotspot) {
             return HotspotAction.MoveNext
         }
 

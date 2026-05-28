@@ -45,6 +45,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -251,7 +252,7 @@ fun HomeScreen(
             SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
-            if (selectedTab == HomeTab.Home || selectedTab == HomeTab.Learning) {
+            if (selectedTab == HomeTab.Home || (selectedTab == HomeTab.Learning && playerUiState.bundle == null)) {
                 Box {
                     FloatingActionButton(
                         onClick = { overlayScreen = HomeOverlayScreen.Sos },
@@ -259,6 +260,7 @@ fun HomeScreen(
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                         shape = UiShapes.pill,
                         modifier = Modifier
+                            .size(64.dp)
                             .accessibilityTouchTarget
                             .accessibilitySemantics(
                                 label = stringResource(Res.string.home_sos),
@@ -268,6 +270,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Rounded.SupportAgent,
                             contentDescription = null,
+                            modifier = Modifier.size(28.dp),
                         )
                     }
                     if (hasUnreadHelpReplies) {
@@ -429,6 +432,11 @@ fun HomeScreen(
                         overlayScreen = HomeOverlayScreen.None
                         onCatalogIntent(CatalogIntent.OpenCourse(course.slug))
                     },
+                    onContents = {
+                        previewCourse = null
+                        overlayScreen = HomeOverlayScreen.None
+                        onCatalogIntent(CatalogIntent.OpenCourseContents(course.slug))
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -445,10 +453,7 @@ fun HomeScreen(
                     diagnosticsUiState = diagnosticsUiState,
                     currentUserDisplayName = profileUiState.displayName?.trim()?.takeIf { it.isNotEmpty() },
                     onContinueCourse = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
-                    onOpenCourse = { course ->
-                        previewCourse = course
-                        overlayScreen = HomeOverlayScreen.LearningPreview
-                    },
+                    onOpenCourse = { course -> onCatalogIntent(CatalogIntent.OpenCourseInLearning(course.slug)) },
                     onOpenDiagnostics = { overlayScreen = HomeOverlayScreen.Diagnostics },
                     onOpenLearningTab = { onTabSelected(HomeTab.Learning) },
                     modifier = Modifier
@@ -458,17 +463,24 @@ fun HomeScreen(
             }
 
             HomeTab.Learning -> {
-                LearningCoursesContent(
-                    uiState = catalogUiState,
-                    onOpenContinue = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
-                    onOpenCourse = { course ->
-                        previewCourse = course
-                        overlayScreen = HomeOverlayScreen.LearningPreview
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                )
+                if (playerUiState.bundle != null) {
+                    playerUiEntry.TabContent(
+                        uiState = playerUiState,
+                        onIntent = onPlayerIntent,
+                        onHelpClick = { overlayScreen = HomeOverlayScreen.Sos },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                    )
+                } else {
+                    LearningCoursesContent(
+                        uiState = catalogUiState,
+                        onOpenCourse = { course -> onCatalogIntent(CatalogIntent.OpenCourseInLearning(course.slug)) },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                    )
+                }
             }
 
             HomeTab.Profile -> {
@@ -1269,34 +1281,57 @@ private fun DiagnosticSummaryCard(
     diagnosticsUiState: DiagnosticsUiState,
     onOpenDiagnostics: () -> Unit,
 ) {
+    val isCompleted = diagnosticsUiState.hasCompletedDiagnostic
+    val title = if (isCompleted) {
+        "Персональная траектория готова"
+    } else {
+        "Соберём персональную траекторию"
+    }
+    val subtitle = if (isCompleted) {
+        "Профиль готов. Откройте маршрут и продолжайте с подходящего шага."
+    } else {
+        "Ответьте на короткие вопросы, а мы подберём уровень и порядок курсов."
+    }
+    val buttonText = if (isCompleted) "Открыть маршрут" else "Начать диагностику"
+
     Card(
         shape = UiShapes.cardLg,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
-        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UiOpacity.border), UiShapes.cardLg),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(UiSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
         ) {
             Text(
-                text = "Персональная траектория",
+                text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = if (diagnosticsUiState.hasCompletedDiagnostic) {
-                    "Профиль компетенций готов. Откройте рекомендации и продолжите обучение."
-                } else {
-                    "Пройдите входную диагностику, чтобы получить индивидуальный маршрут."
-                },
+                text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(onClick = onOpenDiagnostics) {
-                Text(if (diagnosticsUiState.hasCompletedDiagnostic) "Открыть маршрут" else "Начать диагностику")
+            Button(
+                onClick = onOpenDiagnostics,
+                shape = UiShapes.cardMd,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .accessibilityTouchTarget
+                    .accessibilitySemantics(label = buttonText, role = Role.Button),
+            ) {
+                Text(
+                    text = buttonText,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = UiSpacing.xxs),
+                )
             }
         }
     }
@@ -1305,7 +1340,6 @@ private fun DiagnosticSummaryCard(
 @Composable
 private fun LearningCoursesContent(
     uiState: CatalogUiState,
-    onOpenContinue: (String) -> Unit,
     onOpenCourse: (CatalogCourse) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1318,7 +1352,6 @@ private fun LearningCoursesContent(
         recognitionErrorMessage = recognitionErrorMessage,
         onResult = { result -> voiceSearchState = voiceSearchState.applyResult(result) },
     )
-    val continueCourse = uiState.resolveContinueCourseForLearning()
     val filteredCourses = filterLearningCourses(
         courses = uiState.courses,
         query = voiceSearchState.query,
@@ -1382,16 +1415,6 @@ private fun LearningCoursesContent(
                         ),
                     )
                 }
-            }
-        }
-
-        if (continueCourse != null) {
-            item {
-                ContinueLearningCard(
-                    course = continueCourse,
-                    progress = uiState.progressByCourseId[continueCourse.id],
-                    onStart = { onOpenContinue(continueCourse.slug) },
-                )
             }
         }
 
@@ -1490,13 +1513,12 @@ private fun LearningSearchField(
                     .accessibilityTouchTarget
                     .accessibilitySemantics(label = "Голосовой поиск", role = Role.Button),
             ) {
-                AccessibilityScaledControlContainer {
-                    Icon(
-                        imageVector = Icons.Filled.Mic,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Filled.Mic,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.accessibilityControlScale,
+                )
             }
         }
         val helperText = if (isVoiceListening) listeningText else voiceMessage
@@ -2000,7 +2022,10 @@ private fun FavoriteCourseCard(
                     .height(188.dp)
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(MaterialTheme.colorScheme.scrim, MaterialTheme.colorScheme.scrim),
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.scrim.copy(alpha = UiOpacity.scrimOverlay),
+                            ),
                         ),
                     ),
             )
@@ -2034,7 +2059,7 @@ private fun FavoriteCourseCard(
                 Text(
                     text = course.title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color.White,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -2043,7 +2068,7 @@ private fun FavoriteCourseCard(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = Color.White.copy(alpha = UiOpacity.textSecondaryOnScrim),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -2052,7 +2077,7 @@ private fun FavoriteCourseCard(
                     Text(
                         text = "${it.completedLessons}/${it.totalLessons}",
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -2313,14 +2338,6 @@ private fun RecommendedCourseCard(
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
                 modifier = Modifier.weight(1f),
             ) {
-                progress?.let {
-                    Text(
-                        text = "${it.completedLessons}/${it.totalLessons}",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
@@ -2338,6 +2355,31 @@ private fun RecommendedCourseCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                progress?.let {
+                    val totalLessons = it.totalLessons.coerceAtLeast(1)
+                    val completedLessons = it.completedLessons.coerceIn(0, totalLessons)
+                    val progressFraction = completedLessons.toFloat() / totalLessons.toFloat()
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
+                        modifier = Modifier.padding(top = UiSpacing.xs),
+                    ) {
+                        Text(
+                            text = "Прогресс: $completedLessons из $totalLessons",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        LinearProgressIndicator(
+                            progress = { progressFraction },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(UiShapes.pill),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        )
+                    }
+                }
             }
         }
     }

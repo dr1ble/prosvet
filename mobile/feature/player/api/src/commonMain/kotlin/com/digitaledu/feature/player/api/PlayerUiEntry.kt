@@ -19,6 +19,7 @@ interface PlayerUiEntry {
     fun TabContent(
         uiState: PlayerUiState,
         onIntent: (PlayerIntent) -> Unit,
+        onHelpClick: () -> Unit,
         modifier: Modifier = Modifier,
     )
 }

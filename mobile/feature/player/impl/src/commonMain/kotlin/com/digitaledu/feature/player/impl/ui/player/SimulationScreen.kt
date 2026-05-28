@@ -30,7 +30,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +44,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil3.compose.LocalPlatformContext
 import coil3.compose.SubcomposeAsyncImage
@@ -71,10 +71,9 @@ import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_hint
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_load_error
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_screen_image
-import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
-private const val AUTO_ADVANCE_DELAY_MILLIS = 3_000L
+
 
 /**
  * Renders an interactive simulation screen with clickable hotspots.
@@ -90,6 +89,7 @@ private const val AUTO_ADVANCE_DELAY_MILLIS = 3_000L
 fun SimulationScreen(
     screenTitle: String,
     payload: SimulationPayload,
+    isCurrentScreen: Boolean = true,
     accessToken: String?,
     activeHotspotHint: Hotspot?,
     onResolveImageUrl: (String) -> String,
@@ -112,25 +112,7 @@ fun SimulationScreen(
         discoveredLabels = discoveredLabels.toSet(),
     )
 
-    val isCompletionDeadEnd = payload.isCompletion && payload.hotspots.isEmpty()
-    var autoAdvanceSecondsLeft by remember(payload) {
-        mutableStateOf((AUTO_ADVANCE_DELAY_MILLIS / 1000).toInt())
-    }
-    LaunchedEffect(payload, isCompletionDeadEnd) {
-        println(
-            "SimulationScreen: enter payload title=$screenTitle isCompletion=${payload.isCompletion} " +
-                "hotspots=${payload.hotspots.size} dead=${isCompletionDeadEnd}",
-        )
-        if (!isCompletionDeadEnd) return@LaunchedEffect
-        val totalSeconds = (AUTO_ADVANCE_DELAY_MILLIS / 1000).toInt()
-        for (remaining in totalSeconds downTo 1) {
-            autoAdvanceSecondsLeft = remaining
-            delay(1000L)
-        }
-        autoAdvanceSecondsLeft = 0
-        println("SimulationScreen: autoAdvance fires for $screenTitle")
-        onAutoAdvance()
-    }
+    val isCompletionDeadEnd = payload.isCompletion && payload.hotspots.isEmpty() && isCurrentScreen
     
     val fullImageUrl = remember(payload.imageUrl, onResolveImageUrl) {
         onResolveImageUrl(payload.imageUrl)
@@ -258,9 +240,8 @@ fun SimulationScreen(
                 imageHeight = imageHeight,
             )
         } else if (isCompletionDeadEnd) {
-            AutoAdvanceBanner(
-                secondsLeft = autoAdvanceSecondsLeft,
-                onContinueNow = onAutoAdvance,
+            CompletionBanner(
+                onContinue = onAutoAdvance,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(UiSpacing.md),
@@ -277,9 +258,8 @@ fun SimulationScreen(
 }
 
 @Composable
-private fun AutoAdvanceBanner(
-    secondsLeft: Int,
-    onContinueNow: () -> Unit,
+private fun CompletionBanner(
+    onContinue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -295,37 +275,31 @@ private fun AutoAdvanceBanner(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
-            ) {
-                Text(
-                    text = "Это последний экран",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = if (secondsLeft > 0) {
-                        "Переход на следующий модуль через $secondsLeft…"
-                    } else {
-                        "Переход на следующий модуль…"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             Text(
-                text = "Продолжить",
-                style = MaterialTheme.typography.labelLarge,
+                text = "Это последний экран",
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .clip(UiShapes.pill)
-                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .background(MaterialTheme.colorScheme.primary)
                     .accessibilityTouchTarget
-                    .accessibilitySemantics(label = "Продолжить", role = Role.Button)
-                    .clickable(onClick = onContinueNow)
+                    .accessibilitySemantics(
+                        label = "Продолжить",
+                        role = Role.Button,
+                    )
+                    .clickable(onClick = onContinue)
                     .padding(horizontal = UiSpacing.md, vertical = UiSpacing.xs),
-            )
+            ) {
+                Text(
+                    text = "Продолжить",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                )
+            }
         }
     }
 }

@@ -51,8 +51,8 @@
     <string name="lesson_summary_title">Итоги урока</string>
     <string name="lesson_summary_complete_title">Курс завершен</string>
     <string name="lesson_summary_subtitle">Вы прошли «%1$s» в курсе «%2$s».</string>
-    <string name="lesson_summary_progress">%1$d из %2$d шагов • %3$d%%</string>
-    <string name="lesson_summary_next">Следующий урок: %1$s</string>
+    <string name="lesson_summary_progress">Прогресс курса: %1$d из %2$d шагов • %3$d</string>
+    <string name="lesson_summary_next">Следующий шаг: %1$s</string>
     <string name="lesson_summary_finish">Вернуться к курсу</string>
     <string name="lesson_summary_continue">Продолжить</string>
 
