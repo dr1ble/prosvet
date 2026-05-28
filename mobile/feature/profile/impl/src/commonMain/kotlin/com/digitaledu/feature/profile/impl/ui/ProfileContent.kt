@@ -131,6 +131,9 @@ import org.jetbrains.compose.resources.stringResource
 private enum class ProfileSection {
     Main,
     Progress,
+    CourseHistory,
+    Achievements,
+    AchievementDetail,
     Accessibility,
     Account,
     Memos,
@@ -149,6 +152,7 @@ fun ProfileContent(
     val isLoggingOut = uiState.status is ProfileStatus.LoggingOut
     var section by rememberSaveable { mutableStateOf(ProfileSection.Main) }
     var selectedMemoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedAchievementKind by rememberSaveable { mutableStateOf<ProfileAchievementKind?>(null) }
     val successSnackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.successMessage) {
@@ -184,7 +188,8 @@ fun ProfileContent(
                         onIntent(ProfileIntent.RefreshMemos)
                         section = ProfileSection.Memos
                     },
-                    onOpenProgress = { section = ProfileSection.Progress },
+                    onOpenProgress = { section = ProfileSection.CourseHistory },
+                    onOpenAchievements = { section = ProfileSection.Achievements },
                     onOpenAccessibility = { section = ProfileSection.Accessibility },
                     onOpenAccount = { section = ProfileSection.Account },
                     onLogout = { onIntent(ProfileIntent.Logout) },
@@ -233,6 +238,52 @@ fun ProfileContent(
                     onBack = { section = ProfileSection.Main },
                     modifier = modifier,
                 )
+            }
+
+            ProfileSection.CourseHistory -> {
+                CourseHistoryContent(
+                    courseProgress = uiState.courseProgress,
+                    isLoadingProgress = uiState.isLoadingProgress,
+                    onBack = { section = ProfileSection.Main },
+                    modifier = modifier,
+                )
+            }
+
+            ProfileSection.Achievements -> {
+                AchievementsContent(
+                    summary = buildProfileProgressSummaryState(
+                        courseProgress = uiState.courseProgress,
+                        favoriteCourseCount = uiState.favoriteCourseCount,
+                        glossaryTermCount = uiState.glossaryTerms.size,
+                        noteCount = uiState.notes.size,
+                    ),
+                    onOpenAchievement = { achievement ->
+                        selectedAchievementKind = achievement.kind
+                        section = ProfileSection.AchievementDetail
+                    },
+                    onBack = { section = ProfileSection.Main },
+                    modifier = modifier,
+                )
+            }
+
+            ProfileSection.AchievementDetail -> {
+                val summary = buildProfileProgressSummaryState(
+                    courseProgress = uiState.courseProgress,
+                    favoriteCourseCount = uiState.favoriteCourseCount,
+                    glossaryTermCount = uiState.glossaryTerms.size,
+                    noteCount = uiState.notes.size,
+                )
+                val achievement = summary.achievements.firstOrNull { it.kind == selectedAchievementKind }
+                if (achievement == null) {
+                    selectedAchievementKind = null
+                    section = ProfileSection.Achievements
+                } else {
+                    AchievementDetailContent(
+                        achievement = achievement,
+                        onBack = { section = ProfileSection.Achievements },
+                        modifier = modifier,
+                    )
+                }
             }
 
             ProfileSection.Accessibility -> {
@@ -306,6 +357,7 @@ private fun ProfileMain(
     onOpenNotes: () -> Unit,
     onOpenMemos: () -> Unit,
     onOpenProgress: () -> Unit,
+    onOpenAchievements: () -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenAccount: () -> Unit,
     onLogout: () -> Unit,
@@ -317,6 +369,8 @@ private fun ProfileMain(
         glossaryTermCount = glossaryTermCount,
         noteCount = noteCount,
     )
+    val courseHistory = courseProgress
+        .filter { it.completedLessons > 0 || it.completionRate > 0f }
 
     LazyColumn(
         modifier = modifier,
@@ -380,7 +434,7 @@ private fun ProfileMain(
 
         item {
             Text(
-                text = stringResource(Res.string.profile_progress),
+                text = stringResource(Res.string.profile_achievements_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = UiSpacing.xs),
@@ -388,9 +442,18 @@ private fun ProfileMain(
         }
 
         item {
-            ProfileProgressSummaryCard(
-                state = progressSummary,
-                onClick = onOpenProgress,
+            AchievementsPreviewCard(
+                achievements = progressSummary.achievements,
+                onClick = onOpenAchievements,
+            )
+        }
+
+        item {
+            Text(
+                text = "Обучение",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = UiSpacing.xs),
             )
         }
 
@@ -400,33 +463,18 @@ private fun ProfileMain(
                     modifier = Modifier.size(32.dp),
                     strokeWidth = 3.dp,
                 )
-            } else if (courseProgress.isEmpty()) {
-                Surface(
-                    shape = UiShapes.cardLg,
-                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                ) {
-                    Column(
-                        modifier = Modifier.padding(UiSpacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
-                    ) {
-                        Text(
-                            text = "Пока нет пройденных уроков",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            text = "Начните проходить курсы, и здесь появится ваш прогресс.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
-                    for (course in courseProgress) {
-                        CourseProgressCard(course)
-                    }
-                }
+                SettingsRow(
+                    icon = Icons.Rounded.AutoStories,
+                    title = "История курсов",
+                    subtitle = if (courseHistory.isEmpty()) {
+                        "Пока нет начатых курсов"
+                    } else {
+                        "${courseHistory.size} курс(ов) с прогрессом"
+                    },
+                    onClick = onOpenProgress,
+                    tremorFilter = accessibilitySettings.tremorFilter,
+                )
             }
         }
 
@@ -645,6 +693,7 @@ private fun ProfileProgressSummaryCard(
                 state.achievements.forEach { achievement ->
                     AchievementPill(
                         title = achievement.titleText(),
+                        icon = achievement.icon(),
                         isUnlocked = achievement.isUnlocked,
                         modifier = Modifier.weight(1f),
                     )
@@ -819,6 +868,172 @@ private fun ProgressDetailsContent(
 }
 
 @Composable
+private fun AchievementsPreviewCard(
+    achievements: List<ProfileAchievementState>,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = "Открыть достижения", role = Role.Button)
+            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
+            .clickable(onClick = onClick),
+        shape = UiShapes.cardLg,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(UiSpacing.md),
+            horizontalArrangement = Arrangement.spacedBy(UiSpacing.xs),
+        ) {
+            achievements.forEach { achievement ->
+                AchievementPill(
+                    title = achievement.titleText(),
+                    icon = achievement.icon(),
+                    isUnlocked = achievement.isUnlocked,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AchievementsContent(
+    summary: ProfileProgressSummaryState,
+    onOpenAchievement: (ProfileAchievementState) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.md,
+            bottom = UiSpacing.xxl,
+        ),
+    ) {
+        item {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
+                        .clickable(onClick = onBack)
+                        .padding(UiSpacing.xs),
+                )
+                Text(
+                    text = stringResource(Res.string.profile_achievements_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
+                ProgressStatCard("Уроков", summary.completedLessons.toString(), Modifier.weight(1f))
+                ProgressStatCard("Курсов", summary.completedCourses.toString(), Modifier.weight(1f))
+            }
+        }
+
+        summary.achievements.forEach { achievement ->
+            item {
+                AchievementRow(
+                    achievement = achievement,
+                    onClick = { onOpenAchievement(achievement) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CourseHistoryContent(
+    courseProgress: List<CourseProgressInfo>,
+    isLoadingProgress: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val courseHistory = courseProgress.filter { it.completedLessons > 0 || it.completionRate > 0f }
+
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.md,
+            bottom = UiSpacing.xxl,
+        ),
+    ) {
+        item {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
+                        .clickable(onClick = onBack)
+                        .padding(UiSpacing.xs),
+                )
+                Text(
+                    text = "История курсов",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+        }
+
+        if (isLoadingProgress) {
+            item { CircularProgressIndicator() }
+        } else if (courseHistory.isEmpty()) {
+            item {
+                Surface(
+                    shape = UiShapes.cardLg,
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(UiSpacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(UiSpacing.sm),
+                    ) {
+                        Text(
+                            text = "История пока пуста",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text = "Начните проходить курсы, и здесь появятся последние занятия.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        } else {
+            courseHistory.forEach { course ->
+                item { CourseProgressCard(course) }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ProgressStatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Card(
         shape = UiShapes.cardLg,
@@ -837,7 +1052,20 @@ private fun ProgressStatCard(label: String, value: String, modifier: Modifier = 
 }
 
 @Composable
-private fun AchievementRow(achievement: ProfileAchievementState) {
+private fun AchievementRow(
+    achievement: ProfileAchievementState,
+    onClick: (() -> Unit)? = null,
+) {
+    val clickModifier = if (onClick != null) {
+        Modifier
+            .accessibilityTouchTarget
+            .accessibilitySemantics(label = achievement.titleText(), role = Role.Button)
+            .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
+            .clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+
     Card(
         shape = UiShapes.cardLg,
         colors = CardDefaults.cardColors(
@@ -847,6 +1075,7 @@ private fun AchievementRow(achievement: ProfileAchievementState) {
                 MaterialTheme.colorScheme.surfaceContainer
             },
         ),
+        modifier = Modifier.fillMaxWidth().then(clickModifier),
     ) {
         Row(
             modifier = Modifier
@@ -869,7 +1098,7 @@ private fun AchievementRow(achievement: ProfileAchievementState) {
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = if (achievement.isUnlocked) Icons.Rounded.Stars else Icons.Rounded.LockReset,
+                    imageVector = if (achievement.isUnlocked) achievement.icon() else Icons.Rounded.LockReset,
                     contentDescription = null,
                     tint = if (achievement.isUnlocked) {
                         MaterialTheme.colorScheme.onPrimaryContainer
@@ -891,8 +1120,115 @@ private fun AchievementRow(achievement: ProfileAchievementState) {
 }
 
 @Composable
+private fun AchievementDetailContent(
+    achievement: ProfileAchievementState,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            start = UiSpacing.md,
+            end = UiSpacing.md,
+            top = UiSpacing.md,
+            bottom = UiSpacing.xxl,
+        ),
+    ) {
+        item {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .clip(UiShapes.pill)
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = "Назад", role = Role.Button)
+                        .clickable(onClick = onBack)
+                        .padding(UiSpacing.xs),
+                )
+                Text(
+                    text = achievement.titleText(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+        }
+
+        item {
+            Card(
+                shape = UiShapes.cardLg,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(UiSpacing.xl),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(88.dp)
+                            .clip(UiShapes.pill)
+                            .background(
+                                if (achievement.isUnlocked) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (achievement.isUnlocked) achievement.icon() else Icons.Rounded.LockReset,
+                            contentDescription = null,
+                            tint = if (achievement.isUnlocked) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.size(44.dp),
+                        )
+                    }
+                    Text(
+                        text = achievement.titleText(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = if (achievement.isUnlocked) "Достижение открыто" else "Достижение пока заблокировано",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = achievement.descriptionText(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = achievement.requirementText(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun AchievementPill(
     title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     isUnlocked: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -911,7 +1247,7 @@ private fun AchievementPill(
         verticalArrangement = Arrangement.spacedBy(UiSpacing.xxs),
     ) {
         Icon(
-            imageVector = if (isUnlocked) Icons.Rounded.Stars else Icons.Rounded.EventAvailable,
+            imageVector = if (isUnlocked) icon else Icons.Rounded.EventAvailable,
             contentDescription = null,
             tint = if (isUnlocked) {
                 MaterialTheme.colorScheme.onPrimary
@@ -942,6 +1278,33 @@ private fun ProfileAchievementState.titleText(): String {
         ProfileAchievementKind.FavoritesCollector -> stringResource(Res.string.profile_achievement_favorites)
         ProfileAchievementKind.DictionaryStarted -> stringResource(Res.string.profile_achievement_dictionary)
         ProfileAchievementKind.NotesStarted -> stringResource(Res.string.profile_achievement_notes)
+    }
+}
+
+private fun ProfileAchievementState.icon(): androidx.compose.ui.graphics.vector.ImageVector {
+    return when (kind) {
+        ProfileAchievementKind.FirstCourseCompleted -> Icons.Rounded.CheckCircle
+        ProfileAchievementKind.FavoritesCollector -> Icons.Rounded.Favorite
+        ProfileAchievementKind.DictionaryStarted -> Icons.Rounded.AutoStories
+        ProfileAchievementKind.NotesStarted -> Icons.Rounded.Description
+    }
+}
+
+private fun ProfileAchievementState.descriptionText(): String {
+    return when (kind) {
+        ProfileAchievementKind.FirstCourseCompleted -> "Вы завершили первый курс и сделали первый устойчивый шаг в обучении."
+        ProfileAchievementKind.FavoritesCollector -> "Вы добавили курс в избранное, чтобы быстро вернуться к важному материалу."
+        ProfileAchievementKind.DictionaryStarted -> "Вы начали пользоваться словарем терминов и закреплять новые понятия."
+        ProfileAchievementKind.NotesStarted -> "Вы сохранили заметку или памятку, чтобы не потерять важную подсказку."
+    }
+}
+
+private fun ProfileAchievementState.requirementText(): String {
+    return when (kind) {
+        ProfileAchievementKind.FirstCourseCompleted -> "Как получить: завершите любой курс до конца."
+        ProfileAchievementKind.FavoritesCollector -> "Как получить: добавьте хотя бы один курс в избранное."
+        ProfileAchievementKind.DictionaryStarted -> "Как получить: откройте или сохраните первый термин в словаре."
+        ProfileAchievementKind.NotesStarted -> "Как получить: создайте первую заметку или сохраните памятку."
     }
 }
 
@@ -1117,12 +1480,19 @@ fun AccessibilitySettingsContent(
                         onClick = { },
                         shape = UiShapes.pill,
                         modifier = Modifier
+                            .fillMaxWidth()
                             .padding(top = UiSpacing.md)
                             .accessibilityTouchTarget
                             .accessibilitySemantics(label = "Кнопка действия", role = Role.Button),
                     ) {
-                        AccessibilityScaledControlContainer {
-                            Text("Кнопка действия")
+                        AccessibilityScaledControlContainer(
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                "Кнопка действия",
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                            )
                         }
                     }
                 }
@@ -1893,6 +2263,7 @@ private fun SettingsRow(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(UiSpacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
             ) {
                 Box(
                     modifier = Modifier
@@ -1903,13 +2274,21 @@ private fun SettingsRow(
                 ) {
                     Icon(imageVector = icon, contentDescription = null)
                 }
-                Column {
-                    Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     if (subtitle.isNotBlank()) {
                         Text(
                             text = subtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
