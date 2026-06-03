@@ -17,6 +17,37 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    platform: ${MINIO_PLATFORM:-linux/amd64}
+    container_name: dep_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    platform: ${MINIO_PLATFORM:-linux/amd64}
+    container_name: dep_minio_init
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      APP_OBJECT_STORAGE_BUCKET: ${APP_OBJECT_STORAGE_BUCKET:-dep-assets}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD; do sleep 2; done &&
+      mc mb --ignore-existing local/$$APP_OBJECT_STORAGE_BUCKET
+      "
+
   backend:
     build:
       context: ./backend
@@ -31,9 +62,16 @@ services:
       APP_REFRESH_SESSION_DAYS: ${APP_REFRESH_SESSION_DAYS:-30}
       APP_ADMIN_LOGIN: ${APP_ADMIN_LOGIN:-admin}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-admin12345}
+      APP_OBJECT_STORAGE_ENDPOINT_URL: ${APP_OBJECT_STORAGE_ENDPOINT_URL:-http://minio:9000}
+      APP_OBJECT_STORAGE_BUCKET: ${APP_OBJECT_STORAGE_BUCKET:-dep-assets}
+      APP_OBJECT_STORAGE_ACCESS_KEY: ${APP_OBJECT_STORAGE_ACCESS_KEY:-minioadmin}
+      APP_OBJECT_STORAGE_SECRET_KEY: ${APP_OBJECT_STORAGE_SECRET_KEY:-minioadmin}
+      APP_OBJECT_STORAGE_SECURE: ${APP_OBJECT_STORAGE_SECURE:-false}
     depends_on:
       postgres:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -41,3 +79,4 @@ services:
 
 volumes:
   postgres_data:
+  minio_data:

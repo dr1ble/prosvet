@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     simulation_media_dir: str = "storage/simulation_media"
     simulation_media_max_mb: int = 8
 
+    object_storage_endpoint_url: str = "http://localhost:9000"
+    object_storage_bucket: str = "dep-assets"
+    object_storage_access_key: str = "minioadmin"
+    object_storage_secret_key: str = "minioadmin"
+    object_storage_region: str = "us-east-1"
+    object_storage_secure: bool = False
+
     debug_mode: bool = False
 
     smtp_host: str = ""
@@ -58,6 +65,13 @@ class Settings(BaseSettings):
     def validate_security_pepper(cls, v: str, info) -> str:
         if info.data.get("environment") == "production" and "dev-" in v.lower():
             raise ValueError("security_pepper must be set for production")
+        return v
+
+    @field_validator("object_storage_access_key", "object_storage_secret_key")
+    @classmethod
+    def validate_object_storage_credentials(cls, v: str, info) -> str:
+        if info.data.get("environment") == "production" and v == "minioadmin":
+            raise ValueError("object storage credentials must be set for production")
         return v
 
     @field_validator("cors_origins")

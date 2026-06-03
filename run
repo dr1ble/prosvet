@@ -8,6 +8,7 @@ Usage: ./run
 
 Starts local development stack:
 - PostgreSQL (Docker Compose)
+- MinIO object storage (Docker Compose)
 - Backend (FastAPI + Uvicorn, autoreload)
 - Web admin (Next.js dev server)
 
@@ -389,8 +390,8 @@ fi
 echo "[run] Cleaning stale local dev processes..."
 cleanup_stale_processes
 
-echo "[run] Starting PostgreSQL container..."
-docker compose -f "$COMPOSE_FILE" up -d postgres >/dev/null
+echo "[run] Starting PostgreSQL and MinIO containers..."
+docker compose -f "$COMPOSE_FILE" up -d postgres minio minio-init >/dev/null
 
 CONTAINER_ID="$(docker compose -f "$COMPOSE_FILE" ps -q postgres)"
 if [[ -n "$CONTAINER_ID" ]]; then
