@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Favorite
@@ -1301,37 +1302,52 @@ private fun DiagnosticSummaryCard(
             .fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = UiOpacity.border), UiShapes.cardLg),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(UiSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Button(
-                onClick = onOpenDiagnostics,
-                shape = UiShapes.cardMd,
+        Box(modifier = Modifier.fillMaxWidth()) {
+            if (isCompleted) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = "Траектория готова",
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(UiSpacing.md)
+                        .size(30.dp),
+                )
+            }
+
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .accessibilityTouchTarget
-                    .accessibilitySemantics(label = buttonText, role = Role.Button),
+                    .padding(UiSpacing.md),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.xs),
             ) {
                 Text(
-                    text = buttonText,
-                    style = MaterialTheme.typography.labelLarge,
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = UiSpacing.xxs),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = if (isCompleted) Modifier.padding(end = 42.dp) else Modifier,
                 )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(
+                    onClick = onOpenDiagnostics,
+                    shape = UiShapes.cardMd,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .accessibilityTouchTarget
+                        .accessibilitySemantics(label = buttonText, role = Role.Button),
+                ) {
+                    Text(
+                        text = buttonText,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = UiSpacing.xxs),
+                    )
+                }
             }
         }
     }

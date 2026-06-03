@@ -309,19 +309,12 @@ fun ProfileContent(
                     isUpdatingAvatar = uiState.isUpdatingAvatar,
                     isBindingEmail = uiState.isBindingEmail,
                     isChangingPassword = uiState.isChangingPassword,
-                    isUpdatingSettings = uiState.isUpdatingAccountSettings,
-                    learningRemindersEnabled = uiState.learningRemindersEnabled,
-                    securityAlertsEnabled = uiState.securityAlertsEnabled,
-                    profileVisible = uiState.profileVisible,
                     onUpdateDisplayName = { name -> onIntent(ProfileIntent.UpdateDisplayName(name)) },
                     onUploadAvatar = { filename, contentType, content ->
                         onIntent(ProfileIntent.UploadAvatar(filename, contentType, content))
                     },
                     onBindEmail = { email -> onIntent(ProfileIntent.BindEmail(email)) },
                     onChangePassword = { current, new -> onIntent(ProfileIntent.ChangePassword(current, new)) },
-                    onSetLearningReminders = { onIntent(ProfileIntent.SetLearningReminders(it)) },
-                    onSetSecurityAlerts = { onIntent(ProfileIntent.SetSecurityAlerts(it)) },
-                    onSetProfileVisible = { onIntent(ProfileIntent.SetProfileVisible(it)) },
                     onBack = { section = ProfileSection.Main },
                     modifier = modifier,
                 )
@@ -1581,17 +1574,10 @@ private fun AccountSettings(
     isUpdatingAvatar: Boolean,
     isBindingEmail: Boolean,
     isChangingPassword: Boolean,
-    isUpdatingSettings: Boolean,
-    learningRemindersEnabled: Boolean,
-    securityAlertsEnabled: Boolean,
-    profileVisible: Boolean,
     onUpdateDisplayName: (String) -> Unit,
     onUploadAvatar: (String, String, ByteArray) -> Unit,
     onBindEmail: (String) -> Unit,
     onChangePassword: (String, String) -> Unit,
-    onSetLearningReminders: (Boolean) -> Unit,
-    onSetSecurityAlerts: (Boolean) -> Unit,
-    onSetProfileVisible: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1845,39 +1831,6 @@ private fun AccountSettings(
                     currentPassword = ""
                     newPassword = ""
                 },
-            )
-        }
-
-        item {
-            AccountSwitchCard(
-                icon = Icons.Rounded.NotificationsActive,
-                title = "Уведомления",
-                subtitle = "Напоминать о продолжении обучения",
-                checked = learningRemindersEnabled,
-                enabled = !isUpdatingSettings,
-                onCheckedChange = onSetLearningReminders,
-            )
-        }
-
-        item {
-            AccountSwitchCard(
-                icon = Icons.Rounded.Shield,
-                title = "Безопасность",
-                subtitle = "Получать предупреждения о важных действиях",
-                checked = securityAlertsEnabled,
-                enabled = !isUpdatingSettings,
-                onCheckedChange = onSetSecurityAlerts,
-            )
-        }
-
-        item {
-            AccountSwitchCard(
-                icon = Icons.Rounded.Visibility,
-                title = "Конфиденциальность",
-                subtitle = "Показывать профиль наставникам и участникам группы",
-                checked = profileVisible,
-                enabled = !isUpdatingSettings,
-                onCheckedChange = onSetProfileVisible,
             )
         }
     }
