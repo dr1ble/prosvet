@@ -19,7 +19,7 @@ function sanitizeScopeKey(value: string | null): string {
 async function toJsonResponse(backendResponse: Response): Promise<Response> {
   const raw = await backendResponse.text();
   if (!raw) {
-    return NextResponse.json({}, { status: backendResponse.status });
+    return new Response(null, { status: backendResponse.status });
   }
 
   try {

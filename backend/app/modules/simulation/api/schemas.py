@@ -52,7 +52,12 @@ class SimulationMediaUploadOut(_BaseSchema):
 
 
 class SimulationMediaAssetUpdateIn(_BaseSchema):
-    original_filename: str = Field(min_length=1, max_length=255)
+    original_filename: str | None = Field(default=None, min_length=1, max_length=255)
+    app_package_name: str | None = Field(default=None, min_length=3, max_length=255)
+    store_type: str | None = Field(default=None, max_length=30)
+    min_supported_version: str | None = Field(default=None, min_length=3, max_length=40)
+    max_supported_version: str | None = Field(default=None, min_length=3, max_length=40)
+    released_at: str | None = Field(default=None, max_length=20)
 
 
 class SimulationMediaApplicationUpsertIn(_BaseSchema):

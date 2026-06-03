@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     access_token_secret: str = "dev-secret-do-not-use-in-prod"
     access_token_ttl_minutes: int = 30
 
-    qr_ttl_hours: int = 24
+    qr_ttl_minutes: int = 30
 
     refresh_session_days: int = 30
 

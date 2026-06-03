@@ -1,9 +1,12 @@
 import hashlib
 import json
+import logging
 import re
 from collections import deque
 from datetime import datetime, timezone
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from uuid import UUID, uuid4
 
 from markdownify import markdownify as _html_to_markdown
@@ -37,6 +40,14 @@ from app.modules.catalog.infra.models import (
 )
 from app.modules.catalog.infra.repository import CatalogRepository
 from app.modules.simulation.infra.models import SimulationLibraryItem
+
+logger = logging.getLogger(__name__)
+
+_RUTUBE_VIDEO_ID_REGEX = re.compile(
+    r"^https?://(?:www\.)?rutube\.ru/(?:video|play/embed)/([a-f0-9]+)(?:[/?#].*)?$",
+    re.IGNORECASE,
+)
+_RUTUBE_PLAYER_OPTIONS_TIMEOUT_SEC = 5
 
 
 def _utcnow() -> datetime:
@@ -77,6 +88,69 @@ def _html_to_markdown_safe(html: str) -> str:
     if not html.strip():
         return ""
     return _html_to_markdown(html, heading_style="ATX", strip=["script", "style"]).strip()
+
+
+def _extract_rutube_video_id(url: str) -> str | None:
+    match = _RUTUBE_VIDEO_ID_REGEX.match(url.strip())
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _resolve_rutube_stream_url(video_url: str) -> str | None:
+    video_id = _extract_rutube_video_id(video_url)
+    if video_id is None:
+        return None
+
+    request = Request(
+        url=f"https://rutube.ru/api/play/options/{video_id}",
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json,text/plain,*/*",
+            "Referer": f"https://rutube.ru/video/{video_id}/",
+        },
+    )
+
+    try:
+        with urlopen(request, timeout=_RUTUBE_PLAYER_OPTIONS_TIMEOUT_SEC) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        logger.warning("Failed to resolve RuTube stream for %s: %s", video_url, exc)
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    video_balancer = payload.get("video_balancer")
+    if not isinstance(video_balancer, dict):
+        return None
+
+    for key in ("m3u8", "default"):
+        candidate = video_balancer.get(key)
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+
+    return None
+
+
+def _resolve_video_payload_stream(payload: dict[str, Any]) -> dict[str, Any]:
+    if payload.get("type") != "video":
+        return payload
+
+    video_url = payload.get("video_url")
+    if not isinstance(video_url, str) or not video_url.strip():
+        return payload
+
+    resolved_stream_url = _resolve_rutube_stream_url(video_url)
+    if resolved_stream_url is None:
+        return payload
+
+    resolved_payload = dict(payload)
+    resolved_payload["video_url"] = resolved_stream_url
+    return resolved_payload
 
 
 def _normalize_quiz_questions(questions: list[Any]) -> list[dict[str, Any]]:
@@ -585,6 +659,10 @@ class CatalogService:
             raise CatalogError("Published release not found for this course.", status_code=404)
 
         screens = self.repo.list_release_screens(release.id)
+        for screen in screens:
+            if not isinstance(screen.payload_json, dict):
+                continue
+            screen.payload_json = _resolve_video_payload_stream(screen.payload_json)
         return course, release, screens
 
     def list_course_releases(

@@ -227,7 +227,7 @@ class GroupsService:
 
         token = generate_token(24)
         now = _utcnow()
-        expires_at = now + timedelta(hours=max(1, settings.qr_ttl_hours))
+        expires_at = now + timedelta(minutes=max(1, settings.qr_ttl_minutes))
         self.repo.delete_group_join_qr_tokens(group_id=group_id)
         self.repo.create_group_join_qr_token(
             group_id=group_id,

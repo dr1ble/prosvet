@@ -117,10 +117,10 @@ export default async function SimulationV2Page({
   } catch {
     courses = [];
   }
-  const selectedCourse = params.courseId
-    ? courses.find((course) => course.id === params.courseId)
+  const selectedCourse = scope.courseId
+    ? courses.find((course) => course.id === scope.courseId)
     : null;
-  const selectedCourseId = selectedCourse?.id ?? null;
+  const selectedCourseId = scope.courseId;
   const scopeLabel = formatScopeLabel(language, scope, selectedCourse?.title);
 
   return (

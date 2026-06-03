@@ -57,8 +57,10 @@ import {
   saveSimulationLibraryItemRemote,
   fetchSimulationMediaAssetsRemote,
   renameSimulationMediaAssetRemote,
+  rebindSimulationMediaAssetRemote,
   resolveSimulationStoreAppRemote,
   saveSimulationMediaAppRemote,
+  type SimulationMediaBinding,
   type SimulationLibraryFilter,
   updateSimulationLibraryItemRemote,
   uploadSimulationMediaAssetRemote,
@@ -752,6 +754,8 @@ function SimulationEditorInner({
   const [modalTargetApp, setModalTargetApp] =
     useState<SimulationDraft["targetApp"]>(defaultTargetApp);
   const [modalMediaAssets, setModalMediaAssets] = useState<MediaAsset[]>([]);
+  const [modalEditSourceBinding, setModalEditSourceBinding] =
+    useState<SimulationMediaBinding | null>(null);
   const [modalMediaSearchQuery, setModalMediaSearchQuery] = useState("");
   const [modalMediaLoading, setModalMediaLoading] = useState(false);
   const [modalMediaUploading, setModalMediaUploading] = useState(false);
@@ -762,9 +766,7 @@ function SimulationEditorInner({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [courseLibraryItemId, setCourseLibraryItemId] = useState<string | null>(
-    null,
-  );
+  const [libraryItemId, setLibraryItemId] = useState<string | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
   const [isSidebarResizing, setIsSidebarResizing] = useState(false);
@@ -1096,6 +1098,7 @@ function SimulationEditorInner({
         if (draft) {
           setTitle(draft.title);
           setTargetApp(draft.targetApp ?? defaultTargetApp);
+          setLibraryItemId(draft.libraryItemId ?? null);
           const { nodes: loadedNodes, edges: loadedEdges } =
             draftToNodesEdges(draft);
           setNodes(loadedNodes);
@@ -1128,6 +1131,14 @@ function SimulationEditorInner({
       releasedAt: modalTargetApp.releasedAt.trim(),
     }),
     [modalTargetApp],
+  );
+
+  const effectiveModalMediaBinding = useMemo(
+    () =>
+      addMediaModalMode === "edit" && modalEditSourceBinding
+        ? modalEditSourceBinding
+        : modalMediaBinding,
+    [addMediaModalMode, modalEditSourceBinding, modalMediaBinding],
   );
 
   const modalMediaBindingError = useMemo(() => {
@@ -1270,7 +1281,7 @@ function SimulationEditorInner({
         const assets = await fetchSimulationMediaAssetsRemote(
           scopeKey,
           modalMediaSearchQuery,
-          modalMediaBinding,
+          effectiveModalMediaBinding,
         );
         if (!mounted) return;
         const mapped: MediaAsset[] = assets.map((a) => ({
@@ -1302,7 +1313,7 @@ function SimulationEditorInner({
   }, [
     isAddMediaModalOpen,
     language,
-    modalMediaBinding,
+    effectiveModalMediaBinding,
     modalMediaBindingError,
     modalMediaSearchQuery,
     scopeKey,
@@ -1317,39 +1328,71 @@ function SimulationEditorInner({
     setTitleError(false);
     setIsSaving(true);
     try {
-      const draft = nodesEdgesToDraft(nodes, title, targetApp);
+      const draft = {
+        ...nodesEdgesToDraft(nodes, title, targetApp),
+        libraryItemId,
+      };
       const saved = await saveCurrentSimulationDraftRemote(draft, scopeKey);
       if (saved) {
         setTargetApp(saved.targetApp ?? defaultTargetApp);
+        setLibraryItemId(saved.libraryItemId ?? libraryItemId ?? null);
         setLastSavedAt(new Date().toLocaleTimeString());
       }
 
-      // When opened from a course, also persist to the simulation library
-      // so the course builder can select this simulation, then go back.
-      if (selectedCourseId) {
-        const libraryPayload = {
-          title: draft.title.trim() || "Симуляция",
-          draft,
-        };
-        try {
-          if (courseLibraryItemId) {
-            await updateSimulationLibraryItemRemote(
-              courseLibraryItemId,
-              libraryPayload,
-            );
-          } else {
+      const libraryPayload = {
+        title: draft.title.trim() || "Симуляция",
+        draft,
+      };
+      let nextLibraryItemId = libraryItemId;
+      try {
+        if (libraryItemId) {
+          await updateSimulationLibraryItemRemote(
+            libraryItemId,
+            libraryPayload,
+          );
+        } else {
+          const created = await saveSimulationLibraryItemRemote(
+            scopeKey,
+            libraryPayload,
+          );
+          nextLibraryItemId = created.id;
+          setLibraryItemId(created.id);
+        }
+      } catch (error) {
+        if (libraryItemId) {
+          try {
             const created = await saveSimulationLibraryItemRemote(
               scopeKey,
               libraryPayload,
             );
-            setCourseLibraryItemId(created.id);
+            nextLibraryItemId = created.id;
+            setLibraryItemId(created.id);
+          } catch (createError) {
+            const msg =
+              createError instanceof Error
+                ? createError.message
+                : String(createError);
+            setDraftError(`Failed to publish to library: ${msg}`);
+            return;
           }
-        } catch (error) {
+        } else {
           const msg = error instanceof Error ? error.message : String(error);
           setDraftError(`Failed to publish to library: ${msg}`);
           return;
         }
+      }
 
+      if (nextLibraryItemId && nextLibraryItemId !== draft.libraryItemId) {
+        await saveCurrentSimulationDraftRemote(
+          {
+            ...draft,
+            libraryItemId: nextLibraryItemId,
+          },
+          scopeKey,
+        );
+      }
+
+      if (selectedCourseId) {
         window.location.assign(`/course-builder/${selectedCourseId}`);
         return;
       }
@@ -1366,7 +1409,7 @@ function SimulationEditorInner({
     scopeKey,
     isSaving,
     selectedCourseId,
-    courseLibraryItemId,
+    libraryItemId,
   ]);
 
   const handleExport = useCallback(() => {
@@ -1664,12 +1707,12 @@ function SimulationEditorInner({
       setModalMediaError(null);
       try {
         await saveSimulationMediaAppRemote(scopeKey, {
-          appPackageName: modalMediaBinding.appPackageName,
+          appPackageName: effectiveModalMediaBinding.appPackageName,
           appName:
             modalTargetApp.appName.trim() ||
             deriveAppNameFromPackageName(
-              modalMediaBinding.appPackageName,
-              modalMediaBinding.appPackageName,
+              effectiveModalMediaBinding.appPackageName,
+              effectiveModalMediaBinding.appPackageName,
             ),
           iconUrl: modalTargetApp.iconUrl || null,
           storeUrl: modalTargetApp.storeUrl || null,
@@ -1677,7 +1720,7 @@ function SimulationEditorInner({
         const asset = await uploadSimulationMediaAssetRemote(
           scopeKey,
           file,
-          modalMediaBinding,
+          effectiveModalMediaBinding,
         );
         const mapped: MediaAsset = {
           id: asset.id,
@@ -1685,13 +1728,13 @@ function SimulationEditorInner({
           url: asset.fileUrl,
           uploadedAt: asset.createdAt,
         };
-        const appKey = modalMediaBinding.appPackageName;
+        const appKey = effectiveModalMediaBinding.appPackageName;
         const versionKey = buildAppVersionKey({
-          appPackageName: modalMediaBinding.appPackageName,
-          storeType: modalMediaBinding.storeType,
-          minSupportedVersion: modalMediaBinding.minSupportedVersion,
-          maxSupportedVersion: modalMediaBinding.maxSupportedVersion,
-          releasedAt: modalMediaBinding.releasedAt || null,
+          appPackageName: effectiveModalMediaBinding.appPackageName,
+          storeType: effectiveModalMediaBinding.storeType,
+          minSupportedVersion: effectiveModalMediaBinding.minSupportedVersion,
+          maxSupportedVersion: effectiveModalMediaBinding.maxSupportedVersion,
+          releasedAt: effectiveModalMediaBinding.releasedAt || null,
         });
         setModalMediaAssets((assets) => [mapped, ...assets]);
         setAppScreens((screens) => [
@@ -1715,10 +1758,12 @@ function SimulationEditorInner({
               versions: [
                 {
                   key: versionKey,
-                  storeType: modalMediaBinding.storeType,
-                  minSupportedVersion: modalMediaBinding.minSupportedVersion,
-                  maxSupportedVersion: modalMediaBinding.maxSupportedVersion,
-                  releasedAt: modalMediaBinding.releasedAt || null,
+                  storeType: effectiveModalMediaBinding.storeType,
+                  minSupportedVersion:
+                    effectiveModalMediaBinding.minSupportedVersion,
+                  maxSupportedVersion:
+                    effectiveModalMediaBinding.maxSupportedVersion,
+                  releasedAt: effectiveModalMediaBinding.releasedAt || null,
                   assetsCount: 1,
                   expanded: true,
                   screensLoading: false,
@@ -1747,10 +1792,12 @@ function SimulationEditorInner({
                 versions: [
                   {
                     key: versionKey,
-                    storeType: modalMediaBinding.storeType,
-                    minSupportedVersion: modalMediaBinding.minSupportedVersion,
-                    maxSupportedVersion: modalMediaBinding.maxSupportedVersion,
-                    releasedAt: modalMediaBinding.releasedAt || null,
+                    storeType: effectiveModalMediaBinding.storeType,
+                    minSupportedVersion:
+                      effectiveModalMediaBinding.minSupportedVersion,
+                    maxSupportedVersion:
+                      effectiveModalMediaBinding.maxSupportedVersion,
+                    releasedAt: effectiveModalMediaBinding.releasedAt || null,
                     assetsCount: 1,
                     expanded: true,
                     screensLoading: false,
@@ -1794,7 +1841,7 @@ function SimulationEditorInner({
     },
     [
       language,
-      modalMediaBinding,
+      effectiveModalMediaBinding,
       modalMediaBindingError,
       modalTargetApp.appName,
       modalTargetApp.iconUrl,
@@ -1972,6 +2019,7 @@ function SimulationEditorInner({
     setAddMediaModalMode("create");
     setModalTargetApp(emptyModalTargetApp);
     setModalMediaAssets([]);
+    setModalEditSourceBinding(null);
     setModalMediaSearchQuery("");
     setModalMediaError(null);
     setModalResolvingStoreApp(false);
@@ -1990,6 +2038,13 @@ function SimulationEditorInner({
 
       setAddMediaModalMode("edit");
       setModalTargetApp(toTargetAppFromVersion(selectedApp, selectedVersion));
+      setModalEditSourceBinding({
+        appPackageName: selectedApp.key,
+        storeType: selectedVersion.storeType,
+        minSupportedVersion: selectedVersion.minSupportedVersion,
+        maxSupportedVersion: selectedVersion.maxSupportedVersion,
+        releasedAt: selectedVersion.releasedAt ?? "",
+      });
       setModalMediaAssets(selectedVersion.screens);
       setModalMediaSearchQuery("");
       setModalMediaError(null);
@@ -2011,6 +2066,7 @@ function SimulationEditorInner({
 
   const handleCloseAddMediaModal = useCallback(() => {
     setIsAddMediaModalOpen(false);
+    setModalEditSourceBinding(null);
   }, []);
 
   const handleSubmitAddMediaModal = useCallback(async () => {
@@ -2041,6 +2097,42 @@ function SimulationEditorInner({
         iconUrl: normalizedTargetApp.iconUrl || null,
         storeUrl: normalizedTargetApp.storeUrl || null,
       });
+
+      const normalizedBinding: SimulationMediaBinding = {
+        appPackageName: normalizedTargetApp.packageName,
+        storeType: normalizedTargetApp.storeType,
+        minSupportedVersion: normalizedTargetApp.minSupportedVersion,
+        maxSupportedVersion: normalizedTargetApp.maxSupportedVersion,
+        releasedAt: normalizedTargetApp.releasedAt,
+      };
+
+      const sourceBinding =
+        addMediaModalMode === "edit" ? modalEditSourceBinding : null;
+      const shouldRebindAssets =
+        sourceBinding !== null &&
+        buildAppVersionKey({
+          appPackageName: sourceBinding.appPackageName,
+          storeType: sourceBinding.storeType,
+          minSupportedVersion: sourceBinding.minSupportedVersion,
+          maxSupportedVersion: sourceBinding.maxSupportedVersion,
+          releasedAt: sourceBinding.releasedAt || null,
+        }) !==
+          buildAppVersionKey({
+            appPackageName: normalizedBinding.appPackageName,
+            storeType: normalizedBinding.storeType,
+            minSupportedVersion: normalizedBinding.minSupportedVersion,
+            maxSupportedVersion: normalizedBinding.maxSupportedVersion,
+            releasedAt: normalizedBinding.releasedAt || null,
+          });
+
+      if (shouldRebindAssets && modalMediaAssets.length > 0) {
+        await Promise.all(
+          modalMediaAssets.map((asset) =>
+            rebindSimulationMediaAssetRemote(asset.id, normalizedBinding),
+          ),
+        );
+      }
+
       setModalTargetApp(normalizedTargetApp);
       setTargetApp(normalizedTargetApp);
       setApplications((prev) => {
@@ -2073,6 +2165,7 @@ function SimulationEditorInner({
       });
       setAppsReloadToken((token) => token + 1);
       setModalMediaError(null);
+      setModalEditSourceBinding(null);
       setIsAddMediaModalOpen(false);
     } catch (error) {
       setModalMediaError(
@@ -2083,7 +2176,15 @@ function SimulationEditorInner({
             : "Failed to save application.",
       );
     }
-  }, [language, modalMediaBindingError, modalTargetApp, scopeKey]);
+  }, [
+    addMediaModalMode,
+    language,
+    modalEditSourceBinding,
+    modalMediaAssets,
+    modalMediaBindingError,
+    modalTargetApp,
+    scopeKey,
+  ]);
 
   const handleScreenAddFromAsset = useCallback(
     (asset: MediaAsset) => {

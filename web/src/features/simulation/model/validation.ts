@@ -214,6 +214,10 @@ export function normalizeSimulationDraft(
     typeof source.updatedAt === "string" && source.updatedAt.trim()
       ? source.updatedAt
       : new Date().toISOString();
+  const libraryItemId =
+    typeof source.libraryItemId === "string" && source.libraryItemId.trim()
+      ? normalizeString(source.libraryItemId, "", 120)
+      : null;
 
   return {
     version: 1,
@@ -221,6 +225,7 @@ export function normalizeSimulationDraft(
     targetApp: normalizeTargetApp(source.targetApp),
     startScreenId,
     screens,
+    libraryItemId,
     updatedAt,
   };
 }

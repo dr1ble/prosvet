@@ -541,6 +541,95 @@ class SimulationService:
         )
         return updated
 
+    def update_media_asset(
+        self,
+        owner_user_id: UUID,
+        asset_id: UUID,
+        *,
+        original_filename: str | None = None,
+        app_package_name: str | None = None,
+        store_type: str | None = None,
+        min_supported_version: str | None = None,
+        max_supported_version: str | None = None,
+        released_at: str | None | object = ...,
+    ) -> SimulationMediaAsset | None:
+        asset = self.repo.get_media_asset_by_id(
+            owner_user_id=owner_user_id,
+            asset_id=asset_id,
+        )
+        if asset is None:
+            return None
+
+        normalized_filename = (
+            _normalize_media_filename(original_filename)
+            if original_filename is not None
+            else None
+        )
+
+        normalized_package = app_package_name.strip() if app_package_name else None
+        normalized_store_type = store_type.strip() if store_type else None
+        normalized_min_version = (
+            min_supported_version.strip() if min_supported_version else None
+        )
+        normalized_max_version = (
+            max_supported_version.strip() if max_supported_version else None
+        )
+
+        has_binding_patch = any(
+            value is not None
+            for value in (
+                normalized_package,
+                normalized_store_type,
+                normalized_min_version,
+                normalized_max_version,
+            )
+        ) or released_at is not ...
+
+        next_package = asset.app_package_name
+        next_store_type = asset.store_type
+        next_min_version = asset.min_supported_version
+        next_max_version = asset.max_supported_version
+        next_released_at = asset.released_at
+
+        if has_binding_patch:
+            if not all(
+                value is not None
+                for value in (
+                    normalized_package,
+                    normalized_store_type,
+                    normalized_min_version,
+                    normalized_max_version,
+                )
+            ):
+                raise ValueError(
+                    "Binding update requires app_package_name, store_type, min_supported_version, and max_supported_version."
+                )
+
+            next_package = _normalize_package_name(normalized_package)
+            next_store_type = _normalize_store_type(normalized_store_type)
+            _parse_semver(normalized_min_version)
+            _parse_semver(normalized_max_version)
+            if _parse_semver(normalized_min_version) > _parse_semver(normalized_max_version):
+                raise ValueError(
+                    "min_supported_version must be less than or equal to max_supported_version."
+                )
+            next_min_version = normalized_min_version[:40]
+            next_max_version = normalized_max_version[:40]
+            if released_at is ...:
+                next_released_at = asset.released_at
+            else:
+                next_released_at = _normalize_release_date(released_at)
+
+        return self.repo.update_media_asset(
+            asset,
+            original_filename=normalized_filename,
+            app_package_name=next_package if has_binding_patch else None,
+            store_type=next_store_type if has_binding_patch else None,
+            min_supported_version=next_min_version if has_binding_patch else None,
+            max_supported_version=next_max_version if has_binding_patch else None,
+            released_at=next_released_at if has_binding_patch else ...,
+        )
+
     def delete_media_asset(
         self,
         owner_user_id: UUID,

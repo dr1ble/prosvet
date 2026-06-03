@@ -298,6 +298,32 @@ class SimulationRepository:
         self.db.flush()
         return asset
 
+    def update_media_asset(
+        self,
+        asset: SimulationMediaAsset,
+        *,
+        original_filename: str | None = None,
+        app_package_name: str | None = None,
+        store_type: str | None = None,
+        min_supported_version: str | None = None,
+        max_supported_version: str | None = None,
+        released_at: date | None | object = ...,
+    ) -> SimulationMediaAsset:
+        if original_filename is not None:
+            asset.original_filename = original_filename
+        if app_package_name is not None:
+            asset.app_package_name = app_package_name
+        if store_type is not None:
+            asset.store_type = store_type
+        if min_supported_version is not None:
+            asset.min_supported_version = min_supported_version
+        if max_supported_version is not None:
+            asset.max_supported_version = max_supported_version
+        if released_at is not ...:
+            asset.released_at = released_at
+        self.db.flush()
+        return asset
+
     def delete_media_asset(self, asset: SimulationMediaAsset) -> None:
         self.db.delete(asset)
         self.db.flush()

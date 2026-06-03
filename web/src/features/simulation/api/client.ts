@@ -509,6 +509,23 @@ export async function renameSimulationMediaAssetRemote(
   return mapMediaAsset(data);
 }
 
+export async function rebindSimulationMediaAssetRemote(
+  assetId: string,
+  binding: SimulationMediaBinding,
+): Promise<SimulationMediaAsset> {
+  const data = await patchJson<MediaAssetApiOut>(
+    `/api/admin/simulation/media/${encodeURIComponent(assetId)}`,
+    {
+      app_package_name: binding.appPackageName,
+      store_type: binding.storeType,
+      min_supported_version: binding.minSupportedVersion,
+      max_supported_version: binding.maxSupportedVersion,
+      released_at: binding.releasedAt.trim() || null,
+    },
+  );
+  return mapMediaAsset(data);
+}
+
 export async function deleteSimulationMediaAssetRemote(
   assetId: string,
 ): Promise<void> {

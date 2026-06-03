@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { ADMIN_ACCESS_COOKIE } from "@/shared/auth/cookies";
 import { apiBaseUrl } from "@/shared/config";
-import { getRequestCookie } from "@/shared/server/request-cookies";
-
-function resolveAdminAccessToken(request: Request): string | null {
-  return getRequestCookie(request, ADMIN_ACCESS_COOKIE) ?? null;
-}
+import {
+  getAdminAccessToken,
+  proxyBackendAdminGet,
+} from "@/shared/server/backend-admin-proxy";
 
 function sanitizeScopeKey(value: string | null): string {
   const normalized = (value ?? "").trim();
@@ -59,14 +57,6 @@ async function toJsonResponse(backendResponse: Response): Promise<Response> {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const accessToken = resolveAdminAccessToken(request);
-  if (!accessToken) {
-    return NextResponse.json(
-      { detail: "Admin session token is missing. Sign in again." },
-      { status: 401 },
-    );
-  }
-
   const url = new URL(request.url);
   const query = new URLSearchParams({
     scope_key: sanitizeScopeKey(url.searchParams.get("scope_key")),
@@ -87,32 +77,14 @@ export async function GET(request: Request): Promise<Response> {
   if (releasedAt) {
     query.set("released_at", releasedAt);
   }
-
-  let backendResponse: Response;
-  try {
-    backendResponse = await fetch(
-      `${apiBaseUrl}/simulation/media?${query.toString()}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        cache: "no-store",
-      },
-    );
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to connect to backend API.";
-    return NextResponse.json({ detail: message }, { status: 502 });
-  }
-
-  return toJsonResponse(backendResponse);
+  return proxyBackendAdminGet({
+    request,
+    path: `/simulation/media?${query.toString()}`,
+  });
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const accessToken = resolveAdminAccessToken(request);
+  const accessToken = getAdminAccessToken(request);
   if (!accessToken) {
     return NextResponse.json(
       { detail: "Admin session token is missing. Sign in again." },

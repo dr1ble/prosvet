@@ -61,6 +61,7 @@ export function createInitialSimulationDraft(): SimulationDraft {
     },
     startScreenId: firstScreen.id,
     screens: [firstScreen],
+    libraryItemId: null,
     updatedAt: new Date().toISOString(),
   };
 }

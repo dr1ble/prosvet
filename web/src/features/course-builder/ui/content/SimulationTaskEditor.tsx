@@ -33,16 +33,31 @@ export function SimulationTaskEditor({
     let mounted = true;
     async function loadLibrary() {
       try {
-        const scopeKey = courseId ? `course:${courseId}` : "global";
-        const response = await fetch(
-          `/api/admin/simulation/library?scope_key=${encodeURIComponent(scopeKey)}`,
+        const scopeKeys = courseId
+          ? [`course:${courseId}`, "global"]
+          : ["global"];
+        const responses = await Promise.all(
+          scopeKeys.map(async (scopeKey) => {
+            const response = await fetch(
+              `/api/admin/simulation/library?scope_key=${encodeURIComponent(scopeKey)}`,
+            );
+            if (!response.ok) {
+              throw new Error("Не удалось загрузить библиотеку");
+            }
+            return response.json();
+          }),
         );
-        if (!response.ok) {
-          throw new Error("Не удалось загрузить библиотеку");
-        }
-        const data = await response.json();
+        const mergedItems = responses.flatMap(
+          (data) => data.items || data || [],
+        );
+        const uniqueItems = Array.from(
+          new Map(
+            mergedItems.map((item: SimulationLibraryItem) => [item.id, item]),
+          ).values(),
+        );
         if (mounted) {
-          setItems(data.items || data || []);
+          setItems(uniqueItems);
+          setError(null);
         }
       } catch (err) {
         if (mounted) {

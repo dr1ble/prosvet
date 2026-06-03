@@ -113,6 +113,7 @@ def _seed_default_users_on_startup() -> None:
         ("admin", "admin12345", UserRole.ADMINISTRATOR, "Администратор"),
         ("methodologist", "method12345", UserRole.METHODOLOGIST, "Методист"),
         ("moderator", "moder12345", UserRole.MODERATOR, "Модератор"),
+        ("assistant", "assistant12345", UserRole.ASSISTANT, "Ассистент"),
         ("user", "user12345", UserRole.USER, "Пользователь"),
     ]
     try:

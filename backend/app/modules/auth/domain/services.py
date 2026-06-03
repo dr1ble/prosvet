@@ -198,7 +198,7 @@ class AuthService:
 
         token = generate_token(24)
         now = _utcnow()
-        expires_at = now + timedelta(hours=max(1, settings.qr_ttl_hours))
+        expires_at = now + timedelta(minutes=max(1, settings.qr_ttl_minutes))
         self.repo.create_qr_token(
             issued_by_user_id=target_user.id,
             token_hash=stable_hash(token, settings.security_pepper),
@@ -214,7 +214,7 @@ class AuthService:
         del actor_user_id
         token = generate_token(24)
         now = _utcnow()
-        expires_at = now + timedelta(hours=max(1, settings.qr_ttl_hours))
+        expires_at = now + timedelta(minutes=max(1, settings.qr_ttl_minutes))
         self.repo.create_qr_token(
             issued_by_user_id=None,
             token_hash=stable_hash(token, settings.security_pepper),

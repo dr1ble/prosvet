@@ -232,10 +232,15 @@ def update_media_asset(
     actor: CurrentActor = Depends(require_policy("simulation.builder")),
 ) -> SimulationMediaAssetOut:
     try:
-        asset = service.rename_media_asset(
+        asset = service.update_media_asset(
             owner_user_id=actor.user_id,
             asset_id=asset_id,
             original_filename=payload.original_filename,
+            app_package_name=payload.app_package_name,
+            store_type=payload.store_type,
+            min_supported_version=payload.min_supported_version,
+            max_supported_version=payload.max_supported_version,
+            released_at=payload.released_at,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

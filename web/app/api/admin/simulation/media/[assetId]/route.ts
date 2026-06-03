@@ -10,6 +10,15 @@ type RouteParams = {
   }>;
 };
 
+type MediaAssetPatchPayload = Partial<{
+  original_filename: string | null;
+  app_package_name: string | null;
+  store_type: string | null;
+  min_supported_version: string | null;
+  max_supported_version: string | null;
+  released_at: string | null;
+}>;
+
 function resolveAdminAccessToken(request: Request): string | null {
   return getRequestCookie(request, ADMIN_ACCESS_COOKIE) ?? null;
 }
@@ -19,6 +28,13 @@ function sanitizeFilename(value: string): string {
     .trim()
     .replace(/[\\/\x00]+/g, "_")
     .slice(0, 255);
+}
+
+function sanitizeText(
+  value: string | null | undefined,
+  maxLength: number,
+): string {
+  return (value ?? "").trim().slice(0, maxLength);
 }
 
 async function toJsonResponse(backendResponse: Response): Promise<Response> {
@@ -59,9 +75,9 @@ export async function PATCH(
     );
   }
 
-  let payload: { original_filename?: string } | null = null;
+  let payload: MediaAssetPatchPayload | null = null;
   try {
-    payload = (await request.json()) as { original_filename?: string };
+    payload = (await request.json()) as MediaAssetPatchPayload;
   } catch {
     return NextResponse.json(
       { detail: "Invalid JSON payload." },
@@ -69,10 +85,71 @@ export async function PATCH(
     );
   }
 
-  const originalFilename = sanitizeFilename(payload?.original_filename ?? "");
-  if (!originalFilename) {
+  const forwardedPayload: MediaAssetPatchPayload = {};
+
+  if (payload?.original_filename !== undefined) {
+    const originalFilename = sanitizeFilename(payload.original_filename ?? "");
+    if (!originalFilename) {
+      return NextResponse.json(
+        { detail: "original_filename is required." },
+        { status: 422 },
+      );
+    }
+    forwardedPayload.original_filename = originalFilename;
+  }
+
+  if (payload?.app_package_name !== undefined) {
+    const appPackageName = sanitizeText(payload.app_package_name, 255);
+    if (!appPackageName) {
+      return NextResponse.json(
+        { detail: "app_package_name is required." },
+        { status: 422 },
+      );
+    }
+    forwardedPayload.app_package_name = appPackageName;
+  }
+
+  if (payload?.store_type !== undefined) {
+    const storeType = sanitizeText(payload.store_type, 30);
+    if (!storeType) {
+      return NextResponse.json(
+        { detail: "store_type is required." },
+        { status: 422 },
+      );
+    }
+    forwardedPayload.store_type = storeType;
+  }
+
+  if (payload?.min_supported_version !== undefined) {
+    const minSupportedVersion = sanitizeText(payload.min_supported_version, 40);
+    if (!minSupportedVersion) {
+      return NextResponse.json(
+        { detail: "min_supported_version is required." },
+        { status: 422 },
+      );
+    }
+    forwardedPayload.min_supported_version = minSupportedVersion;
+  }
+
+  if (payload?.max_supported_version !== undefined) {
+    const maxSupportedVersion = sanitizeText(payload.max_supported_version, 40);
+    if (!maxSupportedVersion) {
+      return NextResponse.json(
+        { detail: "max_supported_version is required." },
+        { status: 422 },
+      );
+    }
+    forwardedPayload.max_supported_version = maxSupportedVersion;
+  }
+
+  if (payload?.released_at !== undefined) {
+    const releasedAt = sanitizeText(payload.released_at, 20);
+    forwardedPayload.released_at = releasedAt || null;
+  }
+
+  if (Object.keys(forwardedPayload).length === 0) {
     return NextResponse.json(
-      { detail: "original_filename is required." },
+      { detail: "At least one update field is required." },
       { status: 422 },
     );
   }
@@ -85,9 +162,7 @@ export async function PATCH(
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        original_filename: originalFilename,
-      }),
+      body: JSON.stringify(forwardedPayload),
       cache: "no-store",
     });
   } catch (error) {

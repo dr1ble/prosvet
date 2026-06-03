@@ -43,6 +43,7 @@ export interface SimulationDraft {
   targetApp: SimulationTargetAppDraft;
   startScreenId: string | null;
   screens: SimulationScreenDraft[];
+  libraryItemId?: string | null;
   updatedAt: string;
 }
 

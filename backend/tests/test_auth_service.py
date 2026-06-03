@@ -618,7 +618,7 @@ def test_issue_personal_qr_success_for_active_learner(auth_service, mock_repo):
 
     with patch("app.modules.auth.domain.services.settings") as mock_settings:
         mock_settings.security_pepper = "pepper"
-        mock_settings.qr_ttl_hours = 24
+        mock_settings.qr_ttl_minutes = 30
         with patch("app.modules.auth.domain.services._utcnow", return_value=now):
             result = auth_service.issue_personal_qr(
                 target_user_id=target_user_id,
@@ -629,7 +629,7 @@ def test_issue_personal_qr_success_for_active_learner(auth_service, mock_repo):
     assert result.deep_link_url.startswith("digitaledu://auth/qr/")
     token = result.deep_link_url.rsplit("/", maxsplit=1)[-1]
     assert token
-    assert result.expires_at == now + timedelta(hours=24)
+    assert result.expires_at == now + timedelta(minutes=30)
     kwargs = mock_repo.create_qr_token.call_args.kwargs
     assert kwargs["issued_by_user_id"] == target_user_id
     assert kwargs["token_hash"] != token
@@ -642,14 +642,14 @@ def test_issue_onboarding_qr_creates_unbound_token(auth_service, mock_repo):
 
     with patch("app.modules.auth.domain.services.settings") as mock_settings:
         mock_settings.security_pepper = "pepper"
-        mock_settings.qr_ttl_hours = 24
+        mock_settings.qr_ttl_minutes = 30
         with patch("app.modules.auth.domain.services._utcnow", return_value=now):
             result = auth_service.issue_onboarding_qr(actor_user_id=actor_user_id)
 
     assert result.deep_link_url.startswith("digitaledu://auth/qr/")
     token = result.deep_link_url.rsplit("/", maxsplit=1)[-1]
     assert token
-    assert result.expires_at == now + timedelta(hours=24)
+    assert result.expires_at == now + timedelta(minutes=30)
     kwargs = mock_repo.create_qr_token.call_args.kwargs
     assert kwargs["issued_by_user_id"] is None
     assert kwargs["token_hash"] != token
@@ -713,7 +713,7 @@ def test_personal_qr_activates_bound_user_once(db_session):
 
     with patch("app.modules.auth.domain.services.settings") as mock_settings:
         mock_settings.security_pepper = "pepper"
-        mock_settings.qr_ttl_hours = 24
+        mock_settings.qr_ttl_minutes = 30
         mock_settings.access_token_secret = "test-access-secret"
         mock_settings.access_token_ttl_minutes = 15
         mock_settings.refresh_session_days = 30
