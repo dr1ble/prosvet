@@ -1,7 +1,6 @@
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -11,12 +10,14 @@ from app.core.config import settings
 from app.modules.simulation.infra.models import (
     SimulationDraft,
     SimulationLibraryItem,
+    SimulationMediaApplication,
     SimulationMediaAsset,
 )
 from app.modules.simulation.infra.repository import (
     SimulationMediaAppBinding,
     SimulationRepository,
 )
+from app.shared.storage.object_storage import ObjectStorage, ObjectStorageError, get_object_storage
 
 DEFAULT_SCOPE_KEY = "global"
 ALLOWED_STORE_TYPES = {"play_market", "rustore", "app_store", "other"}
@@ -83,6 +84,22 @@ def _normalize_media_filename(value: str) -> str:
     return normalized[:255]
 
 
+def _normalize_app_name(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("app_name is required.")
+    return normalized[:255]
+
+
+def _normalize_optional_url(value: str | None, max_length: int) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    return normalized[:max_length]
+
+
 def _extract_library_metadata(
     title: str | None,
     payload_json: dict,
@@ -126,6 +143,19 @@ class SimulationLibrarySummary:
     created_at: datetime
     updated_at: datetime
     payload_json: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SimulationMediaApplicationPayload:
+    id: UUID
+    owner_user_id: UUID
+    scope_key: str
+    app_package_name: str
+    app_name: str
+    icon_url: str | None
+    store_url: str | None
+    created_at: datetime
+    updated_at: datetime
 
 
 def _extract_library_binding(payload_json: dict[str, Any]) -> SimulationLibraryBinding | None:
@@ -208,9 +238,15 @@ def _count_library_links(payload_json: dict[str, Any]) -> int:
 
 
 class SimulationService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, storage: ObjectStorage | None = None) -> None:
         self.db = db
         self.repo = SimulationRepository(db)
+        self.storage = storage
+
+    def _object_storage(self) -> ObjectStorage:
+        if self.storage is None:
+            self.storage = get_object_storage()
+        return self.storage
 
     def get_current_draft(
         self,
@@ -219,6 +255,44 @@ class SimulationService:
     ) -> SimulationDraft | None:
         normalized_scope = normalize_scope_key(scope_key)
         return self.repo.get_current_by_owner(owner_user_id, normalized_scope)
+
+    def _to_media_application_payload(
+        self,
+        application: SimulationMediaApplication,
+    ) -> SimulationMediaApplicationPayload:
+        return SimulationMediaApplicationPayload(
+            id=application.id,
+            owner_user_id=application.owner_user_id,
+            scope_key=application.scope_key,
+            app_package_name=application.app_package_name,
+            app_name=application.app_name,
+            icon_url=application.icon_url,
+            store_url=application.store_url,
+            created_at=application.created_at,
+            updated_at=application.updated_at,
+        )
+
+    def upsert_media_application(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        app_package_name: str,
+        app_name: str,
+        icon_url: str | None,
+        store_url: str | None,
+    ) -> SimulationMediaApplicationPayload:
+        normalized_scope = normalize_scope_key(scope_key)
+        normalized_package = _normalize_package_name(app_package_name)
+        normalized_name = _normalize_app_name(app_name)
+        application = self.repo.upsert_media_application(
+            owner_user_id=owner_user_id,
+            scope_key=normalized_scope,
+            app_package_name=normalized_package,
+            app_name=normalized_name,
+            icon_url=_normalize_optional_url(icon_url, 1000),
+            store_url=_normalize_optional_url(store_url, 500),
+        )
+        return self._to_media_application_payload(application)
 
     def upsert_current_draft(
         self,
@@ -229,6 +303,27 @@ class SimulationService:
     ) -> SimulationDraft:
         normalized_scope = normalize_scope_key(scope_key)
         normalized_title = title.strip() or "Simulation draft"
+        binding = _extract_library_binding(payload_json)
+        target_app_name = None
+        raw_target_app = payload_json.get("targetApp")
+        if isinstance(raw_target_app, dict):
+            raw_app_name = raw_target_app.get("appName")
+            if isinstance(raw_app_name, str) and raw_app_name.strip():
+                target_app_name = raw_app_name.strip()[:255]
+            if binding is not None and target_app_name:
+                self.repo.upsert_media_application(
+                    owner_user_id=owner_user_id,
+                    scope_key=normalized_scope,
+                    app_package_name=binding.app_package_name,
+                    app_name=target_app_name,
+                    icon_url=binding.icon_url,
+                    store_url=_normalize_optional_url(
+                        raw_target_app.get("storeUrl"),
+                        500,
+                    )
+                    if isinstance(raw_target_app.get("storeUrl"), str)
+                    else None,
+                )
         current = self.repo.get_current_by_owner(owner_user_id, normalized_scope)
 
         if current is None:
@@ -293,12 +388,23 @@ class SimulationService:
     ) -> list[SimulationMediaAppBinding]:
         normalized_scope = normalize_scope_key(scope_key)
         normalized_limit = max(1, min(limit, 100))
-        return self.repo.list_media_app_bindings(
+        candidate_limit = max(normalized_limit, min(500, normalized_limit * 5))
+        items = self.repo.list_media_app_bindings(
             owner_user_id=owner_user_id,
             scope_key=normalized_scope,
-            search_query=search_query,
-            limit=normalized_limit,
+            search_query="",
+            limit=candidate_limit,
         )
+        normalized_query = search_query.strip().lower()
+        if not normalized_query:
+            return items[:normalized_limit]
+        filtered = [
+            item
+            for item in items
+            if normalized_query in item.app_package_name.lower()
+            or (item.app_name is not None and normalized_query in item.app_name.lower())
+        ]
+        return filtered[:normalized_limit]
 
     def create_media_asset(
         self,
@@ -339,14 +445,11 @@ class SimulationService:
         extension = ALLOWED_IMAGE_TYPES[content_type]
         safe_name = original_filename.strip() or f"image.{extension}"
         safe_name = _normalize_media_filename(safe_name)
-        storage_root = Path(settings.simulation_media_dir).resolve()
-        target_dir = storage_root / str(owner_user_id) / safe_scope
-        target_dir.mkdir(parents=True, exist_ok=True)
 
         storage_filename = f"{uuid4().hex}.{extension}"
-        storage_path = target_dir / storage_filename
-        storage_key = f"{owner_user_id}/{safe_scope}/{storage_filename}"
-        storage_path.write_bytes(content)
+        storage_key = f"simulation/{owner_user_id}/{safe_scope}/{storage_filename}"
+        storage = self._object_storage()
+        storage.put_bytes(storage_key, content, content_type)
 
         try:
             asset = self.repo.create_media_asset(
@@ -363,24 +466,60 @@ class SimulationService:
                 size_bytes=len(content),
             )
         except Exception:
-            if storage_path.exists():
-                storage_path.unlink(missing_ok=True)
+            try:
+                storage.delete_object(storage_key)
+            except ObjectStorageError:
+                pass
             raise
         return asset
 
-    def get_media_asset_with_path(
+    def delete_media_application(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        app_package_name: str,
+    ) -> bool:
+        normalized_scope = normalize_scope_key(scope_key)
+        normalized_package = _normalize_package_name(app_package_name)
+        application = self.repo.get_media_application_by_package(
+            owner_user_id=owner_user_id,
+            scope_key=normalized_scope,
+            app_package_name=normalized_package,
+        )
+        assets = self.repo.list_media_assets_by_package_for_scope(
+            owner_user_id=owner_user_id,
+            scope_key=normalized_scope,
+            app_package_name=normalized_package,
+        )
+        if application is None and not assets:
+            return False
+
+        storage_keys = [asset.storage_key for asset in assets]
+        for asset in assets:
+            self.repo.delete_media_asset(asset)
+        if application is not None:
+            self.repo.delete_media_application(application)
+
+        for storage_key in storage_keys:
+            try:
+                self._object_storage().delete_object(storage_key)
+            except ObjectStorageError:
+                pass
+        return True
+
+    def get_media_asset_content(
         self,
         asset_id: UUID,
-    ) -> tuple[SimulationMediaAsset, Path] | None:
+    ) -> tuple[SimulationMediaAsset, bytes] | None:
         asset = self.repo.get_media_asset_public(asset_id=asset_id)
         if asset is None:
             return None
 
-        storage_root = Path(settings.simulation_media_dir).resolve()
-        file_path = storage_root / asset.storage_key
-        if not file_path.exists() or not file_path.is_file():
+        try:
+            content = self._object_storage().get_bytes(asset.storage_key)
+        except ObjectStorageError:
             return None
-        return asset, file_path
+        return asset, content
 
     def rename_media_asset(
         self,
@@ -414,11 +553,11 @@ class SimulationService:
         if asset is None:
             return False
 
-        storage_root = Path(settings.simulation_media_dir).resolve()
-        file_path = storage_root / asset.storage_key
         self.repo.delete_media_asset(asset)
-        if file_path.exists():
-            file_path.unlink(missing_ok=True)
+        try:
+            self._object_storage().delete_object(asset.storage_key)
+        except ObjectStorageError:
+            pass
         return True
 
     def list_library_items(

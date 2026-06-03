@@ -81,6 +81,46 @@ class SimulationMediaAsset(Base):
     )
 
 
+class SimulationMediaApplication(Base):
+    __tablename__ = "simulation_media_applications"
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_user_id",
+            "scope_key",
+            "app_package_name",
+            name="uq_simulation_media_app_owner_scope_package",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    scope_key: Mapped[str] = mapped_column(String(190), nullable=False, default="global")
+    app_package_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    app_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    icon_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    store_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utcnow,
+        onupdate=_utcnow,
+        nullable=False,
+    )
+
+
 class SimulationLibraryItem(Base):
     __tablename__ = "simulation_library_items"
 

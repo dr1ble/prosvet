@@ -33,6 +33,9 @@ type MediaListApiOut = {
 
 type MediaAppBindingApiOut = {
   app_package_name: string;
+  app_name: string | null;
+  icon_url: string | null;
+  store_url: string | null;
   store_type: SimulationStoreType;
   min_supported_version: string;
   max_supported_version: string;
@@ -109,6 +112,9 @@ export type SimulationMediaBinding = {
 
 export type SimulationMediaAppBinding = {
   appPackageName: string;
+  appName: string | null;
+  iconUrl: string | null;
+  storeUrl: string | null;
   storeType: SimulationStoreType;
   minSupportedVersion: string;
   maxSupportedVersion: string;
@@ -356,6 +362,9 @@ function mapMediaAppBinding(
 ): SimulationMediaAppBinding {
   return {
     appPackageName: value.app_package_name,
+    appName: value.app_name,
+    iconUrl: value.icon_url,
+    storeUrl: value.store_url,
     storeType: value.store_type,
     minSupportedVersion: value.min_supported_version,
     maxSupportedVersion: value.max_supported_version,
@@ -438,9 +447,38 @@ export async function fetchSimulationMediaAppBindingsRemote(
   });
   const data = await getJson<MediaAppBindingListApiOut>(
     `/api/admin/simulation/media/apps?${query.toString()}`,
-    { dedupeMs: 800 },
   );
   return (data.items ?? []).map(mapMediaAppBinding);
+}
+
+export async function saveSimulationMediaAppRemote(
+  scopeKey: string,
+  payload: {
+    appPackageName: string;
+    appName: string;
+    iconUrl?: string | null;
+    storeUrl?: string | null;
+  },
+): Promise<void> {
+  await postJson(withScope("/api/admin/simulation/media/apps", scopeKey), {
+    app_package_name: payload.appPackageName,
+    app_name: payload.appName,
+    icon_url: payload.iconUrl ?? null,
+    store_url: payload.storeUrl ?? null,
+  });
+}
+
+export async function deleteSimulationMediaAppRemote(
+  scopeKey: string,
+  appPackageName: string,
+): Promise<void> {
+  await deleteRequest(
+    `/api/admin/simulation/media/apps/${encodeURIComponent(appPackageName)}?${new URLSearchParams(
+      {
+        scope_key: scopeKey,
+      },
+    ).toString()}`,
+  );
 }
 
 export async function uploadSimulationMediaAssetRemote(

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.modules.simulation.infra.models import (
     SimulationDraft,
     SimulationLibraryItem,
+    SimulationMediaApplication,
     SimulationMediaAsset,
 )
 
@@ -15,6 +16,9 @@ from app.modules.simulation.infra.models import (
 @dataclass(frozen=True)
 class SimulationMediaAppBinding:
     app_package_name: str
+    app_name: str | None
+    icon_url: str | None
+    store_url: str | None
     store_type: str
     min_supported_version: str
     max_supported_version: str
@@ -147,9 +151,36 @@ class SimulationRepository:
         ).limit(limit)
         rows = self.db.execute(stmt).all()
 
+        metadata_by_package: dict[str, SimulationMediaApplication] = {}
+        package_names = [row[0] for row in rows]
+        if package_names:
+            metadata_stmt = select(SimulationMediaApplication).where(
+                SimulationMediaApplication.owner_user_id == owner_user_id,
+                SimulationMediaApplication.app_package_name.in_(package_names),
+                or_(
+                    SimulationMediaApplication.scope_key == "global",
+                    SimulationMediaApplication.scope_key == scope_key,
+                ),
+            )
+            for item in self.db.scalars(metadata_stmt):
+                current = metadata_by_package.get(item.app_package_name)
+                if current is None or (
+                    current.scope_key == "global" and item.scope_key == scope_key
+                ):
+                    metadata_by_package[item.app_package_name] = item
+
         return [
             SimulationMediaAppBinding(
                 app_package_name=row[0],
+                app_name=metadata_by_package[row[0]].app_name
+                if row[0] in metadata_by_package
+                else None,
+                icon_url=metadata_by_package[row[0]].icon_url
+                if row[0] in metadata_by_package
+                else None,
+                store_url=metadata_by_package[row[0]].store_url
+                if row[0] in metadata_by_package
+                else None,
                 store_type=row[1],
                 min_supported_version=row[2],
                 max_supported_version=row[3],
@@ -192,6 +223,52 @@ class SimulationRepository:
         self.db.flush()
         return asset
 
+    def get_media_application_by_package(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        app_package_name: str,
+    ) -> SimulationMediaApplication | None:
+        stmt = select(SimulationMediaApplication).where(
+            SimulationMediaApplication.owner_user_id == owner_user_id,
+            SimulationMediaApplication.scope_key == scope_key,
+            SimulationMediaApplication.app_package_name == app_package_name,
+        )
+        return self.db.scalar(stmt)
+
+    def upsert_media_application(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        app_package_name: str,
+        app_name: str,
+        icon_url: str | None,
+        store_url: str | None,
+    ) -> SimulationMediaApplication:
+        current = self.get_media_application_by_package(
+            owner_user_id=owner_user_id,
+            scope_key=scope_key,
+            app_package_name=app_package_name,
+        )
+        if current is None:
+            current = SimulationMediaApplication(
+                owner_user_id=owner_user_id,
+                scope_key=scope_key,
+                app_package_name=app_package_name,
+                app_name=app_name,
+                icon_url=icon_url,
+                store_url=store_url,
+            )
+            self.db.add(current)
+            self.db.flush()
+            return current
+
+        current.app_name = app_name
+        current.icon_url = icon_url
+        current.store_url = store_url
+        self.db.flush()
+        return current
+
     def get_media_asset_by_id(
         self,
         owner_user_id: UUID,
@@ -223,6 +300,23 @@ class SimulationRepository:
 
     def delete_media_asset(self, asset: SimulationMediaAsset) -> None:
         self.db.delete(asset)
+        self.db.flush()
+
+    def list_media_assets_by_package_for_scope(
+        self,
+        owner_user_id: UUID,
+        scope_key: str,
+        app_package_name: str,
+    ) -> list[SimulationMediaAsset]:
+        stmt = select(SimulationMediaAsset).where(
+            SimulationMediaAsset.owner_user_id == owner_user_id,
+            SimulationMediaAsset.scope_key == scope_key,
+            SimulationMediaAsset.app_package_name == app_package_name,
+        )
+        return list(self.db.scalars(stmt))
+
+    def delete_media_application(self, application: SimulationMediaApplication) -> None:
+        self.db.delete(application)
         self.db.flush()
 
     def list_library_items(

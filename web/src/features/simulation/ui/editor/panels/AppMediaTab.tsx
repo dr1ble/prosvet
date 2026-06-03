@@ -32,6 +32,7 @@ export type AppMediaApplication = {
   key: string;
   appName: string;
   iconUrl: string | null;
+  storeUrl?: string | null;
   expanded: boolean;
   versions: AppMediaVersion[];
 };
@@ -76,6 +77,7 @@ type AppMediaTabProps = {
   ) => Promise<void>;
   onModalScreenDelete: (screen: AppMediaAsset) => Promise<void>;
   onModalSubmit: () => void;
+  onModalDeleteApplication: () => Promise<void>;
   modalSubmitDisabled: boolean;
   onModalScreenDragStart: (
     event: React.DragEvent<HTMLElement>,
@@ -146,6 +148,7 @@ export function AppMediaTab({
   onModalScreenRename,
   onModalScreenDelete,
   onModalSubmit,
+  onModalDeleteApplication,
   modalSubmitDisabled,
   onModalScreenDragStart,
   onPreviewImage,
@@ -171,6 +174,7 @@ export function AppMediaTab({
             dragHint: "Перетащите экран на холст или нажмите «Добавить».",
             addScreen: "Добавить",
             editApp: "Редактировать приложение",
+            deleteApp: "Удалить приложение",
             modalTitleCreate: "Добавить приложение и экраны",
             modalTitleEdit: "Редактировать приложение и экраны",
             appName: "Название приложения",
@@ -194,6 +198,7 @@ export function AppMediaTab({
             modalEmpty: "Пока нет экранов для этой версии приложения.",
             submitCreate: "Добавить приложение",
             submitEdit: "Сохранить",
+            submitDelete: "Удалить приложение",
             renameScreen: "Название экрана",
             deleteScreen: "Удалить экран",
             deletingScreen: "Удаляем...",
@@ -212,6 +217,7 @@ export function AppMediaTab({
             dragHint: "Drag screen to canvas or click Add.",
             addScreen: "Add",
             editApp: "Edit application",
+            deleteApp: "Delete application",
             modalTitleCreate: "Add application and screens",
             modalTitleEdit: "Edit application and screens",
             appName: "Application name",
@@ -235,6 +241,7 @@ export function AppMediaTab({
             modalEmpty: "No screens for this app version yet.",
             submitCreate: "Add application",
             submitEdit: "Save",
+            submitDelete: "Delete application",
             renameScreen: "Screen title",
             deleteScreen: "Delete screen",
             deletingScreen: "Deleting...",
@@ -566,6 +573,7 @@ export function AppMediaTab({
                 multiple
                 className={styles.hiddenInput}
                 onChange={async (event) => {
+                  const input = event.currentTarget;
                   const files = Array.from(event.target.files ?? []);
                   if (files.length === 0) {
                     return;
@@ -573,7 +581,7 @@ export function AppMediaTab({
                   for (const file of files) {
                     await onModalUploadMedia(file);
                   }
-                  event.currentTarget.value = "";
+                  input.value = "";
                 }}
               />
             </div>
@@ -706,6 +714,17 @@ export function AppMediaTab({
                   ? labels.submitCreate
                   : labels.submitEdit}
               </button>
+              {modalMode === "edit" ? (
+                <button
+                  type="button"
+                  className={styles.dangerButton}
+                  onClick={() => {
+                    void onModalDeleteApplication();
+                  }}
+                >
+                  {labels.submitDelete}
+                </button>
+              ) : null}
             </div>
           </section>
         </div>

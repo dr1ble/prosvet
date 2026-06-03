@@ -1,3 +1,4 @@
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import (
@@ -10,7 +11,6 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import FileResponse
 
 from app.modules.simulation.api.schemas import (
     SimulationDraftOut,
@@ -20,6 +20,8 @@ from app.modules.simulation.api.schemas import (
     SimulationLibraryItemSummaryOut,
     SimulationLibraryListOut,
     SimulationMediaAppBindingListOut,
+    SimulationMediaApplicationOut,
+    SimulationMediaApplicationUpsertIn,
     SimulationMediaAssetOut,
     SimulationMediaAssetUpdateIn,
     SimulationMediaListOut,
@@ -119,6 +121,47 @@ def list_media_app_bindings(
     return SimulationMediaAppBindingListOut(items=items)  # type: ignore[arg-type]
 
 
+@router.post("/media/apps", response_model=SimulationMediaApplicationOut)
+def upsert_media_application(
+    payload: SimulationMediaApplicationUpsertIn,
+    service: SimulationServiceDep,
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
+    scope_key: str = Query(default="global", min_length=1, max_length=190),
+) -> SimulationMediaApplicationOut:
+    try:
+        application = service.upsert_media_application(
+            owner_user_id=actor.user_id,
+            scope_key=scope_key,
+            app_package_name=payload.app_package_name,
+            app_name=payload.app_name,
+            icon_url=payload.icon_url,
+            store_url=payload.store_url,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return SimulationMediaApplicationOut.model_validate(application)
+
+
+@router.delete("/media/apps/{app_package_name}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_media_application(
+    app_package_name: str,
+    service: SimulationServiceDep,
+    actor: CurrentActor = Depends(require_policy("simulation.builder")),
+    scope_key: str = Query(default="global", min_length=1, max_length=190),
+) -> Response:
+    try:
+        deleted = service.delete_media_application(
+            owner_user_id=actor.user_id,
+            scope_key=scope_key,
+            app_package_name=app_package_name,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Приложение не найдено.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post(
     "/media/upload",
     response_model=SimulationMediaUploadOut,
@@ -165,18 +208,19 @@ def get_media_asset_file(
     asset_id: UUID,
     service: SimulationServiceDep,
     actor: CurrentActor = Depends(get_current_actor),
-) -> FileResponse:
-    asset_data = service.get_media_asset_with_path(
+) -> Response:
+    asset_data = service.get_media_asset_content(
         asset_id=asset_id,
     )
     if asset_data is None:
         raise HTTPException(status_code=404, detail="Медиафайл не найден.")
 
-    asset, file_path = asset_data
-    return FileResponse(
-        path=file_path,
+    asset, content = asset_data
+    filename = quote(asset.original_filename)
+    return Response(
+        content=content,
         media_type=asset.content_type,
-        filename=asset.original_filename,
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{filename}"},
     )
 
 

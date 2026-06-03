@@ -48,6 +48,7 @@ import type { AppScreen } from "./types";
 import type { CourseDto } from "@/features/catalog/types";
 import type { SimulationDraft } from "@/features/simulation/model/types";
 import {
+  deleteSimulationMediaAppRemote,
   deleteSimulationMediaAssetRemote,
   fetchCurrentSimulationDraftRemote,
   fetchSimulationMediaAppBindingsRemote,
@@ -57,6 +58,7 @@ import {
   fetchSimulationMediaAssetsRemote,
   renameSimulationMediaAssetRemote,
   resolveSimulationStoreAppRemote,
+  saveSimulationMediaAppRemote,
   type SimulationLibraryFilter,
   updateSimulationLibraryItemRemote,
   uploadSimulationMediaAssetRemote,
@@ -1186,13 +1188,15 @@ function SimulationEditorInner({
               grouped.get(appKey) ??
               ({
                 key: appKey,
-                appName: prevApp?.appName
-                  ? prevApp.appName
-                  : deriveAppNameFromPackageName(
-                      item.appPackageName,
-                      item.appPackageName,
-                    ),
-                iconUrl: prevApp?.iconUrl ?? null,
+                appName:
+                  item.appName?.trim() ||
+                  prevApp?.appName ||
+                  deriveAppNameFromPackageName(
+                    item.appPackageName,
+                    item.appPackageName,
+                  ),
+                iconUrl: item.iconUrl ?? prevApp?.iconUrl ?? null,
+                storeUrl: item.storeUrl ?? prevApp?.storeUrl ?? null,
                 expanded: prevApp?.expanded ?? false,
                 versions: [],
               } satisfies AppMediaApplication);
@@ -1659,6 +1663,17 @@ function SimulationEditorInner({
       setModalMediaUploading(true);
       setModalMediaError(null);
       try {
+        await saveSimulationMediaAppRemote(scopeKey, {
+          appPackageName: modalMediaBinding.appPackageName,
+          appName:
+            modalTargetApp.appName.trim() ||
+            deriveAppNameFromPackageName(
+              modalMediaBinding.appPackageName,
+              modalMediaBinding.appPackageName,
+            ),
+          iconUrl: modalTargetApp.iconUrl || null,
+          storeUrl: modalTargetApp.storeUrl || null,
+        });
         const asset = await uploadSimulationMediaAssetRemote(
           scopeKey,
           file,
@@ -1695,6 +1710,7 @@ function SimulationEditorInner({
                 ? modalTargetApp.appName.trim()
                 : deriveAppNameFromPackageName(appKey, appKey),
               iconUrl: modalTargetApp.iconUrl || null,
+              storeUrl: modalTargetApp.storeUrl || null,
               expanded: true,
               versions: [
                 {
@@ -1726,6 +1742,7 @@ function SimulationEditorInner({
                 ...item,
                 appName: modalTargetApp.appName.trim() || item.appName,
                 iconUrl: modalTargetApp.iconUrl || item.iconUrl,
+                storeUrl: modalTargetApp.storeUrl || item.storeUrl || null,
                 expanded: true,
                 versions: [
                   {
@@ -1748,6 +1765,7 @@ function SimulationEditorInner({
               ...item,
               appName: modalTargetApp.appName.trim() || item.appName,
               iconUrl: modalTargetApp.iconUrl || item.iconUrl,
+              storeUrl: modalTargetApp.storeUrl || item.storeUrl || null,
               versions: item.versions.map((version) =>
                 version.key === versionKey
                   ? {
@@ -1780,6 +1798,7 @@ function SimulationEditorInner({
       modalMediaBindingError,
       modalTargetApp.appName,
       modalTargetApp.iconUrl,
+      modalTargetApp.storeUrl,
       scopeKey,
     ],
   );
@@ -1792,7 +1811,7 @@ function SimulationEditorInner({
       appName: app.appName,
       packageName: app.key,
       storeType: version.storeType,
-      storeUrl: "",
+      storeUrl: app.storeUrl ?? "",
       iconUrl: app.iconUrl ?? "",
       minSupportedVersion: version.minSupportedVersion,
       maxSupportedVersion: version.maxSupportedVersion,
@@ -1994,7 +2013,7 @@ function SimulationEditorInner({
     setIsAddMediaModalOpen(false);
   }, []);
 
-  const handleSubmitAddMediaModal = useCallback(() => {
+  const handleSubmitAddMediaModal = useCallback(async () => {
     if (modalMediaBindingError) {
       return;
     }
@@ -2015,10 +2034,56 @@ function SimulationEditorInner({
         modalTargetApp.maxSupportedVersion.trim() || "99.99.99",
       releasedAt: modalTargetApp.releasedAt.trim(),
     };
-    setModalTargetApp(normalizedTargetApp);
-    setTargetApp(normalizedTargetApp);
-    setIsAddMediaModalOpen(false);
-  }, [modalMediaBindingError, modalTargetApp]);
+    try {
+      await saveSimulationMediaAppRemote(scopeKey, {
+        appPackageName: normalizedTargetApp.packageName,
+        appName: normalizedTargetApp.appName,
+        iconUrl: normalizedTargetApp.iconUrl || null,
+        storeUrl: normalizedTargetApp.storeUrl || null,
+      });
+      setModalTargetApp(normalizedTargetApp);
+      setTargetApp(normalizedTargetApp);
+      setApplications((prev) => {
+        const existing = prev.find(
+          (item) => item.key === normalizedTargetApp.packageName,
+        );
+        if (!existing) {
+          return [
+            {
+              key: normalizedTargetApp.packageName,
+              appName: normalizedTargetApp.appName,
+              iconUrl: normalizedTargetApp.iconUrl || null,
+              storeUrl: normalizedTargetApp.storeUrl || null,
+              expanded: true,
+              versions: [],
+            },
+            ...prev,
+          ];
+        }
+        return prev.map((item) =>
+          item.key === normalizedTargetApp.packageName
+            ? {
+                ...item,
+                appName: normalizedTargetApp.appName,
+                iconUrl: normalizedTargetApp.iconUrl || null,
+                storeUrl: normalizedTargetApp.storeUrl || null,
+              }
+            : item,
+        );
+      });
+      setAppsReloadToken((token) => token + 1);
+      setModalMediaError(null);
+      setIsAddMediaModalOpen(false);
+    } catch (error) {
+      setModalMediaError(
+        error instanceof Error
+          ? error.message
+          : language === "ru"
+            ? "Не удалось сохранить приложение."
+            : "Failed to save application.",
+      );
+    }
+  }, [language, modalMediaBindingError, modalTargetApp, scopeKey]);
 
   const handleScreenAddFromAsset = useCallback(
     (asset: MediaAsset) => {
@@ -2091,23 +2156,33 @@ function SimulationEditorInner({
           prev.filter((item) => item.id !== screen.id),
         );
         setApplications((prev) =>
-          prev.map((app) => ({
-            ...app,
-            versions: app.versions.map((version) => {
-              const removedCount = version.screens.some(
-                (item) => item.id === screen.id,
-              )
-                ? 1
-                : 0;
-              return {
-                ...version,
-                screens: version.screens.filter(
-                  (item) => item.id !== screen.id,
+          prev
+            .map((app) => ({
+              ...app,
+              versions: app.versions
+                .map((version) => {
+                  const removedCount = version.screens.some(
+                    (item) => item.id === screen.id,
+                  )
+                    ? 1
+                    : 0;
+                  return {
+                    ...version,
+                    screens: version.screens.filter(
+                      (item) => item.id !== screen.id,
+                    ),
+                    assetsCount: Math.max(
+                      0,
+                      version.assetsCount - removedCount,
+                    ),
+                  };
+                })
+                .filter(
+                  (version) =>
+                    version.assetsCount > 0 || version.screens.length > 0,
                 ),
-                assetsCount: Math.max(0, version.assetsCount - removedCount),
-              };
-            }),
-          })),
+            }))
+            .filter((app) => app.versions.length > 0),
         );
         setAppScreens((prev) => prev.filter((item) => item.id !== screen.id));
         setModalMediaError(null);
@@ -2124,6 +2199,67 @@ function SimulationEditorInner({
     },
     [language],
   );
+
+  const handleDeleteApplication = useCallback(
+    async (appKey: string) => {
+      const confirmed = window.confirm(
+        language === "ru"
+          ? "Удалить приложение и все его экраны в текущей области?"
+          : "Delete the application and all of its screens in the current scope?",
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await deleteSimulationMediaAppRemote(scopeKey, appKey);
+        setApplications((prev) => prev.filter((item) => item.key !== appKey));
+        setLoadedVersionScreens((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((key) => {
+            if (key.startsWith(`${appKey}::`)) {
+              delete next[key];
+            }
+          });
+          return next;
+        });
+        if (targetApp.packageName === appKey) {
+          setTargetApp(defaultTargetApp);
+        }
+        setModalTargetApp((current) =>
+          current.packageName === appKey ? defaultTargetApp : current,
+        );
+        setModalMediaAssets((current) =>
+          modalTargetApp.packageName === appKey ? [] : current,
+        );
+        setAppScreens((current) =>
+          modalTargetApp.packageName === appKey ? [] : current,
+        );
+        if (modalTargetApp.packageName === appKey) {
+          setIsAddMediaModalOpen(false);
+        }
+        setAppsReloadToken((token) => token + 1);
+        setModalMediaError(null);
+      } catch (error) {
+        setModalMediaError(
+          error instanceof Error
+            ? error.message
+            : language === "ru"
+              ? "Не удалось удалить приложение."
+              : "Failed to delete application.",
+        );
+      }
+    },
+    [language, modalTargetApp.packageName, scopeKey, targetApp.packageName],
+  );
+
+  const handleDeleteEditingApplication = useCallback(async () => {
+    const appKey = modalTargetApp.packageName.trim();
+    if (!appKey) {
+      return;
+    }
+    await handleDeleteApplication(appKey);
+  }, [handleDeleteApplication, modalTargetApp.packageName]);
 
   const handleScreenDragStart = useCallback(
     (event: React.DragEvent<HTMLElement>, screen: MediaAsset) => {
@@ -3091,6 +3227,7 @@ function SimulationEditorInner({
       onModalScreenRename={handleModalScreenRename}
       onModalScreenDelete={handleModalScreenDelete}
       onModalSubmit={handleSubmitAddMediaModal}
+      onModalDeleteApplication={handleDeleteEditingApplication}
       modalSubmitDisabled={Boolean(modalMediaBindingError)}
       onModalScreenDragStart={handleModalScreenDragStart}
       onPreviewImage={openImagePreview}

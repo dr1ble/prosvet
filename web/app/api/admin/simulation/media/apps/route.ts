@@ -90,3 +90,52 @@ export async function GET(request: Request): Promise<Response> {
 
   return toJsonResponse(backendResponse);
 }
+
+export async function POST(request: Request): Promise<Response> {
+  const accessToken = resolveAdminAccessToken(request);
+  if (!accessToken) {
+    return NextResponse.json(
+      { detail: "Admin session token is missing. Sign in again." },
+      { status: 401 },
+    );
+  }
+
+  const url = new URL(request.url);
+  const scopeKey = sanitizeScopeKey(url.searchParams.get("scope_key"));
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json(
+      { detail: "Invalid JSON payload." },
+      { status: 400 },
+    );
+  }
+
+  let backendResponse: Response;
+  try {
+    backendResponse = await fetch(
+      `${apiBaseUrl}/simulation/media/apps?${new URLSearchParams({
+        scope_key: scopeKey,
+      }).toString()}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to connect to backend API.";
+    return NextResponse.json({ detail: message }, { status: 502 });
+  }
+
+  return toJsonResponse(backendResponse);
+}

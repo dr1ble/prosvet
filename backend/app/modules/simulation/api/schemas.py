@@ -55,10 +55,34 @@ class SimulationMediaAssetUpdateIn(_BaseSchema):
     original_filename: str = Field(min_length=1, max_length=255)
 
 
+class SimulationMediaApplicationUpsertIn(_BaseSchema):
+    app_package_name: str = Field(min_length=3, max_length=255)
+    app_name: str = Field(min_length=1, max_length=255)
+    icon_url: str | None = Field(default=None, max_length=1000)
+    store_url: str | None = Field(default=None, max_length=500)
+
+
+class SimulationMediaApplicationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    owner_user_id: UUID
+    scope_key: str
+    app_package_name: str
+    app_name: str
+    icon_url: str | None
+    store_url: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class SimulationMediaAppBindingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     app_package_name: str
+    app_name: str | None
+    icon_url: str | None
+    store_url: str | None
     store_type: str
     min_supported_version: str
     max_supported_version: str

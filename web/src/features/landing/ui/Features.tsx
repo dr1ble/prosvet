@@ -96,17 +96,17 @@ export function Features() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: index * 0.05 }}
-                className={`${card.className} h-full min-h-56 rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/35 transition hover:-translate-y-1 hover:shadow-xl`}
+                className={`${card.className} h-full min-h-56 rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/35 transition hover:-translate-y-1 hover:shadow-xl sm:p-7`}
               >
                 <div
-                  className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl ${card.accent}`}
+                  className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${card.accent} sm:h-[3.25rem] sm:w-[3.25rem]`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-6 w-6 sm:h-[1.625rem] sm:w-[1.625rem]" />
                 </div>
-                <h3 className="mt-5 text-lg font-bold text-slate-900">
+                <h3 className="mt-5 text-xl font-bold leading-tight text-slate-900 sm:mt-6 sm:text-[1.6rem]">
                   {card.title}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-3 text-[0.95rem] leading-7 text-slate-600 sm:text-base sm:leading-7">
                   {card.description}
                 </p>
               </motion.article>
