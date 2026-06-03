@@ -160,7 +160,7 @@ def _simulation(
             "image_url": image_url,
             "hotspots": hotspots,
             "is_start": True,
-            "is_completion": False,
+            "is_completion": True,
         },
     }
 
