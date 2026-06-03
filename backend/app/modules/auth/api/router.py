@@ -1,13 +1,11 @@
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.modules.auth.api.schemas import (
     AccountSettingsIn,
     AuthMeOut,
@@ -38,6 +36,7 @@ from app.shared.db.deps import get_db
 from app.shared.di.services import AuthServiceDep
 from app.shared.security.audit import log_login_attempt
 from app.shared.security.rate_limit import limiter
+from app.shared.storage.object_storage import ObjectStorageError, get_object_storage
 
 router = APIRouter()
 AVATAR_MEDIA_TYPES = {
@@ -74,10 +73,6 @@ def _localize_auth_error(detail: str) -> str:
     return _AUTH_ERROR_RU.get(detail, detail)
 
 
-def _profile_avatars_dir() -> Path:
-    return Path(settings.simulation_media_dir).resolve().parent / "profile_avatars"
-
-
 def _avatar_url(user: User, request: Request | None) -> str | None:
     if not getattr(user, "avatar_file_path", None):
         return None
@@ -87,20 +82,8 @@ def _avatar_url(user: User, request: Request | None) -> str | None:
     return str(request.url_for("auth_user_avatar", user_id=str(user.id)))
 
 
-def _avatar_file_path(user: User) -> Path | None:
-    filename = getattr(user, "avatar_file_path", None)
-    if not filename:
-        return None
-    path = (_profile_avatars_dir() / filename).resolve()
-    if _profile_avatars_dir().resolve() not in path.parents:
-        return None
-    return path if path.is_file() else None
-
-
-def _delete_existing_avatar(user: User) -> None:
-    existing = _avatar_file_path(user)
-    if existing is not None:
-        existing.unlink(missing_ok=True)
+def _avatar_object_key(user_id: UUID, suffix: str) -> str:
+    return f"avatars/{user_id}{suffix}"
 
 
 def _to_auth_me_out(user: User, db: Session, request: Request | None = None) -> AuthMeOut:
@@ -308,16 +291,31 @@ async def upload_auth_me_avatar(
     if len(content) > MAX_AVATAR_BYTES:
         raise HTTPException(status_code=413, detail="Файл аватарки слишком большой.")
 
-    avatars_dir = _profile_avatars_dir()
-    avatars_dir.mkdir(parents=True, exist_ok=True)
-    _delete_existing_avatar(current_user)
+    storage = get_object_storage()
+    old_key = current_user.avatar_file_path
+    stored_key = _avatar_object_key(current_user.id, suffix)
+    try:
+        storage.put_bytes(stored_key, content, file.content_type)
+    except ObjectStorageError as exc:
+        raise HTTPException(status_code=503, detail="Не удалось сохранить аватарку.") from exc
 
-    stored_filename = f"{current_user.id}{suffix}"
-    (avatars_dir / stored_filename).write_bytes(content)
-    current_user.avatar_file_path = stored_filename
+    current_user.avatar_file_path = stored_key
     current_user.avatar_key = None
     db.add(current_user)
-    db.flush()
+    try:
+        db.flush()
+    except Exception:
+        try:
+            storage.delete_object(stored_key)
+        except ObjectStorageError:
+            pass
+        raise
+
+    if old_key and old_key != stored_key:
+        try:
+            storage.delete_object(old_key)
+        except ObjectStorageError:
+            pass
     return _to_auth_me_out(current_user, db, request)
 
 
@@ -325,15 +323,19 @@ async def upload_auth_me_avatar(
 def get_auth_user_avatar(
     user_id: UUID,
     db: Session = Depends(get_db),
-) -> FileResponse:
+) -> Response:
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="Аватарка не найдена.")
-    avatar_path = _avatar_file_path(user)
-    if avatar_path is None:
+    avatar_key = getattr(user, "avatar_file_path", None)
+    if not avatar_key:
         raise HTTPException(status_code=404, detail="Аватарка не найдена.")
-    media_type = AVATAR_MEDIA_TYPES.get(avatar_path.suffix.lower(), "application/octet-stream")
-    return FileResponse(path=avatar_path, media_type=media_type)
+    try:
+        content = get_object_storage().get_bytes(avatar_key)
+    except ObjectStorageError as exc:
+        raise HTTPException(status_code=404, detail="Аватарка не найдена.") from exc
+    media_type = AVATAR_MEDIA_TYPES.get(Path(avatar_key).suffix.lower(), "application/octet-stream")
+    return Response(content=content, media_type=media_type)
 
 
 @router.patch("/me/email", response_model=AuthMeOut)
