@@ -163,7 +163,7 @@ private data class LearningCoursePreview(
     val title: String,
     val description: String,
     val category: LearningCategory,
-    val lessons: List<CatalogScreen>,
+    val lessons: List<LearningLessonPreview>,
     val progressIndex: Int,
     val completedLessonsCount: Int,
     val totalLessonsCount: Int,
@@ -171,6 +171,13 @@ private data class LearningCoursePreview(
     val coverImageUrl: String?,
     val isPlayableBundle: Boolean,
     val isFavorite: Boolean,
+)
+
+private data class LearningLessonPreview(
+    val id: String,
+    val title: String,
+    val entryScreen: CatalogScreen,
+    val screens: List<CatalogScreen>,
 )
 
 @Composable
@@ -265,8 +272,8 @@ fun LessonContent(
                 onOpenDetails = {
                     activeScreen = LearningScreen.LessonDetails
                 },
-                onOpenPlayableLesson = { screen ->
-                    onIntent(PlayerIntent.NavigateToScreen(screen.screenKey))
+                onOpenPlayableLesson = { lesson ->
+                    onIntent(PlayerIntent.NavigateToScreen(lesson.entryScreen.screenKey))
                     onIntent(PlayerIntent.EnterFullscreen)
                 },
                 modifier = modifier,
@@ -628,7 +635,7 @@ private fun LearningCourseLessonsScreen(
     onSelectLesson: (Int) -> Unit,
     onBackToCourses: () -> Unit,
     onOpenDetails: () -> Unit,
-    onOpenPlayableLesson: (CatalogScreen) -> Unit,
+    onOpenPlayableLesson: (LearningLessonPreview) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val totalSteps = selectedCourse.lessons.size.coerceAtLeast(1)
@@ -722,7 +729,7 @@ private fun LearningCourseLessonsScreen(
             }
         }
 
-        itemsIndexed(selectedCourse.lessons, key = { _, screen -> screen.id }) { index, screen ->
+        itemsIndexed(selectedCourse.lessons, key = { _, lesson -> lesson.id }) { index, lesson ->
             val lessonStatus = when {
                 index < selectedCourse.progressIndex -> LessonStatus.Completed
                 index == selectedCourse.progressIndex -> LessonStatus.InProgress
@@ -733,14 +740,14 @@ private fun LearningCourseLessonsScreen(
             LessonRow(
                 index = index,
                 totalLessons = selectedCourse.lessons.size,
-                screen = screen,
+                lesson = lesson,
                 status = lessonStatus,
                 isCurrentLesson = index == selectedLessonIndex,
                 onOpen = {
                     if (lessonStatus != LessonStatus.Locked) {
                         onSelectLesson(index)
                         if (selectedCourse.isPlayableBundle) {
-                            onOpenPlayableLesson(screen)
+                            onOpenPlayableLesson(lesson)
                         } else {
                             onOpenDetails()
                         }
@@ -762,7 +769,7 @@ private enum class LessonStatus {
 private fun LessonRow(
     index: Int,
     totalLessons: Int,
-    screen: CatalogScreen,
+    lesson: LearningLessonPreview,
     status: LessonStatus,
     isCurrentLesson: Boolean,
     onOpen: () -> Unit,
@@ -794,7 +801,7 @@ private fun LessonRow(
             .border(width = 2.dp, color = borderColor, shape = UiShapes.cardMd)
             .accessibilityTouchTarget
             .accessibilitySemantics(
-                label = screen.title,
+                label = lesson.title,
                 state = when (status) {
                     LessonStatus.Completed -> "завершён"
                     LessonStatus.InProgress -> "текущий урок"
@@ -863,7 +870,7 @@ private fun LessonRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = screen.title,
+                        text = lesson.title,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = titleColor,
@@ -942,10 +949,12 @@ private fun LearningLessonDetailsScreen(
 ) {
     var showNoteDialog by rememberSaveable { mutableStateOf(false) }
     var noteText by rememberSaveable { mutableStateOf("") }
-    val currentScreen = selectedCourse.lessons.getOrNull(selectedLessonIndex)
+    val currentLesson = selectedCourse.lessons.getOrNull(selectedLessonIndex)
+    val currentScreen = currentLesson?.entryScreen
     val progressPercent = ((selectedLessonIndex + 1) * 100 / selectedCourse.lessons.size.coerceAtLeast(1))
     val learningItems = remember(selectedCourse.lessons) {
         selectedCourse.lessons
+            .flatMap { lesson -> lesson.screens }
             .flatMap { screen -> screen.payload.toLearningPoints() }
             .distinct()
             .take(4)
@@ -1015,7 +1024,9 @@ private fun LearningLessonDetailsScreen(
                                 Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        MaterialTheme.colorScheme.scrim,
+                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.scrim.copy(alpha = 0.18f),
+                                        MaterialTheme.colorScheme.scrim.copy(alpha = 0.74f),
                                     ),
                                 ),
                             ),
@@ -1061,6 +1072,7 @@ private fun LearningLessonDetailsScreen(
             Card(
                 shape = UiShapes.cardLg,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(
                     modifier = Modifier.padding(UiSpacing.lg),
@@ -1352,22 +1364,28 @@ private fun buildLearningCoursePreviews(
     currentScreenIndex: Int,
 ): List<LearningCoursePreview> {
     val openedBundle = bundle ?: return emptyList()
+    val lessons = buildLearningLessonPreviews(openedBundle.screens)
     val category = inferCategoryFromTitle(openedBundle.course.title)
     val simulationCover = openedBundle.screens
         .asSequence()
         .mapNotNull { it.payload as? SimulationPayload }
         .map { it.imageUrl }
         .firstOrNull()
+    val progressLessonIndex = resolveCurrentLessonIndex(
+        lessons = lessons,
+        currentScreenIndex = currentScreenIndex,
+        screens = openedBundle.screens,
+    )
     return listOf(
         LearningCoursePreview(
             id = openedBundle.course.id,
             title = openedBundle.course.title,
             description = openedBundle.course.description ?: "Практический курс с пошаговыми уроками",
             category = category,
-            lessons = openedBundle.screens,
-            progressIndex = currentScreenIndex.coerceIn(0, openedBundle.screens.lastIndex.coerceAtLeast(0)),
-            completedLessonsCount = (currentScreenIndex + 1).coerceIn(0, openedBundle.screens.size),
-            totalLessonsCount = openedBundle.screens.size.coerceAtLeast(1),
+            lessons = lessons,
+            progressIndex = progressLessonIndex,
+            completedLessonsCount = progressLessonIndex.coerceIn(0, lessons.size),
+            totalLessonsCount = lessons.size.coerceAtLeast(1),
             estimatedDurationMinutes = estimateDurationMinutes(openedBundle.screens),
             coverImageUrl = resolveCoursePreviewCoverUrl(
                 simulationImageUrl = simulationCover,
@@ -1377,6 +1395,34 @@ private fun buildLearningCoursePreviews(
             isFavorite = openedBundle.course.isFavorite,
         ),
     )
+}
+
+private fun buildLearningLessonPreviews(screens: List<CatalogScreen>): List<LearningLessonPreview> {
+    if (screens.isEmpty()) return emptyList()
+
+    return screens
+        .groupBy { screen -> screen.lessonId ?: screen.id }
+        .values
+        .map { lessonScreens ->
+            val entryScreen = lessonScreens.first()
+            LearningLessonPreview(
+                id = entryScreen.lessonId ?: entryScreen.id,
+                title = entryScreen.title.ifBlank { "Урок" },
+                entryScreen = entryScreen,
+                screens = lessonScreens,
+            )
+        }
+}
+
+private fun resolveCurrentLessonIndex(
+    lessons: List<LearningLessonPreview>,
+    currentScreenIndex: Int,
+    screens: List<CatalogScreen>,
+): Int {
+    val currentScreen = screens.getOrNull(currentScreenIndex) ?: return 0
+    return lessons.indexOfFirst { lesson ->
+        lesson.screens.any { screen -> screen.id == currentScreen.id }
+    }.takeIf { it >= 0 } ?: 0
 }
 
 private fun formatDuration(totalMinutes: Int): String {

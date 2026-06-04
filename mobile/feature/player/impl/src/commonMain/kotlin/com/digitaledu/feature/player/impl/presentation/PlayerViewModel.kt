@@ -105,6 +105,11 @@ internal class PlayerViewModel(
     }
 
     private fun goToNextScreen() {
+        val bundle = currentState.bundle ?: return
+        if (currentState.currentScreenIndex >= bundle.screens.lastIndex) {
+            finishCurrentLesson()
+            return
+        }
         navigate(NavigationCommand.Next)
     }
 
@@ -361,6 +366,10 @@ internal class PlayerViewModel(
 
     private fun finishCurrentLesson() {
         val bundle = currentState.bundle ?: return
+        if (currentState.currentScreenIndex < bundle.screens.lastIndex) {
+            navigate(NavigationCommand.Next)
+            return
+        }
         val lessonId = currentState.currentScreen?.lessonId
         if (lessonId != null) {
             syncCompletedLesson(lessonId = lessonId, courseId = bundle.course.id)

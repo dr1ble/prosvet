@@ -21,7 +21,10 @@ internal fun buildVideoStoryState(
     val seconds = safeDuration % 60
     val durationLabel = "$minutes:${seconds.toString().padStart(2, '0')}"
 
-    val normalizedTranscript = transcript?.trim().orEmpty()
+    val normalizedTranscript = transcript
+        ?.let(::stripHtml)
+        ?.trim()
+        .orEmpty()
     val hasTranscript = normalizedTranscript.isNotEmpty()
     val normalizedVideoUrl = videoUrl.trim()
     val hasVideoUrl = normalizedVideoUrl.isNotEmpty()
@@ -33,4 +36,15 @@ internal fun buildVideoStoryState(
         hasVideoUrl = hasVideoUrl,
         resolvedVideoUrl = if (hasVideoUrl) resolveUrl(normalizedVideoUrl) else null,
     )
+}
+
+private fun stripHtml(rawText: String): String {
+    return rawText
+        .replace(Regex("<[^>]+>"), " ")
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace(Regex("\\s+"), " ")
 }

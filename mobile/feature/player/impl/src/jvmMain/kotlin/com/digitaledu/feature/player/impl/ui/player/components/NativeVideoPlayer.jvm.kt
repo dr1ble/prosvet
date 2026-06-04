@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 internal actual fun NativeVideoPlayer(
     videoUrl: String,
     onPlaybackError: () -> Unit,
+    onControlsVisibilityChanged: (Boolean) -> Unit,
     modifier: Modifier,
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {

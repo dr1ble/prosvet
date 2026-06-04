@@ -31,12 +31,11 @@ import com.digitaledu.core.ui.components.accessibilityTouchTarget
 import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.content.ArticlePayload
-import com.digitaledu.core.model.content.CheatSheetPayload
 import com.digitaledu.core.model.content.Hotspot
 import com.digitaledu.core.model.content.QuizPayload
 import com.digitaledu.core.model.content.SimulationPayload
+import com.digitaledu.core.model.content.VideoPayload
 import com.digitaledu.feature.player.api.PlayerIntent
-import com.digitaledu.feature.player.impl.ui.buildLessonSummaryState
 import com.digitaledu.feature.player.impl.ui.player.PlayerContent
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
 import digital_education_mobile.feature.player.`impl`.generated.resources.close
@@ -69,9 +68,8 @@ fun LessonStoriesPager(
         pageCount = { bundle.screens.size }
     )
     val currentScreen = bundle.screens.getOrNull(currentScreenIndex)
-    val isSummaryScreen = currentScreenIndex == bundle.screens.lastIndex &&
-        (currentScreen?.payload is ArticlePayload || currentScreen?.payload is CheatSheetPayload)
-    val isSimulation = currentScreen?.payload is SimulationPayload && !isSummaryScreen
+    val isSimulation = currentScreen?.payload is SimulationPayload
+    val isVideo = currentScreen?.payload is VideoPayload
 
     LaunchedEffect(currentScreenIndex) {
         if (pagerState.currentPage != currentScreenIndex) {
@@ -102,8 +100,6 @@ fun LessonStoriesPager(
         ) { pageIndex ->
             val screen = bundle.screens.getOrNull(pageIndex)
             if (screen != null) {
-                val isPageSummary = pageIndex == bundle.screens.lastIndex &&
-                    (screen.payload is ArticlePayload || screen.payload is CheatSheetPayload)
                 // Apply system bars padding only if NOT simulation
                 val contentModifier = if (screen.payload is SimulationPayload) {
                     Modifier.fillMaxSize()
@@ -114,39 +110,28 @@ fun LessonStoriesPager(
                         .padding(top = UiSpacing.xl)
                 }
 
-                if (isPageSummary) {
-                    LessonSummaryView(
-                        state = buildLessonSummaryState(
-                            course = bundle.course,
-                            screens = bundle.screens,
-                            currentScreenIndex = pageIndex,
-                        ),
-                        onContinue = { onIntent(PlayerIntent.Next) },
-                        onFinish = { onIntent(PlayerIntent.ExitFullscreen) },
-                        modifier = contentModifier,
-                    )
-                } else {
-                    PlayerContent(
-                        screen = screen,
-                        mediaAccessToken = mediaAccessToken,
-                        activeHotspotHint = activeHotspotHint,
-                        isCurrentMemoSaved = isCurrentMemoSaved,
-                        isCurrentScreen = pageIndex == currentScreenIndex,
-                        onIntent = onIntent,
-                        resolveUrl = resolveUrl,
-                        modifier = contentModifier,
-                    )
-                }
+                PlayerContent(
+                    screen = screen,
+                    mediaAccessToken = mediaAccessToken,
+                    activeHotspotHint = activeHotspotHint,
+                    isCurrentMemoSaved = isCurrentMemoSaved,
+                    isCurrentScreen = pageIndex == currentScreenIndex,
+                    onIntent = onIntent,
+                    resolveUrl = resolveUrl,
+                    modifier = contentModifier,
+                )
             }
         }
 
         val isArticle = currentScreen?.payload is ArticlePayload
         val isQuiz = currentScreen?.payload is QuizPayload
         if (!isSimulation && !isArticle && !isQuiz) {
+            val edgeZoneWeight = if (isVideo) 0.18f else 0.3f
+            val centerZoneWeight = 1f - (edgeZoneWeight * 2)
             Row(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
-                        .weight(0.3f)
+                        .weight(edgeZoneWeight)
                         .fillMaxSize()
                         .pointerInput(Unit) {
                             detectTapGestures(onTap = {
@@ -157,17 +142,15 @@ fun LessonStoriesPager(
                         }
                 )
                 
-                Box(modifier = Modifier.weight(0.4f).fillMaxSize())
+                Box(modifier = Modifier.weight(centerZoneWeight).fillMaxSize())
 
                 Box(
                     modifier = Modifier
-                        .weight(0.3f)
+                        .weight(edgeZoneWeight)
                         .fillMaxSize()
                         .pointerInput(Unit) {
                             detectTapGestures(onTap = {
-                                if (currentScreenIndex < bundle.screens.lastIndex) {
-                                    onIntent(PlayerIntent.Next)
-                                }
+                                onIntent(PlayerIntent.Next)
                             })
                         }
                 )

@@ -7,5 +7,6 @@ import androidx.compose.ui.Modifier
 internal expect fun NativeVideoPlayer(
     videoUrl: String,
     onPlaybackError: () -> Unit,
+    onControlsVisibilityChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 )

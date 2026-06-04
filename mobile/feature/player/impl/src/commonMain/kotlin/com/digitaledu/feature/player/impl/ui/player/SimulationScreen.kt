@@ -67,6 +67,8 @@ import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_
 import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_trainer_task
 import digital_education_mobile.feature.player.`impl`.generated.resources.cyber_trainer_title
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_hint
+import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_completion_return
+import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_completion_title
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_load_error
 import digital_education_mobile.feature.player.`impl`.generated.resources.simulation_screen_image
 import org.jetbrains.compose.resources.stringResource
@@ -131,10 +133,7 @@ fun SimulationScreen(
             .build()
     }
     
-    BackHandler {
-        if (payload.hotspots.isNotEmpty()) {
-            return@BackHandler
-        }
+    BackHandler(enabled = activeHotspotHint != null) {
         onDismissHint()
     }
 
@@ -271,7 +270,7 @@ private fun CompletionBanner(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Это последний экран",
+                text = stringResource(Res.string.simulation_completion_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
@@ -283,14 +282,14 @@ private fun CompletionBanner(
                     .background(MaterialTheme.colorScheme.primary)
                     .accessibilityTouchTarget
                     .accessibilitySemantics(
-                        label = "Продолжить",
+                        label = stringResource(Res.string.simulation_completion_return),
                         role = Role.Button,
                     )
                     .accessibilityTremorFilteredClickable(onClick = onContinue)
                     .padding(horizontal = UiSpacing.md, vertical = UiSpacing.xs),
             ) {
                 Text(
-                    text = "Продолжить",
+                    text = stringResource(Res.string.simulation_completion_return),
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White,
                 )

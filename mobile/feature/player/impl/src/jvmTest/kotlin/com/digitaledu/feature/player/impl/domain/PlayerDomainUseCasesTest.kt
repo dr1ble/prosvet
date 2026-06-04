@@ -7,6 +7,7 @@ import com.digitaledu.core.model.catalog.CatalogScreen
 import com.digitaledu.core.model.content.ArticlePayload
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 class PlayerDomainUseCasesTest {
     private val progressTransition = ProgressTransitionUseCase()
@@ -104,6 +105,27 @@ class PlayerDomainUseCasesTest {
         )
 
         assertEquals("lesson-2", result)
+    }
+
+    @Test
+    fun resolveVideoPlaybackSource_mapsRutubeWatchUrlToEmbed() {
+        val result = assertIs<VideoPlaybackSource.WebEmbed>(
+            resolveVideoPlaybackSource("https://rutube.ru/video/0123456789abcdef0123456789abcdef/"),
+        )
+
+        assertEquals(
+            "https://rutube.ru/play/embed/0123456789abcdef0123456789abcdef",
+            result.url,
+        )
+    }
+
+    @Test
+    fun resolveVideoPlaybackSource_keepsDirectMediaUrl() {
+        val result = assertIs<VideoPlaybackSource.Direct>(
+            resolveVideoPlaybackSource("https://cdn.example.com/video.mp4"),
+        )
+
+        assertEquals("https://cdn.example.com/video.mp4", result.url)
     }
 
     private fun bundleWithScreens(count: Int): CatalogBundle {

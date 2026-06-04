@@ -34,15 +34,15 @@
     <string name="learning_course_steps">%1$d шагов</string>
     <string name="learning_course_progress">%1$d из %2$d уроков</string>
     <string name="learning_course_progress_label">Ваш прогресс</string>
-    <string name="learning_course_your_progress">Прогресс курса: %1$d%%</string>
-    <string name="learning_progress_percent">%1$d%%</string>
+    <string name="learning_course_your_progress">Прогресс курса: %1$d%</string>
+    <string name="learning_progress_percent">%1$d%</string>
     <string name="learning_course_track_label">Базовый курс</string>
     <string name="learning_course_rating">4.9★</string>
     <string name="learning_status_completed">Пройдено</string>
     <string name="learning_status_current">Текущий</string>
     <string name="learning_status_available">Доступен</string>
     <string name="learning_status_locked">Заблокирован</string>
-    <string name="learning_lesson_progress">Прогресс урока: %1$d%%</string>
+    <string name="learning_lesson_progress">Прогресс урока: %1$d%</string>
     <string name="learning_lesson_progress_label">Прогресс урока</string>
     <string name="learning_lesson_overview_title">О чем этот урок</string>
     <string name="learning_course_overview_title">О чем этот курс</string>
@@ -85,6 +85,8 @@
     <string name="video_unavailable_message">Не удалось открыть видео. Используйте текстовое описание ниже.</string>
     <string name="video_play">Запустить видео</string>
     <string name="video_pause">Поставить на паузу</string>
+    <string name="video_exit_fullscreen">Свернуть видео</string>
+    <string name="video_fullscreen_badge">Во весь экран</string>
 
     <string name="quiz_progress">Вопрос %1$d из %2$d</string>
     <string name="quiz_multiple_pending">Раздел в разработке: множественный выбор</string>
@@ -108,6 +110,8 @@
     <string name="simulation_screen_image">Изображение экрана симуляции</string>
     <string name="simulation_load_error">Не удалось загрузить изображение</string>
     <string name="simulation_hint">Подсказка</string>
+    <string name="simulation_completion_title">Это последний экран</string>
+    <string name="simulation_completion_return">Вернуться</string>
     <string name="cyber_trainer_title">Кибер-тренажер</string>
     <string name="cyber_trainer_task">Найдите красные флаги</string>
     <string name="cyber_trainer_progress">%1$d из %2$d</string>

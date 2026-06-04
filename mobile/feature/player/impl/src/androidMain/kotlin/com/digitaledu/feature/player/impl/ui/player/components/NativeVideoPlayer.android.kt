@@ -19,6 +19,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.PlayerView.ControllerVisibilityListener
+import com.digitaledu.feature.player.impl.domain.VideoPlaybackSource
+import com.digitaledu.feature.player.impl.domain.resolveVideoPlaybackSource
 import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)
@@ -26,15 +29,25 @@ import kotlinx.coroutines.delay
 internal actual fun NativeVideoPlayer(
     videoUrl: String,
     onPlaybackError: () -> Unit,
+    onControlsVisibilityChanged: (Boolean) -> Unit,
     modifier: Modifier,
 ) {
     val context = LocalContext.current
     val currentOnPlaybackError by rememberUpdatedState(onPlaybackError)
-    var isReady by remember(videoUrl) { mutableStateOf(false) }
-    var didFallback by remember(videoUrl) { mutableStateOf(false) }
-    val player = remember(videoUrl) {
+    val currentOnControlsVisibilityChanged by rememberUpdatedState(onControlsVisibilityChanged)
+    val playbackSource = remember(videoUrl) { resolveVideoPlaybackSource(videoUrl) }
+
+    val directUrl = (playbackSource as? VideoPlaybackSource.Direct)?.url
+    if (directUrl == null) {
+        LaunchedEffect(Unit) { currentOnPlaybackError() }
+        return
+    }
+
+    var isReady by remember(directUrl) { mutableStateOf(false) }
+    var didFallback by remember(directUrl) { mutableStateOf(false) }
+    val player = remember(directUrl) {
         ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(videoUrl))
+            setMediaItem(MediaItem.fromUri(directUrl))
             prepare()
         }
     }
@@ -53,15 +66,17 @@ internal actual fun NativeVideoPlayer(
                     currentOnPlaybackError()
                 }
             }
+
         }
         player.addListener(listener)
         onDispose {
             player.removeListener(listener)
+            currentOnControlsVisibilityChanged(false)
             player.release()
         }
     }
 
-    LaunchedEffect(player, videoUrl) {
+    LaunchedEffect(player, directUrl) {
         delay(VideoLoadTimeoutMillis)
         if (!isReady && !didFallback) {
             didFallback = true
@@ -75,6 +90,9 @@ internal actual fun NativeVideoPlayer(
             PlayerView(viewContext).apply {
                 this.player = player
                 useController = true
+                setControllerVisibilityListener(ControllerVisibilityListener { visibility ->
+                    currentOnControlsVisibilityChanged(visibility == android.view.View.VISIBLE)
+                })
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -83,6 +101,7 @@ internal actual fun NativeVideoPlayer(
         },
         update = { view ->
             view.player = player
+            currentOnControlsVisibilityChanged(view.isControllerFullyVisible)
         },
     )
 }
