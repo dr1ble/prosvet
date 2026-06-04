@@ -2,7 +2,6 @@ package com.digitaledu.feature.home.impl
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -90,6 +89,8 @@ import com.digitaledu.core.ui.components.accessibilityControlScale
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.core.ui.util.BackHandler
 import com.digitaledu.feature.catalog.api.CatalogCategories
 import com.digitaledu.feature.catalog.api.CatalogIntent
@@ -256,7 +257,7 @@ fun HomeScreen(
             if (selectedTab == HomeTab.Home || (selectedTab == HomeTab.Learning && playerUiState.bundle == null)) {
                 Box {
                     FloatingActionButton(
-                        onClick = { overlayScreen = HomeOverlayScreen.Sos },
+                        onClick = rememberTremorFilteredOnClick { overlayScreen = HomeOverlayScreen.Sos },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                         shape = UiShapes.pill,
@@ -312,7 +313,7 @@ fun HomeScreen(
                             .accessibilityTouchTarget
                             .accessibilitySemantics(label = label, state = if (selected) "текущая вкладка" else null, role = Role.Tab)
                             .accessibilityFocusHighlight(shape = if (selected) UiShapes.cardXl else UiShapes.pill, color = MaterialTheme.colorScheme.secondary)
-                            .clickable {
+                            .accessibilityTremorFilteredClickable {
                                 overlayScreen = HomeOverlayScreen.None
                                 onTabSelected(tab)
                             }
@@ -596,8 +597,10 @@ private fun ProfileCompletionGateContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Button(
-                    onClick = { onSubmit(formState.normalizedName, formState.normalizedEmail) },
                     enabled = formState.canSubmit && !isSubmitting,
+                    onClick = rememberTremorFilteredOnClick(enabled = formState.canSubmit && !isSubmitting) {
+                        onSubmit(formState.normalizedName, formState.normalizedEmail)
+                    },
                     shape = UiShapes.cardLg,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -619,8 +622,8 @@ private fun ProfileCompletionGateContent(
                     Text("Сохранить и продолжить")
                 }
                 TextButton(
-                    onClick = onSkip,
                     enabled = !isSubmitting,
+                    onClick = rememberTremorFilteredOnClick(enabled = !isSubmitting, onClick = onSkip),
                     modifier = Modifier
                         .fillMaxWidth()
                         .accessibilityTouchTarget
@@ -695,7 +698,7 @@ private fun SosHelpContent(
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
                         .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -728,7 +731,7 @@ private fun SosHelpContent(
                 ).forEach { (tab, title) ->
                     val selected = selectedTab == tab
                     Button(
-                        onClick = { selectedTab = tab },
+                        onClick = rememberTremorFilteredOnClick { selectedTab = tab },
                         shape = UiShapes.pill,
                         colors = if (selected) {
                             ButtonDefaults.buttonColors()
@@ -795,7 +798,7 @@ private fun SosHelpContent(
                                 role = Role.RadioButton,
                             )
                             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.error)
-                            .clickable { selectedType = option.type }
+                            .accessibilityTremorFilteredClickable { selectedType = option.type }
                             .border(
                                 width = 1.dp,
                                 color = if (selected) {
@@ -856,7 +859,7 @@ private fun SosHelpContent(
         if (selectedTab == SosHelpTab.NewRequest) item {
             Button(
                 enabled = formState.canSubmit && !isSubmitting,
-                onClick = {
+                onClick = rememberTremorFilteredOnClick(enabled = formState.canSubmit && !isSubmitting) {
                     scope.launch {
                         isSubmitting = true
                         runCatching {
@@ -988,7 +991,7 @@ private fun NotesContent(
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
                         .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1119,7 +1122,7 @@ private fun NoteCard(
                         label = stringResource(Res.string.notes_delete),
                         role = Role.Button,
                     )
-                    .clickable(onClick = onDelete)
+                    .accessibilityTremorFilteredClickable(onClick = onDelete)
                     .padding(UiSpacing.sm),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1249,7 +1252,7 @@ private fun HomeCoursesContent(
                             label = stringResource(Res.string.home_recommended_all),
                             role = Role.Button,
                         )
-                        .clickable(onClick = onOpenLearningTab),
+                        .accessibilityTremorFilteredClickable(onClick = onOpenLearningTab),
                 )
             }
         }
@@ -1334,7 +1337,7 @@ private fun DiagnosticSummaryCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Button(
-                    onClick = onOpenDiagnostics,
+                    onClick = rememberTremorFilteredOnClick(onClick = onOpenDiagnostics),
                     shape = UiShapes.cardMd,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1423,7 +1426,7 @@ private fun LearningCoursesContent(
                 ) { category ->
                     FilterChip(
                         selected = category.id == selectedCategoryId,
-                        onClick = { selectedCategoryId = category.id },
+                        onClick = rememberTremorFilteredOnClick { selectedCategoryId = category.id },
                         label = { Text(text = category.label) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -1514,8 +1517,8 @@ private fun LearningSearchField(
                 },
             )
             IconButton(
-                onClick = onVoiceSearchClick,
                 enabled = !isVoiceListening,
+                onClick = rememberTremorFilteredOnClick(enabled = !isVoiceListening, onClick = onVoiceSearchClick),
                 modifier = Modifier
                     .size(56.dp)
                     .clip(UiShapes.pill)
@@ -1584,7 +1587,7 @@ private fun FavoritesContent(
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
                         .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1703,7 +1706,7 @@ private fun FavoriteFilterChip(
 ) {
     FilterChip(
         selected = selected,
-        onClick = onClick,
+        onClick = rememberTremorFilteredOnClick(onClick = onClick),
         modifier = Modifier
             .accessibilityTouchTarget
             .accessibilitySemantics(label = label, state = if (selected) "выбрано" else null, role = Role.Tab),
@@ -1753,7 +1756,7 @@ private fun GlossaryContent(
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
                         .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1925,7 +1928,7 @@ private fun GlossaryTermCard(
                         state = if (term.isBookmarked) "выбрано" else null,
                         role = Role.Button,
                     )
-                    .clickable(onClick = onToggleBookmark)
+                    .accessibilityTremorFilteredClickable(onClick = onToggleBookmark)
                     .padding(UiSpacing.sm),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1998,7 +2001,7 @@ private fun FavoriteCourseCard(
             .accessibilityTouchTarget
             .accessibilitySemantics(label = course.title, state = "избранный курс", role = Role.Button)
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onOpen),
+            .accessibilityTremorFilteredClickable(onClick = onOpen),
     ) {
         Box {
             if (imageUrl == null) {
@@ -2056,7 +2059,7 @@ private fun FavoriteCourseCard(
                         label = stringResource(Res.string.favorites_remove_course),
                         role = Role.Button,
                     )
-                    .clickable(onClick = onRemove)
+                    .accessibilityTremorFilteredClickable(onClick = onRemove)
                     .padding(UiSpacing.sm),
                 contentAlignment = Alignment.Center,
             ) {
@@ -2256,7 +2259,7 @@ private fun ContinueLearningCard(
                         label = stringResource(Res.string.home_continue_start),
                         role = Role.Button,
                     )
-                    .clickable(onClick = onStart)
+                    .accessibilityTremorFilteredClickable(onClick = onStart)
                     .padding(vertical = UiSpacing.md),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
@@ -2304,7 +2307,7 @@ private fun RecommendedCourseCard(
             .accessibilityTouchTarget
             .accessibilitySemantics(label = course.title, state = "кнопка открыть курс", role = Role.Button)
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onClick),
+            .accessibilityTremorFilteredClickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier

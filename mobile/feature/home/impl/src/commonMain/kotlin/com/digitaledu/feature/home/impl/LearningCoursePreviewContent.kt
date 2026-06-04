@@ -1,7 +1,6 @@
 package com.digitaledu.feature.home.impl
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +42,8 @@ import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.feature.catalog.api.CourseProgress
 
 @Composable
@@ -75,7 +76,7 @@ internal fun LearningCoursePreviewContent(
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
                         .accessibilityFocusHighlight(shape = UiShapes.pill, color = MaterialTheme.colorScheme.primary)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .background(
                             color = MaterialTheme.colorScheme.surface.copy(alpha = UiOpacity.textSecondaryOnScrim),
                             shape = UiShapes.pill,
@@ -110,7 +111,7 @@ internal fun LearningCoursePreviewContent(
                     )
                 }
                 OutlinedButton(
-                    onClick = onContents,
+                    onClick = rememberTremorFilteredOnClick(onClick = onContents),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     AccessibilityScaledControlContainer {
@@ -128,7 +129,7 @@ internal fun LearningCoursePreviewContent(
                     }
                 }
                 Button(
-                    onClick = onStart,
+                    onClick = rememberTremorFilteredOnClick(onClick = onStart),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     AccessibilityScaledControlContainer {

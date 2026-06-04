@@ -50,6 +50,7 @@ import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.ProsvetTextField
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_forgot_password_link
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_label_login
@@ -152,8 +153,8 @@ internal fun LoginScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 TextButton(
-                    onClick = onOpenRecovery,
                     enabled = !uiState.isSubmitting,
+                    onClick = rememberTremorFilteredOnClick(enabled = !uiState.isSubmitting, onClick = onOpenRecovery),
                     modifier = Modifier
                         .accessibilityTouchTarget
                         .accessibilitySemantics(
@@ -182,7 +183,7 @@ internal fun LoginScreen(
                 isError = uiState.passwordValidationMessage != null,
                 enabled = !uiState.isSubmitting,
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(onClick = rememberTremorFilteredOnClick { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                             contentDescription = stringResource(Res.string.auth_show_password),
@@ -228,7 +229,7 @@ internal fun LoginScreen(
             Spacer(modifier = Modifier.height(AuthUiSpacing.itemMd))
 
             OutlinedButton(
-                onClick = onOpenQrLogin,
+                onClick = rememberTremorFilteredOnClick(enabled = !uiState.isSubmitting, onClick = onOpenQrLogin),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(AuthUiSize.buttonHeight)
@@ -275,7 +276,7 @@ internal fun LoginScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 TextButton(
-                    onClick = onOpenRegistration,
+                    onClick = rememberTremorFilteredOnClick(onClick = onOpenRegistration),
                     modifier = Modifier
                         .accessibilityTouchTarget
                         .accessibilitySemantics(
@@ -330,8 +331,8 @@ private fun DebugQuickLoginPanel(
             )
             presets.forEach { preset ->
                 OutlinedButton(
-                    onClick = { onPresetClick(preset) },
                     enabled = !isSubmitting,
+                    onClick = rememberTremorFilteredOnClick(enabled = !isSubmitting) { onPresetClick(preset) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = AuthUiShapes.pill,
                     border = BorderStroke(

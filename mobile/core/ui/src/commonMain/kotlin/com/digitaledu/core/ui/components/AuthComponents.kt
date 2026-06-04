@@ -1,7 +1,6 @@
 package com.digitaledu.core.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -57,7 +56,7 @@ fun GradientPrimaryButton(
             )
             .accessibilityTouchTarget
             .accessibilitySemantics(label = text, role = Role.Button, enabled = enabled)
-            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+            .accessibilityTremorFilteredClickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         AccessibilityScaledControlContainer {
@@ -173,7 +172,7 @@ fun AuthHeader(
                 .padding(horizontal = AuthUiSpacing.itemSm, vertical = AuthUiSpacing.itemSm),
         ) {
             IconButton(
-                onClick = onBackClick,
+                onClick = rememberTremorFilteredOnClick(onClick = onBackClick),
                 modifier = Modifier.align(Alignment.CenterStart),
             ) {
                 Icon(
@@ -198,7 +197,7 @@ fun AuthHeader(
             .padding(horizontal = AuthUiSpacing.itemSm, vertical = AuthUiSpacing.itemSm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBackClick) {
+        IconButton(onClick = rememberTremorFilteredOnClick(onClick = onBackClick)) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
@@ -230,7 +229,7 @@ fun PasswordToggle(
     contentDescription: String?,
 ) {
     IconButton(
-        onClick = { onToggle(!visible) },
+        onClick = rememberTremorFilteredOnClick { onToggle(!visible) },
         modifier = Modifier
             .accessibilityTouchTarget
             .accessibilitySemantics(

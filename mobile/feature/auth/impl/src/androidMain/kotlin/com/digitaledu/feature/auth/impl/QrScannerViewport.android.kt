@@ -34,6 +34,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -98,7 +99,7 @@ internal actual fun QrScannerViewport(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Button(
-                onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                onClick = rememberTremorFilteredOnClick { permissionLauncher.launch(Manifest.permission.CAMERA) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .accessibilityTouchTarget

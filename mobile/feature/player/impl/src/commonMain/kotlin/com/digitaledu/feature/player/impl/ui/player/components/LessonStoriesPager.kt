@@ -28,6 +28,7 @@ import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.core.model.catalog.CatalogBundle
 import com.digitaledu.core.model.content.ArticlePayload
 import com.digitaledu.core.model.content.CheatSheetPayload
@@ -189,7 +190,7 @@ fun LessonStoriesPager(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
-                            onClick = onHelpClick,
+                            onClick = rememberTremorFilteredOnClick(onClick = onHelpClick),
                             modifier = Modifier
                                 .accessibilityTouchTarget
                                 .accessibilitySemantics(
@@ -207,7 +208,7 @@ fun LessonStoriesPager(
                         }
 
                         IconButton(
-                            onClick = { onIntent(PlayerIntent.ExitFullscreen) },
+                            onClick = rememberTremorFilteredOnClick { onIntent(PlayerIntent.ExitFullscreen) },
                             modifier = Modifier
                                 .accessibilityTouchTarget
                                 .accessibilitySemantics(

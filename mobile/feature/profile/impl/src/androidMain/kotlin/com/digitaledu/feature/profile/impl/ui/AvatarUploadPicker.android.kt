@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -93,7 +94,7 @@ internal actual fun AvatarUploadPicker(
     }
 
     Button(
-        onClick = {
+        onClick = rememberTremorFilteredOnClick(enabled = enabled) {
             pickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         },
         enabled = enabled,

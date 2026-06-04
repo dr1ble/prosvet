@@ -2,7 +2,6 @@ package com.digitaledu.feature.diagnostics.impl.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +33,8 @@ import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.components.UiOpacity
 import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.feature.diagnostics.api.DiagnosticsIntent
 import com.digitaledu.feature.diagnostics.api.DiagnosticsUiState
 
@@ -120,7 +121,7 @@ internal fun DiagnosticsContent(
                                         },
                                         shape = UiShapes.cardMd,
                                     )
-                                    .clickable {
+                                    .accessibilityTremorFilteredClickable {
                                         onIntent(
                                             DiagnosticsIntent.SelectAnswer(currentQuestion.id, option.key),
                                         )
@@ -139,12 +140,13 @@ internal fun DiagnosticsContent(
             }
             item {
                 val isLast = uiState.currentQuestionIndex == uiState.questionsCount - 1
+                val canMoveNext = uiState.selectedAnswers.containsKey(currentQuestion.id) && !uiState.isLoading
                 Button(
-                    onClick = {
+                    onClick = rememberTremorFilteredOnClick(enabled = canMoveNext) {
                         if (isLast) onIntent(DiagnosticsIntent.CompleteAttempt)
                         else onIntent(DiagnosticsIntent.MoveNext)
                     },
-                    enabled = uiState.selectedAnswers.containsKey(currentQuestion.id) && !uiState.isLoading,
+                    enabled = canMoveNext,
                     shape = UiShapes.cardMd,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -308,7 +310,7 @@ private fun TrajectoryCard(item: LearningTrajectoryItem, onIntent: (DiagnosticsI
             val slug = item.courseSlug
             if (slug != null) {
                 Button(
-                    onClick = { onIntent(DiagnosticsIntent.OpenRecommendedCourse(slug)) },
+                    onClick = rememberTremorFilteredOnClick { onIntent(DiagnosticsIntent.OpenRecommendedCourse(slug)) },
                     shape = UiShapes.cardMd,
                     modifier = Modifier.fillMaxWidth(),
                 ) {

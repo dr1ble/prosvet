@@ -1,7 +1,6 @@
 package com.digitaledu.feature.profile.impl.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -88,6 +87,8 @@ import com.digitaledu.core.ui.components.accessibilityControlScale
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.feature.profile.api.ProfileIntent
 import com.digitaledu.feature.profile.api.ProfileStatus
 import com.digitaledu.feature.profile.api.ProfileUiState
@@ -466,7 +467,6 @@ private fun ProfileMain(
                         "${courseHistory.size} курс(ов) с прогрессом"
                     },
                     onClick = onOpenProgress,
-                    tremorFilter = accessibilitySettings.tremorFilter,
                 )
             }
         }
@@ -486,7 +486,6 @@ private fun ProfileMain(
                 title = stringResource(Res.string.profile_accessibility),
                 subtitle = "",
                 onClick = onOpenAccessibility,
-                tremorFilter = accessibilitySettings.tremorFilter,
             )
         }
 
@@ -496,14 +495,13 @@ private fun ProfileMain(
                 title = stringResource(Res.string.profile_account),
                 subtitle = "",
                 onClick = onOpenAccount,
-                tremorFilter = accessibilitySettings.tremorFilter,
             )
         }
 
         item {
             Button(
-                onClick = onLogout,
                 enabled = !isLoggingOut,
+                onClick = rememberTremorFilteredOnClick(enabled = !isLoggingOut, onClick = onLogout),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = UiSpacing.md)
@@ -607,7 +605,7 @@ private fun ProfileProgressSummaryCard(
             .accessibilityTouchTarget
             .accessibilitySemantics(label = "Открыть подробный прогресс", role = Role.Button)
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onClick)
+            .accessibilityTremorFilteredClickable(onClick = onClick)
     } else {
         Modifier
     }
@@ -737,7 +735,7 @@ private fun ProgressDetailsContent(
                         .clip(UiShapes.pill)
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
                 Text(
@@ -871,7 +869,7 @@ private fun AchievementsPreviewCard(
             .accessibilityTouchTarget
             .accessibilitySemantics(label = "Открыть достижения", role = Role.Button)
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onClick),
+            .accessibilityTremorFilteredClickable(onClick = onClick),
         shape = UiShapes.cardLg,
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
@@ -921,7 +919,7 @@ private fun AchievementsContent(
                         .clip(UiShapes.pill)
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
                 Text(
@@ -981,7 +979,7 @@ private fun CourseHistoryContent(
                         .clip(UiShapes.pill)
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
                 Text(
@@ -1054,7 +1052,7 @@ private fun AchievementRow(
             .accessibilityTouchTarget
             .accessibilitySemantics(label = achievement.titleText(), role = Role.Button)
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onClick)
+            .accessibilityTremorFilteredClickable(onClick = onClick)
     } else {
         Modifier
     }
@@ -1139,7 +1137,7 @@ private fun AchievementDetailContent(
                         .clip(UiShapes.pill)
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
                 Text(
@@ -1314,7 +1312,7 @@ private fun QuickProfileAction(
             .accessibilityTouchTarget
             .accessibilitySemantics(label = title, role = Role.Button)
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onClick)
+            .accessibilityTremorFilteredClickable(onClick = onClick)
     } else {
         Modifier
     }
@@ -1413,7 +1411,7 @@ fun AccessibilitySettingsContent(
                         .clip(UiShapes.pill)
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
                 Text(
@@ -1470,7 +1468,7 @@ fun AccessibilitySettingsContent(
                         modifier = Modifier.padding(top = UiSpacing.md),
                     )
                     Button(
-                        onClick = { },
+                        onClick = rememberTremorFilteredOnClick { },
                         shape = UiShapes.pill,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1543,7 +1541,7 @@ fun AccessibilitySettingsContent(
         }
         item {
             Button(
-                onClick = {
+                onClick = rememberTremorFilteredOnClick {
                     onResetAccessibility()
                     feedbackMessage = resetLabel
                 },
@@ -1620,7 +1618,7 @@ private fun AccountSettings(
                         .clip(UiShapes.pill)
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
                 Text(
@@ -1734,8 +1732,8 @@ private fun AccountSettings(
 
                     if (hasBoundEmail && !isEditingEmail) {
                         Button(
-                            onClick = { isEditingEmail = true },
                             enabled = !isBindingEmail,
+                            onClick = rememberTremorFilteredOnClick(enabled = !isBindingEmail) { isEditingEmail = true },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = UiSpacing.md)
@@ -1754,8 +1752,10 @@ private fun AccountSettings(
                         }
                     } else {
                         Button(
-                            onClick = { onBindEmail(email) },
                             enabled = !isBindingEmail && email.isNotBlank() && email != normalizedBoundEmail,
+                            onClick = rememberTremorFilteredOnClick(
+                                enabled = !isBindingEmail && email.isNotBlank() && email != normalizedBoundEmail,
+                            ) { onBindEmail(email) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = UiSpacing.md)
@@ -1788,7 +1788,7 @@ private fun AccountSettings(
 
                         if (hasBoundEmail) {
                             Button(
-                                onClick = {
+                                onClick = rememberTremorFilteredOnClick(enabled = !isBindingEmail) {
                                     email = normalizedBoundEmail
                                     isEditingEmail = false
                                 },
@@ -2013,8 +2013,8 @@ private fun AccountNameCard(
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(
-                onClick = onSubmit,
                 enabled = !isUpdatingDisplayName && canSubmit,
+                onClick = rememberTremorFilteredOnClick(enabled = !isUpdatingDisplayName && canSubmit, onClick = onSubmit),
                 shape = UiShapes.cardLg,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -2067,8 +2067,11 @@ private fun AccountPasswordCard(
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(
-                onClick = onSubmit,
                 enabled = !isChangingPassword && currentPassword.length >= 8 && newPassword.length >= 8,
+                onClick = rememberTremorFilteredOnClick(
+                    enabled = !isChangingPassword && currentPassword.length >= 8 && newPassword.length >= 8,
+                    onClick = onSubmit,
+                ),
                 shape = UiShapes.cardLg,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -2188,10 +2191,7 @@ private fun SettingsRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    tremorFilter: Boolean,
 ) {
-    val rowVerticalPadding = if (tremorFilter) UiSpacing.lg else UiSpacing.md
-
     Card(
         shape = UiShapes.cardLg,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
@@ -2204,12 +2204,12 @@ private fun SettingsRow(
                 role = Role.Button,
             )
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onClick),
+            .accessibilityTremorFilteredClickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = UiSpacing.md, vertical = rowVerticalPadding),
+                .padding(horizontal = UiSpacing.md, vertical = UiSpacing.md),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {

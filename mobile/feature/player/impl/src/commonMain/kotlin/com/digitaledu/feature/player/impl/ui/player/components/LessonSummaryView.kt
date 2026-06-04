@@ -31,6 +31,7 @@ import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.feature.player.impl.ui.LessonSummaryState
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
 import digital_education_mobile.feature.player.`impl`.generated.resources.lesson_summary_complete_title
@@ -139,7 +140,7 @@ internal fun LessonSummaryView(
 
                 if (state.hasNextLesson) {
                     Button(
-                        onClick = onContinue,
+                        onClick = rememberTremorFilteredOnClick(onClick = onContinue),
                         shape = UiShapes.cardMd,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -151,7 +152,7 @@ internal fun LessonSummaryView(
                 }
 
                 OutlinedButton(
-                    onClick = onFinish,
+                    onClick = rememberTremorFilteredOnClick(onClick = onFinish),
                     shape = UiShapes.cardMd,
                     modifier = Modifier
                         .fillMaxWidth()

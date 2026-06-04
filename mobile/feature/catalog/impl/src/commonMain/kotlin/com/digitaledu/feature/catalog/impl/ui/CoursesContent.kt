@@ -1,7 +1,6 @@
 package com.digitaledu.feature.catalog.impl.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +42,8 @@ import com.digitaledu.core.ui.components.UiShapes
 import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.feature.catalog.api.CatalogIntent
 import com.digitaledu.feature.catalog.api.CourseProgress
 import com.digitaledu.feature.catalog.api.CatalogUiState
@@ -88,7 +89,7 @@ fun CoursesContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Button(
-                onClick = { onIntent(CatalogIntent.RefreshCourses) },
+                onClick = rememberTremorFilteredOnClick { onIntent(CatalogIntent.RefreshCourses) },
                 modifier = Modifier
                     .accessibilityTouchTarget
                     .accessibilitySemantics(
@@ -163,7 +164,7 @@ private fun CourseTile(
             .aspectRatio(1f)
             .accessibilityTouchTarget
             .accessibilitySemantics(label = course.title, role = Role.Button)
-            .clickable(onClick = onClick),
+            .accessibilityTremorFilteredClickable(onClick = onClick),
     ) {
         val imageUrl = course.coverUrlOrNull()
 
@@ -239,7 +240,7 @@ private fun CourseTile(
                 }
             }
             IconButton(
-                onClick = onToggleFavorite,
+                onClick = rememberTremorFilteredOnClick(onClick = onToggleFavorite),
                 modifier = Modifier.align(Alignment.TopEnd),
             ) {
                 Icon(

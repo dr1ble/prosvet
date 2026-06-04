@@ -1,7 +1,6 @@
 package com.digitaledu.feature.auth.impl
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Contrast
-import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Vibration
@@ -59,6 +57,7 @@ import com.digitaledu.core.ui.components.GradientPrimaryButton
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_start_accessibility
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_accessibility_bold_text
@@ -175,7 +174,7 @@ internal fun AuthRoute(
                 onSetTremorFilter = { enabled: Boolean ->
                     viewModel.updateAccessibility { copy(tremorFilter = enabled) }
                 },
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack(ROUTE_ONBOARDING, inclusive = false) },
             )
         }
     }
@@ -297,7 +296,7 @@ private fun AuthAccessibilityScreen(
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh, AuthUiShapes.pill)
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
-                        .clickable(onClick = onBack),
+                        .accessibilityTremorFilteredClickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -413,15 +412,6 @@ private fun AuthAccessibilityScreen(
         }
         item {
             AccessibilityToggleRow(
-                icon = Icons.Rounded.RecordVoiceOver,
-                title = "Голосовая поддержка",
-                subtitle = "Озвучивание элементов экрана",
-                checked = settings.voiceSupport,
-                onCheckedChange = onSetVoiceSupport,
-            )
-        }
-        item {
-            AccessibilityToggleRow(
                 icon = Icons.Rounded.Vibration,
                 title = "Фильтр тремора",
                 subtitle = "Игнорирование случайных нажатий",
@@ -440,7 +430,7 @@ private fun AuthAccessibilityScreen(
                         .fillMaxWidth()
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = resetLabel, role = Role.Button)
-                        .clickable {
+                        .accessibilityTremorFilteredClickable {
                             onResetAccessibility()
                             feedbackMessage = resetLabel
                         }

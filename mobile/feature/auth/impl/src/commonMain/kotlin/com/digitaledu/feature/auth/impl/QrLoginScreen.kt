@@ -50,6 +50,7 @@ import com.digitaledu.core.ui.components.AuthUiTypography
 import com.digitaledu.core.ui.components.ErrorDialog
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_qr_action_manual
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_qr_instruction
@@ -188,7 +189,7 @@ internal fun QrLoginScreen(
                 Spacer(modifier = Modifier.height(AuthUiSpacing.sectionXl))
 
                 Button(
-                    onClick = onManualLogin,
+                    onClick = rememberTremorFilteredOnClick(onClick = onManualLogin),
                     modifier = Modifier
                         .padding(horizontal = AuthUiSpacing.sectionLg)
                         .accessibilityTouchTarget

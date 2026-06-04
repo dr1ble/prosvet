@@ -1,7 +1,6 @@
 package com.digitaledu.feature.player.impl.ui.player.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +31,8 @@ import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.AccessibilityScaledControlContainer
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.core.model.content.QuizPayload
 import com.digitaledu.core.model.quiz.MatchingQuestion
 import com.digitaledu.core.model.quiz.MultipleChoiceQuestion
@@ -254,7 +255,7 @@ fun QuizStory(
                 ) {
                     if (currentQuestionIndex > 0) {
                         Button(
-                            onClick = { currentQuestionIndex-- },
+                            onClick = rememberTremorFilteredOnClick { currentQuestionIndex-- },
                             modifier = Modifier
                                 .accessibilityTouchTarget
                                 .accessibilitySemantics(
@@ -268,8 +269,8 @@ fun QuizStory(
                         }
                     } else {
                         // First question: "Previous" means Previous Screen in Course
-                         Button(
-                            onClick = { onIntent(PlayerIntent.Previous) },
+                          Button(
+                             onClick = rememberTremorFilteredOnClick { onIntent(PlayerIntent.Previous) },
                             modifier = Modifier
                                 .accessibilityTouchTarget
                                 .accessibilitySemantics(
@@ -285,9 +286,10 @@ fun QuizStory(
                     }
 
                     if (currentQuestionIndex < payload.questions.lastIndex) {
+                        val canContinue = answersState.canContinue(currentQuestion)
                         Button(
-                            onClick = { currentQuestionIndex++ },
-                            enabled = answersState.canContinue(currentQuestion),
+                            onClick = rememberTremorFilteredOnClick(enabled = canContinue) { currentQuestionIndex++ },
+                            enabled = canContinue,
                             modifier = Modifier
                                 .accessibilityTouchTarget
                                 .accessibilitySemantics(
@@ -300,9 +302,10 @@ fun QuizStory(
                             }
                         }
                     } else {
+                        val canFinish = answersState.canContinue(currentQuestion)
                         Button(
-                            onClick = { onIntent(PlayerIntent.FinishLesson) },
-                            enabled = answersState.canContinue(currentQuestion),
+                            onClick = rememberTremorFilteredOnClick(enabled = canFinish) { onIntent(PlayerIntent.FinishLesson) },
+                            enabled = canFinish,
                             modifier = Modifier
                                 .accessibilityTouchTarget
                                 .accessibilitySemantics(
@@ -319,8 +322,8 @@ fun QuizStory(
             }
         } else {
              // Fallback for empty quiz
-             Button(
-                 onClick = { onIntent(PlayerIntent.Next) },
+              Button(
+                  onClick = rememberTremorFilteredOnClick { onIntent(PlayerIntent.Next) },
                  modifier = Modifier
                      .accessibilityTouchTarget
                      .accessibilitySemantics(
@@ -348,7 +351,7 @@ fun QuizOptionItem(
             .fillMaxWidth()
             .accessibilityTouchTarget
             .accessibilitySemantics(label = text, role = Role.Button)
-            .clickable(onClick = onClick)
+            .accessibilityTremorFilteredClickable(onClick = onClick)
             .clip(UiShapes.cardMd),
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
         shape = UiShapes.cardMd,

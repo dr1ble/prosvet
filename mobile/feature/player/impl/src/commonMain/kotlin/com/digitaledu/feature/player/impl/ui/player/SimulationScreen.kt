@@ -8,8 +8,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,7 +26,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +57,7 @@ import com.digitaledu.core.ui.util.BackHandler
 import com.digitaledu.core.ui.util.rememberErrorHapticFeedback
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
 import com.digitaledu.core.model.content.Hotspot
 import com.digitaledu.core.model.content.SimulationPayload
 import digital_education_mobile.feature.player.`impl`.generated.resources.Res
@@ -143,10 +141,7 @@ fun SimulationScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-            ) {
+            .accessibilityTremorFilteredClickable {
                 if (payload.hotspots.isNotEmpty()) {
                     wrongTapCount += 1
                     val hintLevel = when {
@@ -291,7 +286,7 @@ private fun CompletionBanner(
                         label = "Продолжить",
                         role = Role.Button,
                     )
-                    .clickable(onClick = onContinue)
+                    .accessibilityTremorFilteredClickable(onClick = onContinue)
                     .padding(horizontal = UiSpacing.md, vertical = UiSpacing.xs),
             ) {
                 Text(
@@ -396,7 +391,7 @@ private fun InlineSimulationHint(
                     .align(Alignment.End)
                     .accessibilityTouchTarget
                     .accessibilitySemantics(label = stringResource(Res.string.close), role = Role.Button)
-                    .clickable(onClick = onDismiss),
+                    .accessibilityTremorFilteredClickable(onClick = onDismiss),
             )
         }
     }
@@ -554,11 +549,7 @@ private fun HotspotOverlay(
                 role = Role.Button,
             )
             .accessibilityFocusHighlight(shape = UiShapes.cardSm, color = MaterialTheme.colorScheme.secondary)
-            .clickable(
-                onClick = onClick,
-                indication = ripple(),
-                interactionSource = remember { MutableInteractionSource() },
-            ),
+            .accessibilityTremorFilteredClickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         // Optional: show label inside hotspot

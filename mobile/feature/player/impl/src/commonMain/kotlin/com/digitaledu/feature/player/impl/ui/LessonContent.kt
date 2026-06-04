@@ -2,7 +2,6 @@ package com.digitaledu.feature.player.impl.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,6 +83,8 @@ import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.digitaledu.core.ui.util.BackHandler
 import com.digitaledu.feature.player.api.PlayerIntent
 import com.digitaledu.feature.player.api.PlayerUiState
@@ -387,7 +388,7 @@ private fun LearningCoursesScreen(
                 itemsIndexed(chips, key = { index, _ -> index }) { index, label ->
                     FilterChip(
                         selected = selectedChip.value == index,
-                        onClick = { selectedChip.value = index },
+                        onClick = rememberTremorFilteredOnClick { selectedChip.value = index },
                         modifier = Modifier
                             .accessibilityTouchTarget
                             .accessibilitySemantics(label = label, role = Role.Button),
@@ -487,7 +488,7 @@ private fun CoursePreviewCard(
             .fillMaxWidth()
             .accessibilityTouchTarget
             .accessibilitySemantics(label = title, role = Role.Button)
-            .clickable(onClick = onClick),
+            .accessibilityTremorFilteredClickable(onClick = onClick),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.sm)) {
             Box {
@@ -529,7 +530,7 @@ private fun CoursePreviewCard(
             ) {
                 FilterChip(
                     selected = true,
-                    onClick = {},
+                    onClick = rememberTremorFilteredOnClick { },
                     label = { Text(categoryLabel) },
                     enabled = false,
                     colors = FilterChipDefaults.filterChipColors(
@@ -661,7 +662,7 @@ private fun LearningCourseLessonsScreen(
                             label = stringResource(Res.string.lesson_back_to_courses),
                             role = Role.Button,
                         )
-                        .clickable(onClick = onBackToCourses)
+                        .accessibilityTremorFilteredClickable(onClick = onBackToCourses)
                         .padding(UiSpacing.xs),
                 ) {
                     Icon(
@@ -804,7 +805,7 @@ private fun LessonRow(
                 enabled = status != LessonStatus.Locked,
             )
             .accessibilityFocusHighlight(shape = UiShapes.cardMd, color = MaterialTheme.colorScheme.primary)
-            .clickable(enabled = status != LessonStatus.Locked, onClick = onOpen),
+            .accessibilityTremorFilteredClickable(enabled = status != LessonStatus.Locked, onClick = onOpen),
     ) {
         Column(
             modifier = Modifier
@@ -966,7 +967,7 @@ private fun LearningLessonDetailsScreen(
             },
             confirmButton = {
                 TextButton(
-                    onClick = {
+                    onClick = rememberTremorFilteredOnClick(enabled = noteText.isNotBlank()) {
                         onCreateNote(noteText)
                         noteText = ""
                         showNoteDialog = false
@@ -977,7 +978,7 @@ private fun LearningLessonDetailsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showNoteDialog = false }) {
+                TextButton(onClick = rememberTremorFilteredOnClick { showNoteDialog = false }) {
                     Text(text = stringResource(Res.string.learning_note_cancel))
                 }
             },
@@ -1033,7 +1034,7 @@ private fun LearningLessonDetailsScreen(
                                 label = stringResource(Res.string.lesson_back_to_courses),
                                 role = Role.Button,
                             )
-                            .clickable(onClick = onBack)
+                            .accessibilityTremorFilteredClickable(onClick = onBack)
                             .padding(UiSpacing.xs),
                     ) {
                         Icon(
@@ -1082,7 +1083,7 @@ private fun LearningLessonDetailsScreen(
             }
 
         OutlinedButton(
-            onClick = onOpenContents,
+            onClick = rememberTremorFilteredOnClick(onClick = onOpenContents),
             modifier = Modifier
                 .fillMaxWidth()
                 .accessibilityTouchTarget
@@ -1106,7 +1107,7 @@ private fun LearningLessonDetailsScreen(
         }
 
         OutlinedButton(
-            onClick = onToggleFavorite,
+            onClick = rememberTremorFilteredOnClick(onClick = onToggleFavorite),
             modifier = Modifier
                 .fillMaxWidth()
                 .accessibilityTouchTarget
@@ -1158,7 +1159,7 @@ private fun LearningLessonDetailsScreen(
         }
 
         OutlinedButton(
-            onClick = { showNoteDialog = true },
+            onClick = rememberTremorFilteredOnClick { showNoteDialog = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .accessibilityTouchTarget
@@ -1228,7 +1229,7 @@ private fun LearningLessonDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(UiSpacing.md),
         ) {
             FloatingActionButton(
-                onClick = onHelpClick,
+                onClick = rememberTremorFilteredOnClick(onClick = onHelpClick),
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 shape = UiShapes.pill,
@@ -1247,8 +1248,8 @@ private fun LearningLessonDetailsScreen(
                 )
             }
             Button(
-                onClick = onStartLesson,
                 enabled = canStartLesson,
+                onClick = rememberTremorFilteredOnClick(enabled = canStartLesson, onClick = onStartLesson),
                 modifier = Modifier
                     .fillMaxWidth()
                     .accessibilityTouchTarget

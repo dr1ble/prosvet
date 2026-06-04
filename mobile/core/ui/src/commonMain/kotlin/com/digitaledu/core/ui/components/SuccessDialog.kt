@@ -26,7 +26,7 @@ fun SuccessDialog(
             Text(text = text)
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = rememberTremorFilteredOnClick(onClick = onDismiss)) {
                 Text(
                     text = stringResource(Res.string.success_dialog_confirm),
                     color = MaterialTheme.colorScheme.primary,

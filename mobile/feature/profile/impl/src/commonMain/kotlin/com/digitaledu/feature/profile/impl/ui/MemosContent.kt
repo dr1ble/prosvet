@@ -1,7 +1,6 @@
 package com.digitaledu.feature.profile.impl.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +45,8 @@ import com.digitaledu.core.ui.components.UiSpacing
 import com.digitaledu.core.ui.components.accessibilityFocusHighlight
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.accessibilityTremorFilteredClickable
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import com.mikepenz.markdown.m3.Markdown
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -82,7 +83,7 @@ fun MemosListContent(
                         .clip(UiShapes.pill)
                         .accessibilityTouchTarget
                         .accessibilitySemantics(label = "Назад", role = Role.Button)
-                        .clickable(onClick = onBack)
+                        .accessibilityTremorFilteredClickable(onClick = onBack)
                         .padding(UiSpacing.xs),
                 )
                 Text(
@@ -158,7 +159,7 @@ private fun MemoRow(
             .accessibilityTouchTarget
             .accessibilitySemantics(label = memo.title, role = Role.Button)
             .accessibilityFocusHighlight(shape = UiShapes.cardLg, color = MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onClick),
+            .accessibilityTremorFilteredClickable(onClick = onClick),
         shape = UiShapes.cardLg,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
     ) {
@@ -246,11 +247,11 @@ fun MemoDetailContent(
                     .clip(UiShapes.pill)
                     .accessibilityTouchTarget
                     .accessibilitySemantics(label = "Назад", role = Role.Button)
-                    .clickable(onClick = onBack)
+                    .accessibilityTremorFilteredClickable(onClick = onBack)
                     .padding(UiSpacing.xs),
             )
             IconButton(
-                onClick = { showConfirmDelete = true },
+                onClick = rememberTremorFilteredOnClick { showConfirmDelete = true },
                 modifier = Modifier
                     .accessibilityTouchTarget
                     .accessibilitySemantics(label = "Удалить памятку", role = Role.Button),
@@ -315,7 +316,7 @@ fun MemoDetailContent(
             title = { Text("Удалить памятку?") },
             text = { Text("Памятка будет удалена с устройства. Это действие нельзя отменить.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(onClick = rememberTremorFilteredOnClick {
                     showConfirmDelete = false
                     onDelete()
                 }) {
@@ -323,7 +324,7 @@ fun MemoDetailContent(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirmDelete = false }) {
+                TextButton(onClick = rememberTremorFilteredOnClick { showConfirmDelete = false }) {
                     Text("Отмена")
                 }
             },

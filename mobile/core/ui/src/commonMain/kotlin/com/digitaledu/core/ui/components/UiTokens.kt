@@ -2,6 +2,10 @@ package com.digitaledu.core.ui.components
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -13,21 +17,25 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
@@ -36,6 +44,99 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.time.TimeSource
+
+class TremorClickDebouncer(
+    private val windowMillis: Long = DEFAULT_WINDOW_MILLIS,
+    private val minimumPressMillis: Long = DEFAULT_MINIMUM_PRESS_MILLIS,
+) {
+    private var lastAcceptedClickMillis: Long? = null
+    private var pendingDelayedClickMillis: Long? = null
+    private var lastBurstRejectedClickMillis: Long? = null
+
+    fun shouldAcceptClick(
+        tremorFilterEnabled: Boolean,
+        nowMillis: Long,
+        pressDurationMillis: Long = minimumPressMillis,
+    ): Boolean {
+        if (!tremorFilterEnabled) {
+            lastAcceptedClickMillis = nowMillis
+            return true
+        }
+
+        if (pressDurationMillis < minimumPressMillis) {
+            return false
+        }
+
+        val lastClickMillis = lastAcceptedClickMillis
+        if (lastClickMillis != null && nowMillis - lastClickMillis < windowMillis) {
+            return false
+        }
+
+        lastAcceptedClickMillis = nowMillis
+        return true
+    }
+
+    fun shouldScheduleDelayedClick(
+        tremorFilterEnabled: Boolean,
+        nowMillis: Long,
+    ): Boolean {
+        if (!tremorFilterEnabled) {
+            lastAcceptedClickMillis = nowMillis
+            return true
+        }
+
+        val lastRejectedMillis = lastBurstRejectedClickMillis
+        if (lastRejectedMillis != null && nowMillis - lastRejectedMillis < windowMillis) {
+            return false
+        }
+
+        val pendingMillis = pendingDelayedClickMillis
+        if (pendingMillis != null && nowMillis - pendingMillis < windowMillis) {
+            pendingDelayedClickMillis = null
+            lastBurstRejectedClickMillis = nowMillis
+            return false
+        }
+
+        val lastClickMillis = lastAcceptedClickMillis
+        if (lastClickMillis != null && nowMillis - lastClickMillis < windowMillis) {
+            return false
+        }
+
+        pendingDelayedClickMillis = nowMillis
+        return true
+    }
+
+    fun shouldAcceptDelayedClick(nowMillis: Long): Boolean {
+        val pendingMillis = pendingDelayedClickMillis ?: return false
+        pendingDelayedClickMillis = null
+
+        if (nowMillis - pendingMillis < windowMillis) {
+            return false
+        }
+
+        val lastRejectedMillis = lastBurstRejectedClickMillis
+        if (lastRejectedMillis != null && nowMillis - lastRejectedMillis < windowMillis) {
+            return false
+        }
+
+        val lastClickMillis = lastAcceptedClickMillis
+        if (lastClickMillis != null && nowMillis - lastClickMillis < windowMillis) {
+            return false
+        }
+
+        lastAcceptedClickMillis = nowMillis
+        return true
+    }
+
+    private companion object {
+        const val DEFAULT_WINDOW_MILLIS = 450L
+        const val DEFAULT_MINIMUM_PRESS_MILLIS = 200L
+    }
+}
 
 object UiSpacing {
     val xxs: Dp = 4.dp
@@ -92,13 +193,75 @@ val Modifier.accessibilityTouchTarget: Modifier
     @Composable
     @ReadOnlyComposable
     get() {
-        val state = LocalAccessibilityUiState.current
-        return if (state.tremorFilter) {
-            sizeIn(minWidth = UiSize.touchTarget, minHeight = UiSize.touchTarget)
-        } else {
-            this
+        return this
+    }
+
+fun Modifier.accessibilityTremorFilteredClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): Modifier = composed {
+    val state = LocalAccessibilityUiState.current
+    val latestOnClick by rememberUpdatedState(onClick)
+    val timeSource = remember { TimeSource.Monotonic.markNow() }
+    val debouncer = remember { TremorClickDebouncer() }
+
+    if (!state.tremorFilter) {
+        clickable(enabled = enabled) { latestOnClick() }
+    } else {
+        pointerInput(enabled) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+                val nowMillis = timeSource.elapsedNow().inWholeMilliseconds
+                val pressDurationMillis = up.uptimeMillis - down.uptimeMillis
+
+                if (enabled && debouncer.shouldAcceptClick(true, nowMillis, pressDurationMillis)) {
+                    latestOnClick()
+                }
+            }
         }
     }
+}
+
+@Composable
+fun rememberTremorFilteredOnClick(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): () -> Unit {
+    val state = LocalAccessibilityUiState.current
+    val latestOnClick by rememberUpdatedState(onClick)
+    val timeSource = remember { TimeSource.Monotonic.markNow() }
+    val debouncer = remember { TremorClickDebouncer() }
+    val scope = rememberCoroutineScope()
+    var pendingClickJob by remember { mutableStateOf<Job?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose { pendingClickJob?.cancel() }
+    }
+
+    return remember(enabled, state.tremorFilter) {
+        {
+            if (enabled) {
+                val nowMillis = timeSource.elapsedNow().inWholeMilliseconds
+                if (!state.tremorFilter) {
+                    latestOnClick()
+                } else if (debouncer.shouldScheduleDelayedClick(true, nowMillis)) {
+                    pendingClickJob?.cancel()
+                    pendingClickJob = scope.launch {
+                        delay(450L)
+                        val delayedNowMillis = timeSource.elapsedNow().inWholeMilliseconds
+                        if (debouncer.shouldAcceptDelayedClick(delayedNowMillis)) {
+                            latestOnClick()
+                        }
+                    }
+                } else {
+                    pendingClickJob?.cancel()
+                    pendingClickJob = null
+                }
+            }
+        }
+    }
+}
 
 val Modifier.accessibilityControlScale: Modifier
     @Composable

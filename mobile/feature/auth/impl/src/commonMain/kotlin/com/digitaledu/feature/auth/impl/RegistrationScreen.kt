@@ -44,6 +44,7 @@ import com.digitaledu.core.ui.components.PasswordToggle
 import com.digitaledu.core.ui.components.ProsvetTextField
 import com.digitaledu.core.ui.components.accessibilitySemantics
 import com.digitaledu.core.ui.components.accessibilityTouchTarget
+import com.digitaledu.core.ui.components.rememberTremorFilteredOnClick
 import digital_education_mobile.feature.auth.`impl`.generated.resources.Res
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_create_account
 import digital_education_mobile.feature.auth.`impl`.generated.resources.auth_create_account_button
@@ -218,7 +219,7 @@ internal fun RegistrationScreen(
                     )
                     Spacer(modifier = Modifier.size(AuthUiSpacing.itemXs))
                     TextButton(
-                        onClick = onBack,
+                        onClick = rememberTremorFilteredOnClick(onClick = onBack),
                         modifier = Modifier
                             .accessibilityTouchTarget
                             .accessibilitySemantics(
