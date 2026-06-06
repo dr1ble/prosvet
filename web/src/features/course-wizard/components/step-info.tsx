@@ -68,21 +68,24 @@ export function StepInfo({ courseId, onNext, onSave }: StepInfoProps) {
   const [desc, setDesc] = useState(info.description);
   const [touched, setTouched] = useState(false);
 
-  const titleValid = title.trim().length >= 2;
-  const canProceed = titleValid;
+  const normalizedTitle = title.trim();
+  const titleValid = normalizedTitle.length >= 3;
+  const normalizedSlug = transliterate(normalizedTitle);
+  const slugValid = normalizedSlug.length >= 3;
+  const canProceed = titleValid && slugValid;
 
   const handleSaveAndNext = async () => {
     setTouched(true);
     if (!canProceed) return;
 
-    const slug = transliterate(title.trim());
-    setInfo({ title: title.trim(), description: desc, slug });
+    const slug = normalizedSlug;
+    setInfo({ title: normalizedTitle, description: desc, slug });
     try {
       setSaving(true);
       setError(null);
       if (!courseId || courseId === "new") {
         const course = await api.createCourse({
-          title: title.trim(),
+          title: normalizedTitle,
           slug,
           description: desc || undefined,
           status: "draft",
@@ -90,7 +93,7 @@ export function StepInfo({ courseId, onNext, onSave }: StepInfoProps) {
         setCourseId(course.id);
       } else {
         await api.updateCourse(courseId, {
-          title: title.trim(),
+          title: normalizedTitle,
           description: desc || undefined,
         });
       }
@@ -119,14 +122,19 @@ export function StepInfo({ courseId, onNext, onSave }: StepInfoProps) {
         <label className={styles.field}>
           <span className={styles.label}>Название *</span>
           <input
-            className={`${styles.input} ${touched && !titleValid ? styles.inputError : ""}`}
+            className={`${styles.input} ${touched && (!titleValid || !slugValid) ? styles.inputError : ""}`}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => setTouched(true)}
             placeholder="Например: Основы цифровой грамотности"
           />
           {touched && !titleValid && (
-            <span className={styles.fieldHint}>Минимум 2 символа</span>
+            <span className={styles.fieldHint}>Минимум 3 символа</span>
+          )}
+          {touched && titleValid && !slugValid && (
+            <span className={styles.fieldHint}>
+              Название должно давать slug минимум из 3 латинских символов или цифр
+            </span>
           )}
         </label>
         <label className={styles.field}>

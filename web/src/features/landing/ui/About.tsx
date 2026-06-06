@@ -1,35 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  ClipboardCheck,
-  HandHeart,
-  LineChart,
-  MousePointerClick,
-} from "lucide-react";
-
-const capabilities = [
-  {
-    icon: MousePointerClick,
-    title: "No-Code конструктор курсов",
-    text: "Методолог собирает уроки из текста, видео, квиза и многоэкранных симуляций без программирования.",
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Модерация перед публикацией",
-    text: "Каждая версия проходит одобрение модератором — с историей и комментариями.",
-  },
-  {
-    icon: HandHeart,
-    title: "Настройки доступности",
-    text: "Размер шрифта, жирный текст, высокий контраст и фильтр тремора.",
-  },
-  {
-    icon: LineChart,
-    title: "Аналитика по урокам",
-    text: "Время прохождения, количество ошибок и уровень подсказки — по каждой сессии.",
-  },
-];
 
 export function About() {
   return (
@@ -72,37 +43,23 @@ export function About() {
           transition={{ duration: 0.55 }}
         >
           <p className="text-base font-semibold uppercase tracking-[0.12em] text-brand-600">
-            Почему выбирают «Просвет»
+            О платформе
           </p>
           <h2 className="mt-3 max-w-xl text-balance text-3xl font-extrabold text-slate-900 sm:text-4xl">
-            Поддержка цифровой самостоятельности граждан
+            Социальный эффект, а не просто набор учебных инструментов
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-            Платформа сочетает обучение и безопасную практику, снижает нагрузку
-            на очные консультации и помогает расширять охват без потери качества
-            сопровождения участников.
+            «Просвет» помогает людям старшего возраста осваивать цифровые
+            сервисы спокойно, пошагово и без страха ошибки. Платформа создаёт
+            безопасную среду, в которой навык можно сначала понять, затем
+            отработать и только после этого перенести в реальную жизнь.
           </p>
-
-          <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-            {capabilities.map(({ icon: Icon, title, text }) => (
-              <li
-                key={title}
-                className="rounded-2xl border border-slate-200 bg-white p-5"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-brand-500/10 text-brand-600">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <p className="text-lg font-semibold text-slate-900 sm:text-xl">
-                    {title}
-                  </p>
-                </div>
-                <p className="mt-3 text-base leading-7 text-slate-600">
-                  {text}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
+            Для центров долголетия, НКО и социальных программ это способ
+            выстроить системную поддержку: сопровождать участников, видеть
+            прогресс и расширять обучение без постоянного роста нагрузки на
+            сотрудников.
+          </p>
         </motion.div>
       </div>
     </section>

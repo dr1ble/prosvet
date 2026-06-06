@@ -235,6 +235,9 @@ function OptionsEditor({
       <label>
         Варианты ответов {type === "multiple_choice" && "(можно несколько)"}
       </label>
+      {options.length === 0 && (
+        <div className={styles.empty}>Добавьте варианты ответа</div>
+      )}
       {options.map((opt, i) => (
         <div key={i} className={styles.optionRow}>
           <label className={styles.checkboxLabel}>

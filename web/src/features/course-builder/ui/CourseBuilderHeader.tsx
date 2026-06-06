@@ -14,13 +14,11 @@ export function CourseBuilderHeader() {
   const isDirty = useCourseBuilderStore((s) => s.isDirty);
   const isSaving = useCourseBuilderStore((s) => s.isSaving);
   const lastSavedAt = useCourseBuilderStore((s) => s.lastSavedAt);
-  const previewOpen = useCourseBuilderStore((s) => s.previewOpen);
   const canUndo = useCourseBuilderStore((s) => s.canUndo);
   const canRedo = useCourseBuilderStore((s) => s.canRedo);
   const save = useCourseBuilderStore((s) => s.save);
   const undo = useCourseBuilderStore((s) => s.undo);
   const redo = useCourseBuilderStore((s) => s.redo);
-  const togglePreview = useCourseBuilderStore((s) => s.togglePreview);
   const updateCourseMeta = useCourseBuilderStore((s) => s.updateCourseMeta);
 
   const [editingTitle, setEditingTitle] = useState(false);
@@ -38,13 +36,22 @@ export function CourseBuilderHeader() {
   const showSaving = Boolean(isSaving);
 
   function handleTitleSubmit() {
-    if (course && titleDraft.trim() && titleDraft !== course.title) {
+    const normalizedTitle = titleDraft.trim();
+
+    if (normalizedTitle.length > 0 && normalizedTitle.length < 3) {
+      setSaveError("Название курса должно содержать минимум 3 символа.");
+      setEditingTitle(false);
+      setTitleDraft(course?.title || "");
+      return;
+    }
+
+    if (course && normalizedTitle && normalizedTitle !== course.title) {
       setSaveError(null);
-      updateCourseMeta({ title: titleDraft.trim() });
+      updateCourseMeta({ title: normalizedTitle });
       void (async () => {
         try {
           const { patchCourseMeta } = await import("../api");
-          await patchCourseMeta(course.id, { title: titleDraft.trim() });
+          await patchCourseMeta(course.id, { title: normalizedTitle });
         } catch (error) {
           setSaveError(
             toUserErrorMessage(error, "Не удалось сохранить название курса."),
@@ -312,13 +319,6 @@ export function CourseBuilderHeader() {
                 disabled={isSaving || !isDirty}
               >
                 Сохранить
-              </button>
-
-              <button
-                className={`${styles.btn} ${previewOpen ? styles.btnActive : ""}`}
-                onClick={() => togglePreview()}
-              >
-                Превью
               </button>
             </div>
 

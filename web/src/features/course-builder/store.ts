@@ -23,6 +23,18 @@ function toPersistedId(id: string | null): string | null {
   return id.startsWith("local_") ? null : id;
 }
 
+function isCourseDraftValid(course: BuilderCourse): boolean {
+  if (course.title.trim().length < 3) {
+    return false;
+  }
+
+  return course.lessons.every(
+    (lesson) =>
+      lesson.title.trim().length >= 2 &&
+      lesson.tasks.every((task) => task.title.trim().length >= 2),
+  );
+}
+
 export interface CourseBuilderState {
   courseId: string;
   course: BuilderCourse | null;
@@ -442,8 +454,13 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
   },
 
   save: async () => {
-    const { course } = get();
+    const { course, isSaving } = get();
     if (!course) return;
+    if (isSaving) return;
+    if (!isCourseDraftValid(course)) {
+      set({ isSaving: false });
+      return;
+    }
 
     const selectedLessonIndex = course.lessons.findIndex(
       (l) => `${l.id}` === `${get().selectedLessonId}`,
@@ -462,13 +479,13 @@ export const useCourseBuilderStore = create<CourseBuilderState>((set, get) => ({
         course.id,
         course.lessons.map((l) => ({
           id: toPersistedId(l.id),
-          title: l.title,
+          title: l.title.trim(),
           description: l.description,
           order_index: l.orderIndex,
           tasks: l.tasks.map((t) => ({
             id: toPersistedId(t.id),
             task_type: t.taskType,
-            title: t.title,
+            title: t.title.trim(),
             order_index: t.orderIndex,
             required: t.required,
             payload: t.payload,

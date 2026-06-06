@@ -59,6 +59,7 @@ internal class ProfileViewModel(
             ProfileIntent.DismissError -> dismissError()
             ProfileIntent.DismissSuccess -> dismissSuccess()
             ProfileIntent.RefreshFavoriteCount -> loadFavoriteCount()
+            ProfileIntent.RefreshProgress -> loadProgress()
             ProfileIntent.RefreshGlossary -> loadGlossary()
             ProfileIntent.RefreshNotes -> loadNotes()
             ProfileIntent.RefreshMemos -> loadMemos()

@@ -5,6 +5,7 @@ sealed interface ProfileIntent {
     data object DismissError : ProfileIntent
     data object DismissSuccess : ProfileIntent
     data object RefreshFavoriteCount : ProfileIntent
+    data object RefreshProgress : ProfileIntent
     data object RefreshGlossary : ProfileIntent
     data object RefreshNotes : ProfileIntent
     data object RefreshMemos : ProfileIntent

@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.digitaledu.core.common.toUserMessage
@@ -60,6 +61,7 @@ fun HomeRoute(
 
     var selectedTab by remember { mutableStateOf(HomeTab.Home) }
     var courseReturnTab by remember { mutableStateOf(HomeTab.Home) }
+    var lastContinueCourseId by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingGroupQrToken by remember { mutableStateOf(initialGroupQrToken) }
     var qrHandledToken by remember { mutableStateOf<String?>(null) }
     var groupQrErrorMessage by remember { mutableStateOf<String?>(null) }
@@ -101,16 +103,19 @@ fun HomeRoute(
         when (effect) {
             is CatalogEffect.CourseOpened -> {
                 courseReturnTab = selectedTab
+                lastContinueCourseId = effect.bundle.course.id
                 playerFeatureHost.openBundle(effect.bundle, startFullscreen = true)
                 selectedTab = HomeTab.Learning
             }
             is CatalogEffect.CourseOpenedInLearning -> {
                 courseReturnTab = selectedTab
+                lastContinueCourseId = effect.bundle.course.id
                 playerFeatureHost.openBundle(effect.bundle, startFullscreen = false, showContents = false)
                 selectedTab = HomeTab.Learning
             }
             is CatalogEffect.CourseContentsOpened -> {
                 courseReturnTab = selectedTab
+                lastContinueCourseId = effect.bundle.course.id
                 playerFeatureHost.openBundle(effect.bundle, startFullscreen = false, showContents = true)
                 selectedTab = HomeTab.Learning
             }
@@ -122,7 +127,7 @@ fun HomeRoute(
 
     ObserveEffects(diagnosticsFeatureHost.effects) { effect ->
         if (effect is DiagnosticsEffect.CourseRequested) {
-            catalogFeatureHost.processIntent(CatalogIntent.OpenCourse(effect.courseSlug))
+            catalogFeatureHost.processIntent(CatalogIntent.OpenCourseInLearning(effect.courseSlug))
         }
     }
 
@@ -130,6 +135,8 @@ fun HomeRoute(
         when (effect) {
             PlayerEffect.Closed -> {
                 diagnosticsFeatureHost.processIntent(DiagnosticsIntent.Refresh)
+                catalogFeatureHost.processIntent(CatalogIntent.RefreshCourses)
+                profileFeatureHost.processIntent(ProfileIntent.RefreshProgress)
                 selectedTab = courseReturnTab
             }
             PlayerEffect.FavoriteChanged -> {
@@ -181,6 +188,7 @@ fun HomeRoute(
         diagnosticsUiEntry = diagnosticsUiEntry,
         playerUiEntry = playerUiEntry,
         profileUiEntry = profileUiEntry,
+        preferredContinueCourseId = lastContinueCourseId,
         resolveUrl = playerFeatureHost::resolveImageUrl,
         snackbarHostState = snackbarHostState,
         onCatalogIntent = catalogFeatureHost::processIntent,

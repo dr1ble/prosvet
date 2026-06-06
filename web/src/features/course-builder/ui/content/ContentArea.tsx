@@ -252,7 +252,7 @@ function VideoUrlEditor({
             payload: { ...task.payload, video_url: e.target.value },
           })
         }
-        placeholder="https://youtube.com/... или https://rutube.ru/video/..."
+        placeholder="https://rutube.ru/video/..."
       />
       {url && (
         <span className={styles.sourceHint}>

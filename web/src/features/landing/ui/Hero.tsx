@@ -108,7 +108,7 @@ function PhoneFan() {
         delay={0.1}
         buttonsSide="right"
       >
-        <ScreenshotImage src="/mockups/profile.png" alt="Профиль и прогресс" />
+        <ScreenshotImage src="/mockups/profile-20260616.png" alt="Профиль и прогресс" />
       </FanPhone>
 
       <FanPhone

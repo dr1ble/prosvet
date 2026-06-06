@@ -183,6 +183,7 @@ fun HomeScreen(
     diagnosticsUiEntry: DiagnosticsUiEntry,
     playerUiEntry: PlayerUiEntry,
     profileUiEntry: ProfileUiEntry,
+    preferredContinueCourseId: String?,
     resolveUrl: (String) -> String,
     snackbarHostState: SnackbarHostState,
     onCatalogIntent: (CatalogIntent) -> Unit,
@@ -244,6 +245,12 @@ fun HomeScreen(
         return
     }
 
+    LaunchedEffect(selectedTab, playerUiState.bundle) {
+        if (selectedTab == HomeTab.Learning && playerUiState.bundle != null) {
+            overlayScreen = HomeOverlayScreen.None
+        }
+    }
+
     BackHandler(enabled = overlayScreen != HomeOverlayScreen.None) {
         overlayScreen = HomeOverlayScreen.None
     }
@@ -254,7 +261,10 @@ fun HomeScreen(
             SnackbarHost(hostState = snackbarHostState)
         },
         floatingActionButton = {
-            if (selectedTab == HomeTab.Home || (selectedTab == HomeTab.Learning && playerUiState.bundle == null)) {
+            if (
+                overlayScreen != HomeOverlayScreen.Sos &&
+                (selectedTab == HomeTab.Home || (selectedTab == HomeTab.Learning && playerUiState.bundle == null))
+            ) {
                 Box {
                     FloatingActionButton(
                         onClick = rememberTremorFilteredOnClick { overlayScreen = HomeOverlayScreen.Sos },
@@ -454,6 +464,7 @@ fun HomeScreen(
                     uiState = catalogUiState,
                     diagnosticsUiState = diagnosticsUiState,
                     currentUserDisplayName = profileUiState.displayName?.trim()?.takeIf { it.isNotEmpty() },
+                    preferredContinueCourseId = preferredContinueCourseId,
                     onContinueCourse = { slug -> onCatalogIntent(CatalogIntent.OpenCourse(slug)) },
                     onOpenCourse = { course -> onCatalogIntent(CatalogIntent.OpenCourseInLearning(course.slug)) },
                     onOpenDiagnostics = { overlayScreen = HomeOverlayScreen.Diagnostics },
@@ -1177,6 +1188,7 @@ private fun HomeCoursesContent(
     uiState: CatalogUiState,
     diagnosticsUiState: DiagnosticsUiState,
     currentUserDisplayName: String?,
+    preferredContinueCourseId: String?,
     onContinueCourse: (String) -> Unit,
     onOpenCourse: (CatalogCourse) -> Unit,
     onOpenDiagnostics: () -> Unit,
@@ -1212,7 +1224,7 @@ private fun HomeCoursesContent(
             )
         }
 
-        val continueCourse = uiState.resolveContinueCourse()
+        val continueCourse = uiState.resolveContinueCourse(preferredContinueCourseId)
         if (continueCourse != null) {
             item {
                 ContinueLearningCard(
@@ -2043,8 +2055,11 @@ private fun FavoriteCourseCard(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                MaterialTheme.colorScheme.scrim.copy(alpha = UiOpacity.scrimOverlay),
+                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.10f),
+                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.52f),
+                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.78f),
                             ),
+                            startY = 36f,
                         ),
                     ),
             )
@@ -2404,9 +2419,19 @@ private fun RecommendedCourseCard(
     }
 }
 
-private fun CatalogUiState.resolveContinueCourse(): CatalogCourse? {
+private fun CatalogUiState.resolveContinueCourse(preferredCourseId: String?): CatalogCourse? {
     val startedCourseIds = progressByCourseId
         .filterValues { progress -> progress.completedLessons > 0 && progress.completedLessons < progress.totalLessons }
         .keys
+    val preferredCourse = preferredCourseId?.let { courseId ->
+        courses.firstOrNull { it.id == courseId }
+    }
+    if (preferredCourse != null) {
+        val progress = progressByCourseId[preferredCourse.id]
+        val isIncomplete = progress == null || progress.completedLessons < progress.totalLessons
+        if (isIncomplete) {
+            return preferredCourse
+        }
+    }
     return courses.firstOrNull { it.id in startedCourseIds }
 }
