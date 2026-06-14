@@ -360,7 +360,7 @@ fun QuizOptionItem(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(UiSpacing.md),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
